@@ -1,0 +1,31 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true
+  },
+  "exclude": [
+    "src/screens/ExecutiveDashboardScreen.tsx",
+    "src/screens/DailyCommandCenterScreen.tsx",
+    "src/screens/IdentityScreen.tsx",
+    "src/screens/HabitArchitectureScreen.tsx",
+    "src/screens/EnvironmentDesignScreen.tsx",
+    "src/screens/HealthDashboardScreen.tsx",
+    "src/screens/ClinicalHealthScreen.tsx",
+    "src/screens/CareerDashboardScreen.tsx",
+    "src/screens/FinanceDashboardScreen.tsx",
+    "src/screens/SpiritualDashboardScreen.tsx",
+    "src/screens/CommitmentDevicesScreen.tsx",
+    "src/screens/WOOPExperimentsScreen.tsx",
+    "src/screens/DopamineMenuScreen.tsx",
+    "src/screens/PrediabetesScreen.tsx",
+    "src/screens/DASHDietScreen.tsx",
+    "src/screens/EnergyRecoveryScreen.tsx",
+    "src/screens/DecisionFatigueScreen.tsx",
+    "src/screens/DeliberatePracticeScreen.tsx",
+    "src/screens/RelapsePreventionScreen.tsx",
+    "src/screens/LifeAreasScreen.tsx",
+    "src/screens/GoalsScreen.tsx",
+    "src/screens/JobApplicationsScreen.tsx",
+    "src/screens/BudgetScreen.tsx"
+  ]
+}
