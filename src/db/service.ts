@@ -477,17 +477,20 @@ export async function seedAllData() {
   const today = daysAgo(0);
   const yesterday = daysAgo(1);
 
-  // ─── Daily Logs (7 days) ───
-  const dailyVariation = [0, 0.5, -0.3, 1.2, -0.5, 0.8, -0.2];
-  const weights = [78.5, 79.0, 78.2, 79.5, 78.8, 79.3, 78.6];
-  for (let i = 6; i >= 0; i--) {
-    const d = daysAgo(i);
+  // ─── Daily Logs (7 days) — deterministic ───
+  const dailySeed = [
+    { date: daysAgo(6), w: 78.5, wa: 1500, s: 5000, mo: 3, sl: 6.5, sq: 3, c: 1800, p: 80, note: 'Good day' },
+    { date: daysAgo(5), w: 79.0, wa: 1800, s: 8000, mo: 4, sl: 7.0, sq: 4, c: 2000, p: 120, note: 'Focused' },
+    { date: daysAgo(4), w: 78.2, wa: 2000, s: 10000, mo: 5, sl: 8.0, sq: 5, c: 2200, p: 140, note: 'Tired' },
+    { date: daysAgo(3), w: 79.5, wa: 1200, s: 6000, mo: 3, sl: 6.0, sq: 3, c: 1900, p: 90, note: 'Productive' },
+    { date: daysAgo(2), w: 78.8, wa: 1600, s: 7000, mo: 4, sl: 7.5, sq: 4, c: 2100, p: 110, note: 'Meh' },
+    { date: daysAgo(1), w: 79.3, wa: 1900, s: 9000, mo: 5, sl: 8.5, sq: 5, c: 2300, p: 130, note: 'Great' },
+    { date: daysAgo(0), w: 78.6, wa: 2000, s: 10000, mo: 5, sl: 8.0, sq: 5, c: 2500, p: 150, note: 'Okay' },
+  ];
+  for (const dd of dailySeed) {
     await getDb().runAsync(
       'INSERT OR IGNORE INTO daily_logs (date, weight, water_ml, steps, mood, sleep_hours, sleep_quality, calories, protein_g, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      d, weights[i], 1500 + Math.floor(Math.random() * 1000), 5000 + Math.floor(Math.random() * 8000),
-      Math.floor(Math.random() * 3) + 3, 6.5 + Math.random() * 1.5, Math.floor(Math.random() * 3) + 3,
-      1800 + Math.floor(Math.random() * 800), 80 + Math.floor(Math.random() * 60),
-      ['Good day', 'Focused', 'Tired', 'Productive', 'Meh', 'Great', 'Okay'][i]
+      dd.date, dd.w, dd.wa, dd.s, dd.mo, dd.sl, dd.sq, dd.c, dd.p, dd.note
     );
   }
 
@@ -496,21 +499,21 @@ export async function seedAllData() {
     for (const name of ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']) {
       await getDb().runAsync(
         'INSERT OR IGNORE INTO prayer_logs (date, prayer_name, on_time, qada) VALUES (?, ?, ?, ?)',
-        date, name, Math.random() > 0.3 ? 1 : 0, Math.random() > 0.7 ? 1 : 0
+        date, name, 1, 0 // all on time, no qada
       );
     }
   }
 
   // ─── Gym Logs (3 sessions) ───
   const gymWorkouts = [
-    { date: daysAgo(5), name: 'Push A', exercises: 'Bench Press 4x8, OHP 3x10, Tricep Pushdown 3x12', duration: 50 },
-    { date: daysAgo(3), name: 'Pull A', exercises: 'Deadlift 3x5, Pull-ups 3x8, Barbell Row 3x10', duration: 55 },
-    { date: daysAgo(1), name: 'Legs', exercises: 'Squat 4x6, RDL 3x8, Leg Press 3x12', duration: 50 },
+    { date: daysAgo(5), name: 'Push A', ex: 'Bench Press 4x8, OHP 3x10, Tricep Pushdown 3x12', dur: 50, note: 'Felt strong' },
+    { date: daysAgo(3), name: 'Pull A', ex: 'Deadlift 3x5, Pull-ups 3x8, Barbell Row 3x10', dur: 55, note: 'Good form' },
+    { date: daysAgo(1), name: 'Legs', ex: 'Squat 4x6, RDL 3x8, Leg Press 3x12', dur: 50, note: 'Legs sore' },
   ];
   for (const w of gymWorkouts) {
     await getDb().runAsync(
-      'INSERT INTO gym_logs (date, workout_name, exercises, duration_minutes) VALUES (?, ?, ?, ?)',
-      w.date, w.name, w.exercises, w.duration
+      'INSERT OR IGNORE INTO gym_logs (date, workout_name, exercises, duration_minutes, notes) VALUES (?, ?, ?, ?, ?)',
+      w.date, w.name, w.ex, w.dur, w.note
     );
   }
 

@@ -1,85 +1,97 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
-import { Card } from '../components/Card';
-import { today, formatDate } from '../types';
 import * as db from '../db/service';
+import { Card } from '../components/Card';
 
 type TabType = 'gym' | 'food' | 'note';
 
 export default function JournalScreen() {
   const { setSidebarOpen } = useApp();
+  const [gymLogs, setGymLogs] = useState<any[]>([]);
+  const [nutritionLogs, setNutritionLogs] = useState<any[]>([]);
+  const [journalEntries, setJournalEntries] = useState<any[]>([]);
   const [tab, setTab] = useState<TabType>('gym');
 
-  // Gym state
-  const [gymLogs, setGymLogs] = useState<any[]>([]);
+  // Gym form state
   const [gymName, setGymName] = useState('');
   const [gymDuration, setGymDuration] = useState('');
   const [gymExercises, setGymExercises] = useState('');
 
-  // Food state
-  const [foodLogs, setFoodLogs] = useState<any[]>([]);
+  // Food form state
   const [mealType, setMealType] = useState('');
   const [foods, setFoods] = useState('');
   const [calories, setCalories] = useState('');
 
-  // Note state
-  const [notes, setNotes] = useState<any[]>([]);
+  // Note form state
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
 
-  useEffect(() => {
-    loadTab(tab);
+  const loadDataForTab = useCallback(async () => {
+    try {
+      if (tab === 'gym') {
+        const logs = await db.getAllGymLogs();
+        setGymLogs(logs);
+      } else if (tab === 'food') {
+        const logs = await db.getAllNutritionLogs();
+        setNutritionLogs(logs);
+      } else {
+        const entries = await db.getAllJournalEntries();
+        setJournalEntries(entries);
+      }
+    } catch (e) {
+      console.warn('Failed to load tab data:', e);
+    }
   }, [tab]);
 
-  const loadTab = async (t: TabType) => {
-    if (t === 'gym') {
-      const logs = await db.getGymLogs(today());
-      setGymLogs(logs);
-    } else if (t === 'food') {
-      const logs = await db.getNutritionLogs(today());
-      setFoodLogs(logs);
-    } else {
-      const entries = await db.getJournalEntries(today());
-      setNotes(entries);
-    }
-  };
+  useEffect(() => { loadDataForTab(); }, [loadDataForTab]);
 
   const addGym = async () => {
     if (!gymName) return;
     await db.addGymLog({
-      date: today(), workout_name: gymName,
-      exercises: gymExercises, duration_minutes: parseInt(gymDuration) || 0,
+      date: new Date().toISOString().split('T')[0],
+      workout_name: gymName,
+      exercises: gymExercises,
+      duration_minutes: parseInt(gymDuration) || 0,
     });
     setGymName(''); setGymDuration(''); setGymExercises('');
-    loadTab('gym');
+    loadDataForTab();
   };
 
   const addFood = async () => {
     if (!foods) return;
     await db.addNutritionLog({
-      date: today(), meal_type: mealType || 'Snack',
-      foods, calories: parseInt(calories) || 0, protein_g: 0, carbs_g: 0, fat_g: 0,
+      date: new Date().toISOString().split('T')[0],
+      meal_type: mealType || 'Snack',
+      foods,
+      calories: parseInt(calories) || 0,
+      protein_g: 0,
+      carbs_g: 0,
+      fat_g: 0,
     });
     setFoods(''); setCalories(''); setMealType('');
-    loadTab('food');
+    loadDataForTab();
   };
 
   const addNote = async () => {
     if (!noteContent) return;
     await db.addJournalEntry({
-      date: today(), title: noteTitle, content: noteContent, type: 'general',
+      date: new Date().toISOString().split('T')[0],
+      title: noteTitle,
+      content: noteContent,
+      type: 'general',
     });
     setNoteTitle(''); setNoteContent('');
-    loadTab('note');
+    loadDataForTab();
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topbar}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.menuBtn}>
-          <Text style={styles.menuIcon}>☰</Text>
+              <Feather name="menu" size={18} color="#9b9a97" />
         </TouchableOpacity>
         <Text style={styles.topTitle}>Journal</Text>
       </View>
@@ -129,7 +141,7 @@ export default function JournalScreen() {
               <TextInput style={styles.input} value={calories} onChangeText={setCalories} keyboardType="numeric" placeholder="Calories (optional)" placeholderTextColor="#ccc" />
               <TouchableOpacity style={styles.addBtn} onPress={addFood}><Text style={styles.addBtnText}>Save Meal</Text></TouchableOpacity>
             </Card>
-            {foodLogs.map((log, i) => (
+            {nutritionLogs.map((log, i) => (
               <Card key={log.id || i} title={log.meal_type}>
                 <Text style={styles.logContent}>{log.foods}</Text>
                 {log.calories > 0 ? <Text style={styles.logMeta}>{log.calories} kcal</Text> : null}
@@ -145,7 +157,7 @@ export default function JournalScreen() {
               <TextInput style={[styles.input, styles.multiline, { minHeight: 100 }]} value={noteContent} onChangeText={setNoteContent} multiline placeholder="Write your thoughts..." placeholderTextColor="#ccc" />
               <TouchableOpacity style={styles.addBtn} onPress={addNote}><Text style={styles.addBtnText}>Save Note</Text></TouchableOpacity>
             </Card>
-            {notes.map((n, i) => (
+            {journalEntries.map((n, i) => (
               <Card key={n.id || i} title={n.title || 'Note'}>
                 <Text style={styles.logContent}>{n.content}</Text>
               </Card>

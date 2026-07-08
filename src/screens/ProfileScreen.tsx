@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import * as db from '../db/service';
@@ -98,7 +99,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topbar}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.menuBtn}>
-          <Text style={styles.menuIcon}>☰</Text>
+              <Feather name="menu" size={18} color="#9b9a97" />
         </TouchableOpacity>
         <Text style={styles.topTitle}>My Data</Text>
         <View style={{ width: 32 }} />

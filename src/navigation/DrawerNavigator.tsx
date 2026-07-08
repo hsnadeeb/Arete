@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 
@@ -24,12 +25,12 @@ const SCREENS: { name: RouteName; component: React.FC }[] = [
 ];
 
 const NAV_ITEMS: { name: RouteName; label: string; icon: string }[] = [
-  { name: 'Dashboard', label: 'Dashboard', icon: '🏠' },
-  { name: 'Trackers', label: 'Trackers', icon: '📊' },
-  { name: 'Journal', label: 'Journal', icon: '📝' },
-  { name: 'Budget', label: 'Budget', icon: '💰' },
-  { name: 'Planner', label: 'Schedule', icon: '📅' },
-  { name: 'Settings', label: 'Settings', icon: '⚙️' },
+  { name: 'Dashboard', label: 'Dashboard', icon: 'home' },
+  { name: 'Trackers', label: 'Trackers', icon: 'bar-chart-2' },
+  { name: 'Journal', label: 'Journal', icon: 'file-text' },
+  { name: 'Budget', label: 'Budget', icon: 'dollar-sign' },
+  { name: 'Planner', label: 'Schedule', icon: 'calendar' },
+  { name: 'Settings', label: 'Settings', icon: 'settings' },
 ];
 
 export default function DrawerNavigator() {
@@ -91,7 +92,7 @@ export default function DrawerNavigator() {
                 onPress={() => { setCurrentRoute(item.name); setSidebarOpen(false); }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.navItemIcon}>{item.icon}</Text>
+                <Feather name={item.icon as any} size={18} color="#6b7280" />
                 <Text style={[styles.navItemLabel, focused && styles.navItemLabelActive]}>
                   {item.label}
                 </Text>

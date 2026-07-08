@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../components/Card';
 import { useApp } from '../context/AppContext';
@@ -35,7 +36,7 @@ export default function SettingsScreen() {
         <Card title="Your Stats">
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Streak</Text>
-            <Text style={styles.statValue}>🔥 {streak} days</Text>
+                <Feather name="zap" size={14} color="#b45309" /> {streak} days
           </View>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Today</Text>

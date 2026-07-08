@@ -1,3 +1,6 @@
+import type { ComponentProps } from "react";
+import Feather from "@expo/vector-icons/Feather";
+
 export interface DailyLog {
   id: number;
   date: string;
@@ -135,40 +138,85 @@ export interface IslamicDate {
   dayOfWeek: string;
 }
 
-export const PRAYER_NAMES = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-export const PRAYER_TIMES_ORDER = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
-export const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-export const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+type FeatherIconName = ComponentProps<typeof Feather>["name"];
+
+export const PRAYER_NAMES = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
+export const PRAYER_TIMES_ORDER = [
+  "fajr",
+  "sunrise",
+  "dhuhr",
+  "asr",
+  "maghrib",
+  "isha",
+] as const;
+export const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"];
 export const BUDGET_CATEGORIES = [
-  'Rent', 'Food', 'Transport', 'Entertainment', 'Learning', 'Savings',
-  'Healthcare', 'Shopping', 'Bills', 'Other'
+  "Rent",
+  "Food",
+  "Transport",
+  "Entertainment",
+  "Learning",
+  "Savings",
+  "Healthcare",
+  "Shopping",
+  "Bills",
+  "Other",
 ];
 
 export function today(): string {
-  return new Date().toISOString().split('T')[0];
+  return new Date().toISOString().split("T")[0];
 }
 
 export function formatDate(date: string): string {
-  const d = new Date(date + 'T12:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const d = new Date(date + "T12:00:00");
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
+// export const PRAYER_ICONS: Record<string, { name: string; color: string }> = {
+//   fajr: { name: 'sunrise', color: '#f59e0b' },
+//   sunrise: { name: 'sun', color: '#f59e0b' },
+//   dhuhr: { name: 'sun', color: '#f59e0b' },
+//   asr: { name: 'cloud', color: '#8b5cf6' },
+//   maghrib: { name: 'sunset', color: '#e03e3e' },
+//   isha: { name: 'moon', color: '#6366f1' },
+// };
+
+export const PRAYER_ICONS: Record<
+  string,
+  {
+    name: FeatherIconName;
+    color: string;
+  }
+> = {
+  fajr: { name: "sunrise", color: "#f59e0b" },
+  sunrise: { name: "sun", color: "#f59e0b" },
+  dhuhr: { name: "sun", color: "#f59e0b" },
+  asr: { name: "cloud", color: "#8b5cf6" },
+  maghrib: { name: "sunset", color: "#e03e3e" },
+  isha: { name: "moon", color: "#6366f1" },
+};
+
 export const PRAYER_EMOJIS: Record<string, string> = {
-  fajr: '🌅',
-  sunrise: '☀️',
-  dhuhr: '🌞',
-  asr: '🌤️',
-  maghrib: '🌇',
-  isha: '🌙',
+  fajr: "🌅",
+  sunrise: "☀️",
+  dhuhr: "🌞",
+  asr: "🌤️",
+  maghrib: "🌇",
+  isha: "🌙",
 };
 
 export const PRAYER_DISPLAY: Record<string, string> = {
-  fajr: 'Fajr',
-  sunrise: 'Sunrise',
-  dhuhr: 'Dhuhr',
-  asr: 'Asr',
-  maghrib: 'Maghrib',
-  isha: 'Isha',
+  fajr: "Fajr",
+  sunrise: "Sunrise",
+  dhuhr: "Dhuhr",
+  asr: "Asr",
+  maghrib: "Maghrib",
+  isha: "Isha",
 };
 
 // ─── Dashboard Widget Layout ───
@@ -188,22 +236,49 @@ export interface WidgetDefinition {
 }
 
 export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
-  { key: 'at-a-glance', title: 'At a Glance', icon: '🕌', accentColor: '#8b5cf6' },
-  { key: 'quick-stats', title: 'Quick Stats', icon: '📊', accentColor: '#0b6bcf' },
-  { key: 'quick-log', title: 'Quick Log', icon: '⚡', accentColor: '#0ea5e9' },
-  { key: 'mood', title: 'Mood', icon: '😊', accentColor: '#6366f1' },
-  { key: 'expenses', title: 'Expenses', icon: '💰', accentColor: '#059669' },
-  { key: 'prayer-tracker', title: 'Prayer Tracker', icon: '📿', accentColor: '#f59e0b' },
-  { key: 'monthly-stats', title: 'Monthly Stats', icon: '📈', accentColor: '#d97706' },
+  {
+    key: "at-a-glance",
+    title: "At a Glance",
+    icon: "compass",
+    accentColor: "#8b5cf6",
+  },
+  {
+    key: "quick-stats",
+    title: "Quick Stats",
+    icon: "bar-chart-2",
+    accentColor: "#0b6bcf",
+  },
+  { key: "quick-log", title: "Quick Log", icon: "zap", accentColor: "#0ea5e9" },
+  { key: "mood", title: "Mood", icon: "smile", accentColor: "#6366f1" },
+  {
+    key: "expenses",
+    title: "Expenses",
+    icon: "dollar-sign",
+    accentColor: "#059669",
+  },
+  {
+    key: "prayer-tracker",
+    title: "Prayer Tracker",
+    icon: "book-open",
+    accentColor: "#f59e0b",
+  },
+  {
+    key: "monthly-stats",
+    title: "Monthly Stats",
+    icon: "trending-up",
+    accentColor: "#d97706",
+  },
 ];
 
-export function getNextPrayer(timings: { [key: string]: string }): { name: string; time: string; remaining: string } | null {
+export function getNextPrayer(timings: {
+  [key: string]: string;
+}): { name: string; time: string; remaining: string } | null {
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  
+
   for (const prayer of PRAYER_TIMES_ORDER) {
-    if (prayer === 'sunrise') continue; // Skip sunrise for next prayer
-    const [h, m] = (timings[prayer] || '').split(':').map(Number);
+    if (prayer === "sunrise") continue; // Skip sunrise for next prayer
+    const [h, m] = (timings[prayer] || "").split(":").map(Number);
     if (isNaN(h) || isNaN(m)) continue;
     const prayerMinutes = h * 60 + m;
     if (prayerMinutes > currentMinutes) {
@@ -211,7 +286,11 @@ export function getNextPrayer(timings: { [key: string]: string }): { name: strin
       const hours = Math.floor(diff / 60);
       const mins = diff % 60;
       const remaining = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-      return { name: PRAYER_DISPLAY[prayer] || prayer, time: timings[prayer], remaining };
+      return {
+        name: PRAYER_DISPLAY[prayer] || prayer,
+        time: timings[prayer],
+        remaining,
+      };
     }
   }
   return null; // All prayers passed for today

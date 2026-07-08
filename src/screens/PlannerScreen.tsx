@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { DAY_NAMES } from '../types';
-import * as db from '../db/service';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const COLORS = ['#6366f1','#0b6bcf','#e03e3e','#0a8c2e','#d9730d','#0ea5e9','#8b5cf6','#0891b2'];
@@ -45,12 +45,11 @@ function getYTDates(): string[] {
 }
 
 export default function PlannerScreen() {
-  const { setSidebarOpen } = useApp();
+  const { setSidebarOpen, timetable, setTimetable, addTimetableItem, updateTimetableItem, deleteTimetableItem } = useApp();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [selectedDates, setSelectedDates] = useState<string[]>(getYTDates());
-  const [timetable, setTimetable] = useState<any[]>([]);
 
   // Modal state
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
@@ -63,7 +62,7 @@ export default function PlannerScreen() {
   const [repeatType, setRepeatType] = useState('weekly');
   const [specificDate, setSpecificDate] = useState('');
 
-  useEffect(() => { db.getAllTimetable().then(setTimetable); }, []);
+  // Timetable is already loaded via AppContext init
 
   const todayStr = toDateStr(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -145,14 +144,13 @@ export default function PlannerScreen() {
 
   const addItem = async () => {
     if (!activity || !startTime) return;
-    await db.addTimetableItem({
+    await addTimetableItem({
       day_of_week: modalDay, start_time: startTime,
       end_time: endTime, activity, color: itemColor,
       repeat_type: repeatType,
       specific_date: repeatType === 'once' ? specificDate : '',
     });
     setModalMode(null);
-    db.getAllTimetable().then(setTimetable);
   };
 
   // ─── Edit ───
@@ -170,28 +168,26 @@ export default function PlannerScreen() {
 
   const saveEdit = async () => {
     if (!editingId || !activity || !startTime) return;
-    await db.updateTimetableItem(editingId, {
+    await updateTimetableItem(editingId, {
       day_of_week: modalDay, start_time: startTime,
       end_time: endTime, activity, color: itemColor,
       repeat_type: repeatType,
       specific_date: repeatType === 'once' ? specificDate : '',
     });
     setModalMode(null);
-    db.getAllTimetable().then(setTimetable);
   };
 
   const deleteItem = async () => {
     if (!editingId) return;
-    await db.deleteTimetableItem(editingId);
+    await deleteTimetableItem(editingId);
     setModalMode(null);
-    db.getAllTimetable().then(setTimetable);
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topbar}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.menuBtn}>
-          <Text style={styles.menuIcon}>☰</Text>
+              <Feather name="menu" size={18} color="#9b9a97" />
         </TouchableOpacity>
         <Text style={styles.topTitle}>Calendar</Text>
         <TouchableOpacity style={styles.todayBtn} onPress={goToday}>

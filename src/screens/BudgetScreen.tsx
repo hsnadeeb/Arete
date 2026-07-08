@@ -1,56 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { Card, Row } from '../components/Card';
-import { today, BUDGET_CATEGORIES } from '../types';
-import * as db from '../db/service';
+import { BUDGET_CATEGORIES } from '../types';
 
 export default function BudgetScreen() {
-  const { setSidebarOpen } = useApp();
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [summary, setSummary] = useState<any[]>([]);
+  const { setSidebarOpen, addTransaction, transactions } = useApp();
   const [txCat, setTxCat] = useState(BUDGET_CATEGORIES[0]);
   const [txAmount, setTxAmount] = useState('');
   const [txDesc, setTxDesc] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
 
-  const currentMonth = today().slice(0, 7);
-
-  useEffect(() => { loadBudget(); }, []);
-
-  const loadBudget = async () => {
-    const [txs, summ] = await Promise.all([
-      db.getTransactions(currentMonth),
-      db.getBudgetSummary(currentMonth),
-    ]);
-    setTransactions(txs);
-    setSummary(summ);
-  };
+  const income = (transactions || []).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expense = (transactions || []).filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
   const addTx = async () => {
     const amt = parseFloat(txAmount);
     if (!amt) return;
-    await db.addTransaction({
-      date: today(), category: txCat, amount: Math.abs(amt),
-      type: amt >= 0 ? 'income' : 'expense', description: txDesc,
+    await addTransaction({
+      date: new Date().toISOString().split('T')[0],
+      category: txCat,
+      amount: Math.abs(amt),
+      type: amt >= 0 ? 'income' : 'expense',
+      description: txDesc,
     });
     setTxAmount(''); setTxDesc('');
-    loadBudget();
   };
-
-  const getTotal = (type: string) => {
-    return summary.filter(s => s.type === type).reduce((sum, s) => sum + s.total, 0);
-  };
-
-  const income = getTotal('income');
-  const expense = getTotal('expense');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topbar}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.menuBtn}>
-          <Text style={styles.menuIcon}>☰</Text>
+              <Feather name="menu" size={18} color="#9b9a97" />
         </TouchableOpacity>
         <Text style={styles.topTitle}>Budget</Text>
       </View>
@@ -77,16 +60,6 @@ export default function BudgetScreen() {
           </View>
         </Card>
 
-        {summary.filter(s => s.type === 'expense').length > 0 && (
-          <Card title="Spending by Category">
-            {summary.filter(s => s.type === 'expense').map((s, i) => (
-              <Row key={i} label={s.category}>
-                <Text style={styles.expenseAmount}>-${s.total.toFixed(0)}</Text>
-              </Row>
-            ))}
-          </Card>
-        )}
-
         <Card title="Add Transaction">
           <View style={styles.catRow}>
             <TouchableOpacity style={styles.catPicker} onPress={() => setShowCatPicker(!showCatPicker)}>
@@ -112,7 +85,7 @@ export default function BudgetScreen() {
           <TouchableOpacity style={styles.addBtn} onPress={addTx}><Text style={styles.addBtnText}>Add Transaction</Text></TouchableOpacity>
         </Card>
 
-        {transactions.length > 0 && (
+        {transactions && transactions.length > 0 && (
           <Card title="Recent">
             {transactions.slice(0, 10).map((tx: any, i) => (
               <Row key={tx.id || i} label={tx.category}>

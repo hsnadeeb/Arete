@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, Dispatch, SetStateAction } from 'react';
 import * as db from '../db/service';
-import { DailyLog, PrayerLog, MonthlyStats, PRAYER_NAMES, PrayerTimings, IslamicDate, WidgetLayout } from '../types';
+import { seedAllTables } from '../data/seedData';
+import { DailyLog, PrayerLog, MonthlyStats, PrayerTimings, IslamicDate, WidgetLayout } from '../types';
 import { fetchPrayerTimings, extractTimings, getIslamicDateInfo } from '../services/prayerApi';
 
 interface AppContextValue {
@@ -30,6 +31,15 @@ interface AppContextValue {
   widgetLayouts: WidgetLayout[];
   setWidgetLayouts: Dispatch<SetStateAction<WidgetLayout[]>>;
   saveWidgetLayouts: () => Promise<void>;
+  // Budget / Transaction management
+  addTransaction: (t: { date: string; category: string; amount: number; type: string; description?: string }) => Promise<void>;
+  transactions: any[];
+  // Timetable / Planner
+  timetable: any[];
+  setTimetable: Dispatch<SetStateAction<any[]>>;
+  addTimetableItem: (item: { day_of_week: number; start_time: string; end_time?: string; activity: string; color?: string; repeat_type?: string; specific_date?: string }) => Promise<void>;
+  updateTimetableItem: (id: number, fields: { day_of_week?: number; start_time?: string; end_time?: string; activity?: string; color?: string; repeat_type?: string; specific_date?: string }) => Promise<void>;
+  deleteTimetableItem: (id: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -96,10 +106,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const loadData = useCallback(async () => {
     try {
-      const database = await db.initDatabase();
-      await db.seedAllData();
-      // Always seed widget layouts separately — seedAllData returns early if daily_logs exist
-      await db.seedWidgetLayouts();
+      await db.initDatabase();
+      // Seed comprehensive dummy data for all tables
+      await seedAllTables();
       const [log, prayerRows, stats, streakVal, txns, widgetRows] = await Promise.all([
         db.getDailyLog(today),
         db.getPrayers(today),
@@ -207,6 +216,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setTodayTransactions((txns || []).filter((t: any) => t.date === today));
   }, [today]);
 
+  // ─── New: Transaction & Budget ───
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const addTransaction = useCallback(async (t: { date: string; category: string; amount: number; type: string; description?: string }) => {
+    await db.addTransaction(t);
+    const txns = await db.getTransactions(t.date.slice(0, 7));
+    setTransactions(txns);
+  }, []);
+
+  // ─── New: Timetable / Planner ───
+  const [timetable, setTimetable] = useState<any[]>([]);
+  const addTimetableItem = useCallback(async (item: any) => {
+    await db.addTimetableItem(item);
+    const items = await db.getAllTimetable();
+    setTimetable(items);
+  }, []);
+  const updateTimetableItem = useCallback(async (id: number, fields: any) => {
+    await db.updateTimetableItem(id, fields);
+    const items = await db.getAllTimetable();
+    setTimetable(items);
+  }, []);
+  const deleteTimetableItem = useCallback(async (id: number) => {
+    await db.deleteTimetableItem(id);
+    const items = await db.getAllTimetable();
+    setTimetable(items);
+  }, []);
+
+  // Load timetable on init
+  useEffect(() => {
+    db.getAllTimetable().then(setTimetable);
+  }, []);
+
   return (
     <AppContext.Provider value={{
       loaded, dailyLog, prayers, monthlyStats, streak,
@@ -215,6 +255,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       prayerTimings, islamicDate, timingsLoading, refreshPrayerTimings,
       addExpense, todayTransactions,
       widgetLayouts, setWidgetLayouts, saveWidgetLayouts,
+      addTransaction,
+      transactions,
+      timetable,
+      setTimetable,
+      addTimetableItem,
+      updateTimetableItem,
+      deleteTimetableItem,
     }}>
       {children}
     </AppContext.Provider>
