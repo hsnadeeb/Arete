@@ -69,7 +69,10 @@ export default function SettingsScreen() {
     await saveSchedule(updated);
     if (val) {
       await requestNotificationPermissions();
-      Alert.alert("Notifications enabled", "Prayer and habit reminders will appear.");
+      Alert.alert(
+        "Notifications enabled",
+        "Prayer and habit reminders will appear.",
+      );
     } else {
       Alert.alert("Notifications disabled", "You can re-enable anytime.");
     }
@@ -112,7 +115,7 @@ export default function SettingsScreen() {
         contentContainerStyle={{ padding: s.md, gap: s.md, paddingBottom: 60 }}
       >
         {/* ── Theme ── */}
-        <Card title="Appearance" style={{ backgroundColor: colors.card }}>
+        {/*<Card title="Appearance" style={{ backgroundColor: colors.card }}>
           <View
             style={{
               flexDirection: "row",
@@ -132,7 +135,7 @@ export default function SettingsScreen() {
               thumbColor={isDark ? colors.accent : colors.muted}
             />
           </View>
-        </Card>
+        </Card>*/}
 
         {/* ── Profile ── */}
         <Card
@@ -141,18 +144,22 @@ export default function SettingsScreen() {
             backgroundColor: colors.card,
             borderLeftColor: colors.accent,
           }}
+          onPress={() => {
+            setCurrentRoute("Profile");
+          }
         >
           <View style={styles.profileRow}>
-            <View
-              style={[
-                styles.avatar,
-                { backgroundColor: colors.accent },
-              ]}
-            >
+            <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
               <Text style={styles.avatarText}>H</Text>
             </View>
             <View>
-              <Text style={{ color: colors.heading, fontSize: 16, fontWeight: "600" }}>
+              <Text
+                style={{
+                  color: colors.heading,
+                  fontSize: 16,
+                  fontWeight: "600",
+                }}
+              >
                 Hasan Adeeb
               </Text>
               <Text style={{ color: colors.textTertiary, fontSize: 12 }}>
@@ -237,7 +244,7 @@ export default function SettingsScreen() {
                 <Text style={{ color: colors.text, fontWeight: "600" }}>
                   {monthlyStats.avg_mood
                     ? `${"•".repeat(Math.round(monthlyStats.avg_mood))}${"○".repeat(
-                        5 - Math.round(monthlyStats.avg_mood)
+                        5 - Math.round(monthlyStats.avg_mood),
                       )}`
                     : "—"}
                 </Text>
@@ -328,9 +335,9 @@ export default function SettingsScreen() {
               marginBottom: 8,
             }}
           >
-            A minimal second brain for tracking life — weight, water, steps, mood,
-            prayers, gym, food, budget, and more. All data lives on your device in
-            SQLite with periodic backups.
+            A minimal second brain for tracking life — weight, water, steps,
+            mood, prayers, gym, food, budget, and more. All data lives on your
+            device in SQLite with periodic backups.
           </Text>
           <Text
             style={{

@@ -58,13 +58,15 @@ const NAV_ITEMS: { name: RouteName; label: string; icon: string }[] = [
 
 export default function DrawerNavigator() {
   const currentRoute = useStore((s) => s.currentRoute) as RouteName;
-const setCurrentRoute = useStore((s) => s.setCurrentRoute) as (route: RouteName) => void;
+  const setCurrentRoute = useStore((s) => s.setCurrentRoute) as (
+    route: RouteName,
+  ) => void;
   const sidebarOpen = useStore((s) => s.sidebarOpen);
   const setSidebarOpen = useStore((s) => s.setSidebarOpen);
   const slideAnim = useRef(new Animated.Value(-260)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
+  const { theme, isDark, toggle } = useTheme();
 
   useEffect(() => {
     Animated.parallel([
@@ -124,8 +126,14 @@ const setCurrentRoute = useStore((s) => s.setCurrentRoute) as (route: RouteName)
           }}
           activeOpacity={0.7}
         >
-          <View style={[styles.avatar, { backgroundColor: theme.colors.accent }]}>
-            <Text style={[styles.avatarText, { color: theme.colors.textInverse }]}>HA</Text>
+          <View
+            style={[styles.avatar, { backgroundColor: theme.colors.accent }]}
+          >
+            <Text
+              style={[styles.avatarText, { color: theme.colors.textInverse }]}
+            >
+              HA
+            </Text>
           </View>
         </TouchableOpacity>
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
@@ -147,13 +155,18 @@ const setCurrentRoute = useStore((s) => s.setCurrentRoute) as (route: RouteName)
                 <Feather
                   name={item.icon as any}
                   size={18}
-                  color={focused ? theme.colors.accent : theme.colors.textTertiary}
+                  color={
+                    focused ? theme.colors.accent : theme.colors.textTertiary
+                  }
                 />
                 <Text
                   style={[
                     styles.navItemLabel,
                     { color: theme.colors.text },
-                    focused && { color: theme.colors.accent, fontWeight: "600" },
+                    focused && {
+                      color: theme.colors.accent,
+                      fontWeight: "600",
+                    },
                   ]}
                 >
                   {item.label}
@@ -162,6 +175,25 @@ const setCurrentRoute = useStore((s) => s.setCurrentRoute) as (route: RouteName)
             );
           })}
         </ScrollView>
+        <TouchableOpacity
+          style={[styles.themeToggle, { borderTopColor: theme.colors.divider }]}
+          onPress={toggle}
+          activeOpacity={0.7}
+        >
+          <Feather
+            name={isDark ? "sun" : "moon"}
+            size={18}
+            color={theme.colors.textSecondary}
+          />
+          <Text
+            style={[
+              styles.themeToggleLabel,
+              { color: theme.colors.textSecondary },
+            ]}
+          >
+            {isDark ? "Light Mode" : "Dark Mode"}
+          </Text>
+        </TouchableOpacity>
       </Animated.View>
     </View>
   );
@@ -187,6 +219,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#f1f5f9",
+    marginTop: 40,
   },
   avatar: {
     width: 40,
@@ -215,5 +248,17 @@ const styles = StyleSheet.create({
   navItemLabelActive: {
     color: "#6366f1",
     fontWeight: "600",
+  },
+  themeToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+  },
+  themeToggleLabel: {
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
