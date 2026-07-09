@@ -1,0 +1,17 @@
+{
+  "id": "019f484d-a83d-72aa-a9f4-a20ea1c0fb49",
+  "name": "1. Kotlin DSL Deprecation (Highest Priority for Clean",
+  "description": "1. Kotlin DSL Deprecation (Highest Priority for Clean Build)\nWarning:\n'kotlinOptions(KotlinJvmOptionsDeprecated...)' is deprecated. Please migrate to the compilerOptions DSL.\nBest Fix:\nUpdate these files (they are in your node_modules but you can override):\nCreate or update android/build.gradle or the specific plugin files:\nKotlin// Instead of kotlinOptions { ... }\nkotlin {\n    compilerOptions {\n        jvmTarget.set(JvmTarget.JVM_17)  // or JVM_21\n        // other options\n    }\n}\nQuick command to check affected files:\nBashgrep -r \"kotlinOptions\" node_modules/expo* node_modules/react-native*\n2. Manifest Package Attribute Warnings (Security + Cleanliness)\nWarnings:\n\npackage=\"com.reactnativecommunity.asyncstorage\"\npackage=\"com.th3rdwave.safeareacontext\"\n\nBest Fix:\nThese are library-side issues. Force a clean manifest by adding this to your android/app/build.gradle:\ngradleandroid {\n    namespace 'com.anonymous.arete'  // Use your actual app package name\n    \n    defaultConfig {\n        manifestPlaceholders = [packageName: \"com.anonymous.arete\"]\n    }\n}\nThen clean and rebuild:\nBashcd android && ./gradlew clean && cd .. && npx expo run:android --variant release\n3. React Native Screens + Edge-to-Edge Deprecations (SDK 35+)\nMany warnings about status bar, navigation bar, translucent, etc.\nBest Fix:\nUpdate react-native-screens to latest version and configure edge-to-edge properly in your MainActivity.kt or AndroidManifest.xml:\nXML<!-- android/app/src/main/AndroidManifest.xml -->\n<application\n    android:enableOnBackInvokedCallback=\"true\"\n    ... >\nIn your root component, use expo-status-bar or react-native-screens latest APIs instead of deprecated props.\n4. ReactNativeHost Deprecations (Architecture Migration)\nBest Long-term Fix (Recommended for Quality & Future-proofing):\nMigrate toward New Architecture (Fabric + TurboModules).\nSteps:\n\nUpdate app.json / app.config.js:\n\nJSON{\n  \"expo\": {\n    \"newArchEnabled\": true\n  }\n}\n\nUpdate all libraries to versions that support New Architecture.\n\n5. General Best Cleanup Commands (Run in Order)\nBash# 1. Clean caches\nnpx expo clean\ncd android && ./gradlew clean\n\n# 2. Update everything\nnpx expo upgrade\nnpm install   # or yarn install\n\n# 3. Rebuild\nnpx expo run:android --variant release\nSecurity & Quality Recommendations (Non-Negotiable)\n\nTarget SDK 36 is good — keep it.\nUse minSdk 24 (already set) — acceptable.\nKeep ProGuard/R8 enabled (default in release).\nAfter building, scan the APK with:Bash./gradlew :app:lintRelease\nAlways sign with proper keystore (don't use debug keys for release).",
+  "status": "draft",
+  "worktree": {
+    "path": "/Users/shaz/Desktop/arete",
+    "branch": "main",
+    "commit": "32867babdad2ca285e794f0055ecd192c053a959"
+  },
+  "scoping": {},
+  "phases": [],
+  "decisions": [],
+  "memories": [],
+  "createdAt": "2026-07-09T19:14:36.733Z",
+  "updatedAt": "2026-07-09T19:14:36.733Z"
+}

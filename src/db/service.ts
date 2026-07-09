@@ -10,11 +10,9 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   // Migrate: add columns for existing databases
   try { await db.execAsync("ALTER TABLE timetable ADD COLUMN repeat_type TEXT DEFAULT 'weekly'"); } catch (_) {}
   try { await db.execAsync("ALTER TABLE timetable ADD COLUMN specific_date TEXT DEFAULT ''"); } catch (_) {}
-  // Migrate: dashboard_widgets - replace grid cols with sort_order
+  // Migrate: dashboard_widgets - add sort_order if not exists
   try {
     await db.execAsync("ALTER TABLE dashboard_widgets ADD COLUMN sort_order INTEGER DEFAULT 0");
-    // Copy old row_pos values into sort_order for existing rows
-    await db.execAsync("UPDATE dashboard_widgets SET sort_order = row_pos WHERE sort_order = 0");
   } catch (_) {}
   try { await db.execAsync("ALTER TABLE habits ADD COLUMN color TEXT DEFAULT '#6366f1'"); } catch (_) {}
   try { await db.execAsync("CREATE TABLE IF NOT EXISTS focus_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, duration INTEGER NOT NULL, elapsed INTEGER NOT NULL, date TEXT NOT NULL, completed_at TEXT DEFAULT (datetime('now')))"); } catch (_) {}

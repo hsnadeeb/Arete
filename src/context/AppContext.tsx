@@ -19,9 +19,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const doHydrate = async () => {
-      await initDatabase();
-      await hydrate();
-      initNotifications();
+      try {
+        await initDatabase();
+        await hydrate();
+      } catch (e) {
+        console.error('Hydration failed:', e);
+      }
+      try {
+        initNotifications();
+      } catch (e) {
+        console.warn('Notifications init failed:', e);
+      }
     };
     doHydrate();
   }, [hydrate]);

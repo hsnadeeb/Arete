@@ -340,7 +340,7 @@ export default function GreetingScreen() {
                   <Text style={[s.bubbleHead, { color: tc.textTertiary, marginTop: 8 }]}>
                     All Clear
                   </Text>
-                  <Text style={[s.bubbleSub, { color: tc.textMuted }]}>
+                  <Text style={[s.bubbleSub, { color: tc.muted }]}>
                     Nothing scheduled
                   </Text>
                 </View>

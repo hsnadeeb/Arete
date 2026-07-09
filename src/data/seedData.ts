@@ -432,7 +432,8 @@ export async function seedAllTables(): Promise<void> {
       widgetKeys[i], i, 1
     );
   }
-}
+} // end if (!existingWidget)
+} // end seedAllTables
 
 /**
  * Verify all tables have data.
