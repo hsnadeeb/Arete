@@ -248,7 +248,6 @@ export default function TrackerScreen() {
                 <BarChart
                   data={[{ label: "Mon", value: dailyLog?.weight ?? 0 }]}
                   height={64}
-                  barWidth={48}
                   showValues={false}
                   accentColor="#0b6bcf"
                 />
@@ -461,7 +460,6 @@ export default function TrackerScreen() {
                   color: "#0b6bcf",
                 }))}
                 height={120}
-                barWidth={48}
                 showValues={false}
                 accentColor="#0b6bcf"
               />
@@ -525,7 +523,6 @@ export default function TrackerScreen() {
                   color: "#0ea5e9",
                 }))}
                 height={120}
-                barWidth={48}
                 showValues={false}
                 accentColor="#0ea5e9"
               />
@@ -575,7 +572,6 @@ export default function TrackerScreen() {
                   color: "#f59e0b",
                 }))}
                 height={120}
-                barWidth={48}
                 showValues={false}
                 accentColor="#f59e0b"
               />
@@ -639,7 +635,6 @@ export default function TrackerScreen() {
                   color: "#8b5cf6",
                 }))}
                 height={120}
-                barWidth={48}
                 showValues={false}
                 accentColor="#8b5cf6"
               />
@@ -692,7 +687,6 @@ export default function TrackerScreen() {
                   color: "#f97316",
                 }))}
                 height={120}
-                barWidth={48}
                 showValues={false}
                 accentColor="#f97316"
               />

@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useMemo, useState, useCallback } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, LayoutChangeEvent } from "react-native";
 
 // ═══════════════════════════════════════════
 // 7-Day Bar Chart — plain RN, no lib
@@ -15,7 +15,7 @@ interface BarData {
 export function BarChart({
   data,
   height = 120,
-  barWidth = 28,
+  barWidth: fixedBarWidth,
   barRadius = 6,
   showLabels = true,
   showValues = true,
@@ -32,6 +32,17 @@ export function BarChart({
   emptyText?: string;
 }) {
   const max = useMemo(() => Math.max(...data.map((d) => d.value), 1), [data]);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    setContainerWidth(e.nativeEvent.layout.width);
+  }, []);
+
+  const barWidth = fixedBarWidth != null
+    ? fixedBarWidth
+    : containerWidth > 0
+      ? Math.max((containerWidth / data.length) - 8, 8)
+      : 28;
 
   if (!data || data.length === 0) {
     return (
@@ -42,7 +53,7 @@ export function BarChart({
   }
 
   return (
-    <View style={styles.barChart}>
+    <View style={styles.barChart} onLayout={onLayout}>
       <View style={[styles.barRow, { height }]}>
         {data.map((d, i) => {
           const pct = max > 0 ? (d.value / max) * 100 : 0;
