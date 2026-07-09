@@ -48,6 +48,13 @@ const PRAYER_NAMES = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 export async function seedAllTables(): Promise<void> {
   const dbInstance = await db.initDatabase();
 
+  // Check if data already exists
+  const existing = await dbInstance.getFirstAsync('SELECT id FROM daily_logs LIMIT 1');
+  if (existing) return; // already seeded
+
+  const existingWidget = await dbInstance.getFirstAsync<any>('SELECT id FROM dashboard_widgets LIMIT 1');
+  if (!existingWidget) {
+
   // ────────────────────────────────────────────
   // 1. DAILY LOGS — 30 days of analytics data
   //    Covers: weight, water, steps, mood, sleep,
@@ -419,14 +426,11 @@ export async function seedAllTables(): Promise<void> {
   // 12. DASHBOARD WIDGETS
   // ────────────────────────────────────────────
   const widgetKeys = ['at-a-glance', 'quick-stats', 'quick-log', 'mood', 'expenses', 'prayer-tracker', 'monthly-stats'];
-  const existingWidget = await dbInstance.getFirstAsync<any>('SELECT id FROM dashboard_widgets LIMIT 1');
-  if (!existingWidget) {
-    for (let i = 0; i < widgetKeys.length; i++) {
-      await dbInstance.runAsync(
-        `INSERT INTO dashboard_widgets (widget_key, sort_order, visible) VALUES (?, ?, ?)`,
-        widgetKeys[i], i, 1
-      );
-    }
+  for (let i = 0; i < widgetKeys.length; i++) {
+    await dbInstance.runAsync(
+      `INSERT INTO dashboard_widgets (widget_key, sort_order, visible) VALUES (?, ?, ?)`,
+      widgetKeys[i], i, 1
+    );
   }
 }
 

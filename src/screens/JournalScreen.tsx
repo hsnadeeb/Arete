@@ -2,212 +2,177 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useApp } from '../context/AppContext';
+import { useStore } from '../store';
+import { useTheme } from '../context/ThemeContext';
 import * as db from '../db/service';
 import { Card } from '../components/Card';
 
 type TabType = 'gym' | 'food' | 'note';
 
 export default function JournalScreen() {
-  const { setSidebarOpen } = useApp();
-  const [gymLogs, setGymLogs] = useState<any[]>([]);
-  const [nutritionLogs, setNutritionLogs] = useState<any[]>([]);
-  const [journalEntries, setJournalEntries] = useState<any[]>([]);
-  const [tab, setTab] = useState<TabType>('gym');
+  const { theme } = useTheme();
+  const setSidebarOpen = useStore((s) => s.setSidebarOpen);
+  const colors = theme.colors;
+  const [tab, setTab] = useState<TabType>('note');
+  const [gym, setGym] = useState({ name: '', exercises: '', duration: '', notes: '' });
+  const [food, setFood] = useState({ meal: 'Breakfast', foods: '', calories: '', protein: '', notes: '' });
+  const [note, setNote] = useState({ title: '', content: '', type: 'general' });
+  const [recent, setRecent] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
 
-  // Gym form state
-  const [gymName, setGymName] = useState('');
-  const [gymDuration, setGymDuration] = useState('');
-  const [gymExercises, setGymExercises] = useState('');
+  const loadRecent = useCallback(async () => {
+    const entries = await db.getAllJournalEntries();
+    setRecent(entries.slice(0, 10));
+  }, []);
 
-  // Food form state
-  const [mealType, setMealType] = useState('');
-  const [foods, setFoods] = useState('');
-  const [calories, setCalories] = useState('');
+  useEffect(() => {
+    loadRecent();
+  }, [loadRecent]);
 
-  // Note form state
-  const [noteTitle, setNoteTitle] = useState('');
-  const [noteContent, setNoteContent] = useState('');
-
-  const loadDataForTab = useCallback(async () => {
+  const handleSave = async () => {
+    setSaving(true);
     try {
+      const today = new Date().toISOString().split('T')[0];
       if (tab === 'gym') {
-        const logs = await db.getAllGymLogs();
-        setGymLogs(logs);
+        if (!gym.name) return;
+        await db.addGymLog({
+          date: today,
+          workout_name: gym.name,
+          exercises: gym.exercises,
+          duration_minutes: parseInt(gym.duration) || 0,
+          notes: gym.notes,
+        });
+        setGym({ name: '', exercises: '', duration: '', notes: '' });
       } else if (tab === 'food') {
-        const logs = await db.getAllNutritionLogs();
-        setNutritionLogs(logs);
+        if (!food.foods) return;
+        await db.addNutritionLog({
+          date: today,
+          meal_type: food.meal,
+          foods: food.foods,
+          calories: parseInt(food.calories) || 0,
+          protein_g: parseFloat(food.protein) || 0,
+          carbs_g: 0,
+          fat_g: 0,
+          notes: food.notes,
+        });
+        setFood({ meal: 'Breakfast', foods: '', calories: '', protein: '', notes: '' });
       } else {
-        const entries = await db.getAllJournalEntries();
-        setJournalEntries(entries);
+        if (!note.content) return;
+        await db.addJournalEntry({
+          date: today,
+          title: note.title,
+          content: note.content,
+          type: note.type,
+        });
+        setNote({ title: '', content: '', type: 'general' });
       }
-    } catch (e) {
-      console.warn('Failed to load tab data:', e);
+      await loadRecent();
+    } finally {
+      setSaving(false);
     }
-  }, [tab]);
-
-  useEffect(() => { loadDataForTab(); }, [loadDataForTab]);
-
-  const addGym = async () => {
-    if (!gymName) return;
-    await db.addGymLog({
-      date: new Date().toISOString().split('T')[0],
-      workout_name: gymName,
-      exercises: gymExercises,
-      duration_minutes: parseInt(gymDuration) || 0,
-    });
-    setGymName(''); setGymDuration(''); setGymExercises('');
-    loadDataForTab();
-  };
-
-  const addFood = async () => {
-    if (!foods) return;
-    await db.addNutritionLog({
-      date: new Date().toISOString().split('T')[0],
-      meal_type: mealType || 'Snack',
-      foods,
-      calories: parseInt(calories) || 0,
-      protein_g: 0,
-      carbs_g: 0,
-      fat_g: 0,
-    });
-    setFoods(''); setCalories(''); setMealType('');
-    loadDataForTab();
-  };
-
-  const addNote = async () => {
-    if (!noteContent) return;
-    await db.addJournalEntry({
-      date: new Date().toISOString().split('T')[0],
-      title: noteTitle,
-      content: noteContent,
-      type: 'general',
-    });
-    setNoteTitle(''); setNoteContent('');
-    loadDataForTab();
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.topbar}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.menuBtn}>
-              <Feather name="menu" size={18} color="#9b9a97" />
+          <Feather name="menu" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.topTitle}>Journal</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Journal</Text>
       </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12, gap: 12, paddingBottom: 60 }}>
+        <View style={[styles.tabRow, { gap: 6 }]}>
+          {[
+            { key: 'note' as const, label: 'Note', icon: '✏️' },
+            { key: 'gym' as const, label: 'Gym', icon: '🏋️' },
+            { key: 'food' as const, label: 'Food', icon: '🍽️' },
+          ].map((t) => (
+            <TouchableOpacity
+              key={t.key}
+              style={[
+                styles.pill,
+                { backgroundColor: colors.bgSecondary, borderColor: colors.border },
+                tab === t.key && { backgroundColor: colors.accentBg, borderColor: colors.accent },
+              ]}
+              onPress={() => setTab(t.key)}
+            >
+              <Text>{t.icon}</Text>
+              <Text style={{ color: tab === t.key ? colors.accent : colors.text, fontWeight: tab === t.key ? '600' : '500' }}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        {(['gym', 'food', 'note'] as TabType[]).map(t => (
-          <TouchableOpacity key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
-            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-              {t === 'gym' ? '🏋️ Gym' : t === 'food' ? '🥗 Food' : '📝 Notes'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        {tab === 'note' && (
+          <Card title="New Entry" style={{ backgroundColor: colors.surface }}>
+            <TextInput style={[styles.inp, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]} placeholder="Title (optional)" placeholderTextColor={colors.placeholder} value={note.title} onChangeText={(v) => setNote({ ...note, title: v })} />
+            <TextInput style={[styles.inp, styles.textarea, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]} placeholder="What's on your mind?" placeholderTextColor={colors.placeholder} multiline value={note.content} onChangeText={(v) => setNote({ ...note, content: v })} />
+            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.accent }, saving && { opacity: 0.5 }]} onPress={handleSave} disabled={saving}>
+              <Text style={{ color: '#fff', fontWeight: '600' }}>{saving ? 'Saving...' : 'Save Entry'}</Text>
+            </TouchableOpacity>
+          </Card>
+        )}
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {tab === 'gym' && (
-          <>
-            <Card title="Log Workout">
-              <TextInput style={styles.input} value={gymName} onChangeText={setGymName} placeholder="Workout name (e.g. Push A)" placeholderTextColor="#ccc" />
-              <View style={styles.row}>
-                <TextInput style={[styles.input, { flex: 1 }]} value={gymDuration} onChangeText={setGymDuration} keyboardType="numeric" placeholder="Duration (min)" placeholderTextColor="#ccc" />
-              </View>
-              <TextInput style={[styles.input, styles.multiline]} value={gymExercises} onChangeText={setGymExercises} multiline placeholder="Exercises (one per line)" placeholderTextColor="#ccc" />
-              <TouchableOpacity style={styles.addBtn} onPress={addGym}><Text style={styles.addBtnText}>Save Workout</Text></TouchableOpacity>
-            </Card>
-            {gymLogs.map((log, i) => (
-              <Card key={log.id || i} title={log.workout_name}>
-                <Text style={styles.logMeta}>{log.duration_minutes} min</Text>
-                {log.exercises ? <Text style={styles.logContent}>{log.exercises}</Text> : null}
-              </Card>
-            ))}
-          </>
+          <Card title="Log Workout" style={{ backgroundColor: colors.surface }}>
+            <TextInput style={[styles.inp, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]} placeholder="Workout name (e.g. Push A)" placeholderTextColor={colors.placeholder} value={gym.name} onChangeText={(v) => setGym({ ...gym, name: v })} />
+            <TextInput style={[styles.inp, styles.textarea, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]} placeholder="Exercises" placeholderTextColor={colors.placeholder} multiline value={gym.exercises} onChangeText={(v) => setGym({ ...gym, exercises: v })} />
+            <TextInput style={[styles.inp, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]} placeholder="Duration (min)" placeholderTextColor={colors.placeholder} keyboardType="numeric" value={gym.duration} onChangeText={(v) => setGym({ ...gym, duration: v })} />
+            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.accent }, saving && { opacity: 0.5 }]} onPress={handleSave} disabled={saving}>
+              <Text style={{ color: '#fff', fontWeight: '600' }}>{saving ? 'Saving...' : 'Save Workout'}</Text>
+            </TouchableOpacity>
+          </Card>
         )}
 
         {tab === 'food' && (
-          <>
-            <Card title="Log Meal">
-              <View style={styles.mealRow}>
-                {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map(m => (
-                  <TouchableOpacity key={m} style={[styles.mealBtn, mealType === m && styles.mealActive]} onPress={() => setMealType(m)}>
-                    <Text style={[styles.mealText, mealType === m && styles.mealTextActive]}>{m}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <TextInput style={[styles.input, styles.multiline]} value={foods} onChangeText={setFoods} multiline placeholder="What did you eat?" placeholderTextColor="#ccc" />
-              <TextInput style={styles.input} value={calories} onChangeText={setCalories} keyboardType="numeric" placeholder="Calories (optional)" placeholderTextColor="#ccc" />
-              <TouchableOpacity style={styles.addBtn} onPress={addFood}><Text style={styles.addBtnText}>Save Meal</Text></TouchableOpacity>
-            </Card>
-            {nutritionLogs.map((log, i) => (
-              <Card key={log.id || i} title={log.meal_type}>
-                <Text style={styles.logContent}>{log.foods}</Text>
-                {log.calories > 0 ? <Text style={styles.logMeta}>{log.calories} kcal</Text> : null}
-              </Card>
-            ))}
-          </>
+          <Card title="Log Meal" style={{ backgroundColor: colors.surface }}>
+            <View style={[styles.row, { gap: 6 }]}>
+              {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  style={[styles.pill, { backgroundColor: colors.bgSecondary, borderColor: colors.border }, food.meal === m && { backgroundColor: colors.successBg, borderColor: colors.success }]}
+                  onPress={() => setFood({ ...food, meal: m })}
+                >
+                  <Text style={{ fontSize: 12, color: food.meal === m ? colors.success : colors.text }}>{m}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput style={[styles.inp, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]} placeholder="Foods" placeholderTextColor={colors.placeholder} value={food.foods} onChangeText={(v) => setFood({ ...food, foods: v })} />
+            <View style={[styles.row, { gap: 6 }]}>
+              <TextInput style={[styles.inp, { flex: 1, backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]} placeholder="Calories" placeholderTextColor={colors.placeholder} keyboardType="numeric" value={food.calories} onChangeText={(v) => setFood({ ...food, calories: v })} />
+              <TextInput style={[styles.inp, { flex: 1, backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]} placeholder="Protein (g)" placeholderTextColor={colors.placeholder} keyboardType="numeric" value={food.protein} onChangeText={(v) => setFood({ ...food, protein: v })} />
+            </View>
+            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.accent }, saving && { opacity: 0.5 }]} onPress={handleSave} disabled={saving}>
+              <Text style={{ color: '#fff', fontWeight: '600' }}>{saving ? 'Saving...' : 'Save Meal'}</Text>
+            </TouchableOpacity>
+          </Card>
         )}
 
-        {tab === 'note' && (
-          <>
-            <Card title="Quick Note">
-              <TextInput style={styles.input} value={noteTitle} onChangeText={setNoteTitle} placeholder="Title (optional)" placeholderTextColor="#ccc" />
-              <TextInput style={[styles.input, styles.multiline, { minHeight: 100 }]} value={noteContent} onChangeText={setNoteContent} multiline placeholder="Write your thoughts..." placeholderTextColor="#ccc" />
-              <TouchableOpacity style={styles.addBtn} onPress={addNote}><Text style={styles.addBtnText}>Save Note</Text></TouchableOpacity>
-            </Card>
-            {journalEntries.map((n, i) => (
-              <Card key={n.id || i} title={n.title || 'Note'}>
-                <Text style={styles.logContent}>{n.content}</Text>
-              </Card>
-            ))}
-          </>
-        )}
+        <Card title="Recent" style={{ backgroundColor: colors.surface }}>
+          {recent.length === 0 ? (
+            <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', padding: 12 }}>No entries yet</Text>
+          ) : (
+            recent.map((e) => (
+              <View key={e.id} style={[styles.recentRow, { borderBottomColor: colors.divider }]}>
+                <Text style={{ color: colors.textTertiary, fontSize: 12 }}>{e.date}</Text>
+                <Text style={{ color: colors.text, fontWeight: '600' }}>{e.title || e.workout_name || e.foods || 'Untitled'}</Text>
+              </View>
+            ))
+          )}
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fafafa' },
-  topbar: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 48,
-    backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#efefef',
-  },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 48, borderBottomWidth: 1 },
   menuBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  menuIcon: { fontSize: 18, color: '#9b9a97' },
-  topTitle: { fontSize: 16, fontWeight: '600', color: '#37352f', marginLeft: 4 },
-  tabs: {
-    flexDirection: 'row', backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#efefef',
-    paddingHorizontal: 16,
-  },
-  tab: { paddingVertical: 12, paddingHorizontal: 16, marginRight: 4 },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: '#0b6bcf' },
-  tabText: { fontSize: 14, color: '#9b9a97', fontWeight: '500' },
-  tabTextActive: { color: '#0b6bcf', fontWeight: '600' },
-  scroll: { flex: 1 },
-  content: { padding: 16, paddingBottom: 48 },
-  input: {
-    borderWidth: 1, borderColor: '#efefef', borderRadius: 8, paddingHorizontal: 12,
-    paddingVertical: 10, fontSize: 14, color: '#37352f', backgroundColor: '#fafafa',
-    marginBottom: 8,
-  },
-  multiline: { minHeight: 60, textAlignVertical: 'top' },
-  row: { flexDirection: 'row', gap: 8 },
-  addBtn: {
-    backgroundColor: '#0b6bcf', paddingVertical: 12, borderRadius: 8,
-    alignItems: 'center', marginTop: 4,
-  },
-  addBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  logMeta: { fontSize: 12, color: '#9b9a97', marginTop: 4 },
-  logContent: { fontSize: 14, color: '#37352f', lineHeight: 20 },
-  mealRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  mealBtn: {
-    paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16,
-    backgroundColor: '#f7f6f3', borderWidth: 1, borderColor: '#efefef',
-  },
-  mealActive: { backgroundColor: '#e0f2fe', borderColor: '#0b6bcf' },
-  mealText: { fontSize: 12, color: '#9b9a97', fontWeight: '500' },
-  mealTextActive: { color: '#0b6bcf', fontWeight: '600' },
+  title: { fontSize: 16, fontWeight: '600', marginLeft: 4 },
+  tabRow: { flexDirection: 'row' },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+  inp: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 8 },
+  textarea: { minHeight: 80, textAlignVertical: 'top' },
+  saveBtn: { padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 4 },
+  row: { flexDirection: 'row' },
+  recentRow: { paddingVertical: 8, borderBottomWidth: 1 },
 });

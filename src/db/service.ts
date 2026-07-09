@@ -430,6 +430,40 @@ export async function getHabitLogs() {
   return await getDb().getAllAsync<any>('SELECT * FROM habit_logs ORDER BY date DESC');
 }
 
+export async function getHabitStreak(habitId: number): Promise<number> {
+  const rows = await getDb().getAllAsync<any>(
+    'SELECT DISTINCT date FROM habit_logs WHERE habit_id = ? ORDER BY date DESC',
+    habitId
+  );
+  if (rows.length === 0) return 0;
+  let streak = 0;
+  const todayStr = new Date().toISOString().split('T')[0];
+  for (let i = 0; i < rows.length; i++) {
+    const expected = new Date();
+    expected.setDate(expected.getDate() - i);
+    const expectedStr = expected.toISOString().split('T')[0];
+    if (rows[i].date === expectedStr) streak++;
+    else break;
+  }
+  return streak;
+}
+
+export async function getHabitAnalytics(
+  habitId: number,
+  days: number = 7
+): Promise<{ date: string; count: number }[]> {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - days);
+  const rows = await getDb().getAllAsync<any>(
+    'SELECT date, count FROM habit_logs WHERE habit_id = ? AND date >= ? AND date <= ? ORDER BY date',
+    habitId,
+    start.toISOString().split('T')[0],
+    end.toISOString().split('T')[0]
+  );
+  return rows;
+}
+
 // Delete helpers
 export async function deleteDailyLogById(id: number) {
   await getDb().runAsync('DELETE FROM daily_logs WHERE id = ?', id);
