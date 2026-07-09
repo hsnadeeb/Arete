@@ -325,7 +325,7 @@ export async function seedWidgetLayouts() {
 
   const defaults = [
     'at-a-glance', 'quick-stats', 'quick-log', 'mood',
-    'expenses', 'prayer-tracker', 'monthly-stats',
+    'expenses', 'monthly-stats',
   ];
 
   for (let i = 0; i < defaults.length; i++) {
@@ -494,6 +494,116 @@ export async function deleteHabitLogById(id: number) {
 }
 export async function deleteBudgetCategoryById(id: number) {
   await getDb().runAsync('DELETE FROM budget_categories WHERE id = ?', id);
+}
+
+// ─── AI Providers ───
+
+export async function getAiProviders() {
+  return await getDb().getAllAsync<any>(
+    'SELECT * FROM ai_providers ORDER BY provider'
+  );
+}
+
+export async function getActiveAiProvider() {
+  return await getDb().getFirstAsync<any>(
+    'SELECT * FROM ai_providers WHERE is_active = 1'
+  );
+}
+
+export async function upsertAiProvider(p: { provider: string; model: string; api_key: string; is_active?: number }) {
+  const existing = await getDb().getFirstAsync<any>(
+    'SELECT id FROM ai_providers WHERE provider = ?', p.provider
+  );
+  if (existing) {
+    await getDb().runAsync(
+      'UPDATE ai_providers SET model = ?, api_key = ?, is_active = ? WHERE id = ?',
+      p.model, p.api_key, p.is_active || 0, existing.id
+    );
+  } else {
+    await getDb().runAsync(
+      'INSERT INTO ai_providers (provider, model, api_key, is_active) VALUES (?, ?, ?, ?)',
+      p.provider, p.model, p.api_key, p.is_active || 0
+    );
+  }
+}
+
+export async function setActiveAiProvider(provider: string) {
+  await getDb().runAsync('UPDATE ai_providers SET is_active = 0');
+  await getDb().runAsync(
+    'UPDATE ai_providers SET is_active = 1 WHERE provider = ?', provider
+  );
+}
+
+export async function deleteAiProvider(provider: string) {
+  await getDb().runAsync('DELETE FROM ai_providers WHERE provider = ?', provider);
+}
+
+// ─── AI Programs ───
+
+export async function getActiveAiProgram(type: string) {
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  const ws = weekStart.toISOString().split('T')[0];
+  const we = weekEnd.toISOString().split('T')[0];
+  return await getDb().getFirstAsync<any>(
+    'SELECT * FROM ai_programs WHERE type = ? AND week_start = ? AND week_end = ? AND is_active = 1',
+    type, ws, we
+  );
+}
+
+export async function getAiProgramWithItems(programId: number) {
+  const program = await getDb().getFirstAsync<any>(
+    'SELECT * FROM ai_programs WHERE id = ?', programId
+  );
+  if (!program) return null;
+  const items = await getDb().getAllAsync<any>(
+    'SELECT * FROM ai_program_items WHERE program_id = ? ORDER BY day_index, sort_order',
+    programId
+  );
+  return { ...program, items };
+}
+
+export async function saveAiProgram(program: {
+  type: string; title: string; week_start: string; week_end: string;
+  context_snapshot?: string; raw_response?: string;
+  items: { day_index: number; day_label: string; title: string; description?: string; sort_order?: number }[];
+}) {
+  // Deactivate any existing active program of this type for this week
+  await getDb().runAsync(
+    'UPDATE ai_programs SET is_active = 0 WHERE type = ? AND week_start = ?',
+    program.type, program.week_start
+  );
+
+  const result = await getDb().runAsync(
+    'INSERT INTO ai_programs (type, title, week_start, week_end, context_snapshot, raw_response) VALUES (?, ?, ?, ?, ?, ?)',
+    program.type, program.title, program.week_start, program.week_end,
+    program.context_snapshot || '', program.raw_response || ''
+  );
+  const programId = result.lastInsertRowId;
+
+  for (const item of program.items) {
+    await getDb().runAsync(
+      'INSERT INTO ai_program_items (program_id, day_index, day_label, title, description, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+      programId, item.day_index, item.day_label, item.title, item.description || '', item.sort_order || 0
+    );
+  }
+  return programId;
+}
+
+export async function toggleAiProgramItem(itemId: number, isCompleted: number) {
+  await getDb().runAsync(
+    'UPDATE ai_program_items SET is_completed = ? WHERE id = ?',
+    isCompleted, itemId
+  );
+}
+
+export async function getAllAiPrograms() {
+  return await getDb().getAllAsync<any>(
+    'SELECT * FROM ai_programs ORDER BY created_at DESC'
+  );
 }
 
 // ─── Seed Data ───

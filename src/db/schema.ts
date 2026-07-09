@@ -1,4 +1,38 @@
 export const SCHEMA = `
+CREATE TABLE IF NOT EXISTS ai_providers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  provider TEXT UNIQUE NOT NULL,
+  model TEXT NOT NULL DEFAULT 'gpt-4o',
+  api_key TEXT NOT NULL DEFAULT '',
+  is_active INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS ai_programs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  week_start TEXT NOT NULL,
+  week_end TEXT NOT NULL,
+  context_snapshot TEXT,
+  raw_response TEXT,
+  is_active INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS ai_program_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  program_id INTEGER NOT NULL,
+  day_index INTEGER NOT NULL,
+  day_label TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  is_completed INTEGER DEFAULT 0,
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (program_id) REFERENCES ai_programs(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS daily_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   date TEXT UNIQUE NOT NULL,

@@ -5,21 +5,13 @@ interface CardProps {
   title?: string;
   children: React.ReactNode;
   style?: ViewStyle;
-  accentColor?: string;
+  titleStyle?: any;
 }
 
-export function Card({ title, children, style, accentColor }: CardProps) {
+export function Card({ title, children, style, titleStyle }: CardProps) {
   return (
-    <View
-      style={[
-        styles.card,
-        accentColor
-          ? { borderLeftWidth: 3, borderLeftColor: accentColor }
-          : undefined,
-        style,
-      ]}
-    >
-      {title ? <Text style={styles.title}>{title}</Text> : null}
+    <View style={[styles.card, style]}>
+      {title ? <Text style={[styles.title, titleStyle]}>{title}</Text> : null}
       {children}
     </View>
   );

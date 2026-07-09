@@ -257,12 +257,6 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     accentColor: "#059669",
   },
   {
-    key: "prayer-tracker",
-    title: "Prayer Tracker",
-    icon: "book-open",
-    accentColor: "#f59e0b",
-  },
-  {
     key: "monthly-stats",
     title: "Monthly Stats",
     icon: "trending-up",

@@ -75,3 +75,36 @@ export interface MonthlyStatsRow {
   avg_sleep: number | null;
   days_tracked: number;
 }
+
+export interface AiProviderRow {
+  id: number;
+  provider: string;
+  model: string;
+  api_key: string;
+  is_active: number;
+  created_at?: string;
+}
+
+export interface AiProgramRow {
+  id: number;
+  type: string;
+  title: string;
+  week_start: string;
+  week_end: string;
+  context_snapshot: string | null;
+  raw_response: string | null;
+  is_active: number;
+  created_at?: string;
+}
+
+export interface AiProgramItemRow {
+  id: number;
+  program_id: number;
+  day_index: number;
+  day_label: string;
+  title: string;
+  description: string | null;
+  is_completed: number;
+  sort_order: number;
+  created_at?: string;
+}

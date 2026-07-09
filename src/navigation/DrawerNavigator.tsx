@@ -20,6 +20,7 @@ import PlannerScreen from "../screens/PlannerScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import WidgetEditor from "../screens/WidgetEditor";
+import AISettingsScreen from "../screens/AISettingsScreen";
 
 type RouteName =
   | "Dashboard"
@@ -29,7 +30,8 @@ type RouteName =
   | "Planner"
   | "Settings"
   | "Profile"
-  | "Widgets";
+  | "Widgets"
+  | "AISettings";
 
 const SCREENS: { name: RouteName; component: React.FC }[] = [
   { name: "Dashboard", component: DashboardScreen },
@@ -40,6 +42,7 @@ const SCREENS: { name: RouteName; component: React.FC }[] = [
   { name: "Settings", component: SettingsScreen },
   { name: "Profile", component: ProfileScreen },
   { name: "Widgets", component: WidgetEditor },
+  { name: "AISettings", component: AISettingsScreen },
 ];
 
 const NAV_ITEMS: { name: RouteName; label: string; icon: string }[] = [
@@ -49,6 +52,7 @@ const NAV_ITEMS: { name: RouteName; label: string; icon: string }[] = [
   { name: "Budget", label: "Budget", icon: "dollar-sign" },
   { name: "Planner", label: "Schedule", icon: "calendar" },
   { name: "Settings", label: "Settings", icon: "settings" },
+  { name: "AISettings", label: "AI Settings", icon: "cpu" },
   { name: "Widgets", label: "Widgets", icon: "grid" },
 ];
 

@@ -14,26 +14,26 @@ export class PrayerRepository {
     );
   }
 
-  async toggle(date: string, name: string, onTime: boolean): Promise<void> {
+  async toggle(date: string, name: string): Promise<void> {
     const existing = await this.db.getFirstAsync<PrayerLogRow>(
       `SELECT * FROM ${TABLE} WHERE date = ? AND prayer_name = ?`,
       date,
       name
     );
     if (existing) {
-      await this.db.runAsync(
-        `UPDATE ${TABLE} SET on_time = ?, qada = ? WHERE id = ?`,
-        onTime ? 1 : 0,
-        onTime ? 0 : 1,
-        existing.id
-      );
+      if (existing.on_time === 1) {
+        await this.db.runAsync(`DELETE FROM ${TABLE} WHERE id = ?`, existing.id);
+      } else {
+        await this.db.runAsync(
+          `UPDATE ${TABLE} SET on_time = 1, qada = 0 WHERE id = ?`,
+          existing.id
+        );
+      }
     } else {
       await this.db.runAsync(
-        `INSERT INTO ${TABLE} (date, prayer_name, on_time, qada) VALUES (?, ?, ?, ?)`,
+        `INSERT INTO ${TABLE} (date, prayer_name, on_time, qada) VALUES (?, ?, 1, 0)`,
         date,
-        name,
-        onTime ? 1 : 0,
-        onTime ? 0 : 1
+        name
       );
     }
   }

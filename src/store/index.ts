@@ -130,10 +130,10 @@ export const useStore = create<AppStore>()((set, get) => ({
   // ── Prayer ──
   prayers: [],
   setPrayers: (p) => set({ prayers: p }),
-  togglePrayer: async (name, onTime) => {
+  togglePrayer: async (name) => {
     const repo = getPrayerRepo();
     const today = new Date().toISOString().split('T')[0];
-    await repo.toggle(today, name, onTime);
+    await repo.toggle(today, name);
     const prayers = await repo.getByDate(today);
     set({ prayers });
   },
