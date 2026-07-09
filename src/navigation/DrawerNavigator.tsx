@@ -22,7 +22,12 @@ import ProfileScreen from "../screens/ProfileScreen";
 import WidgetEditor from "../screens/WidgetEditor";
 import AISettingsScreen from "../screens/AISettingsScreen";
 
+import GreetingScreen from "../screens/GreetingScreen";
+import FocusScreen from "../screens/FocusScreen";
+
 type RouteName =
+  | "Greeting"
+  | "Focus"
   | "Dashboard"
   | "Trackers"
   | "Journal"
@@ -34,6 +39,8 @@ type RouteName =
   | "AISettings";
 
 const SCREENS: { name: RouteName; component: React.FC }[] = [
+  { name: "Greeting", component: GreetingScreen },
+  { name: "Focus", component: FocusScreen },
   { name: "Dashboard", component: DashboardScreen },
   { name: "Trackers", component: TrackerScreen },
   { name: "Journal", component: JournalScreen },
@@ -46,7 +53,8 @@ const SCREENS: { name: RouteName; component: React.FC }[] = [
 ];
 
 const NAV_ITEMS: { name: RouteName; label: string; icon: string }[] = [
-  { name: "Dashboard", label: "Dashboard", icon: "home" },
+  { name: "Greeting", label: "Home", icon: "home" },
+  { name: "Dashboard", label: "Dashboard", icon: "grid" },
   { name: "Trackers", label: "Trackers", icon: "bar-chart-2" },
   { name: "Journal", label: "Journal", icon: "file-text" },
   { name: "Budget", label: "Budget", icon: "dollar-sign" },

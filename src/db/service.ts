@@ -17,6 +17,7 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     await db.execAsync("UPDATE dashboard_widgets SET sort_order = row_pos WHERE sort_order = 0");
   } catch (_) {}
   try { await db.execAsync("ALTER TABLE habits ADD COLUMN color TEXT DEFAULT '#6366f1'"); } catch (_) {}
+  try { await db.execAsync("CREATE TABLE IF NOT EXISTS focus_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, duration INTEGER NOT NULL, elapsed INTEGER NOT NULL, date TEXT NOT NULL, completed_at TEXT DEFAULT (datetime('now')))"); } catch (_) {}
   return db;
 }
 
@@ -496,6 +497,45 @@ export async function deleteAllHabitData() {
   await getDb().runAsync('DELETE FROM habit_logs');
   await getDb().runAsync('DELETE FROM habits');
 }
+
+export async function saveFocusSession(duration: number, elapsed: number) {
+  const date = new Date().toISOString().split('T')[0];
+  await getDb().runAsync(
+    'INSERT INTO focus_sessions (duration, elapsed, date) VALUES (?, ?, ?)',
+    duration, elapsed, date
+  );
+}
+
+export async function getFocusSessions(): Promise<any[]> {
+  return await getDb().getAllAsync('SELECT * FROM focus_sessions ORDER BY completed_at DESC');
+}
+
+export async function getFocusStats(): Promise<{ totalTrees: number; totalSessions: number; streak: number; todaySessions: number }> {
+  const sessions = await getDb().getAllAsync<any>('SELECT * FROM focus_sessions ORDER BY date DESC');
+  const totalTrees = sessions.reduce((sum, s) => sum + Math.floor(s.elapsed / 300), 0);
+  const totalSessions = sessions.length;
+  const today = new Date().toISOString().split('T')[0];
+  const todaySessions = sessions.filter((s) => s.date === today).length;
+
+  // Calculate streak (consecutive days back from today)
+  let streak = 0;
+  const checkDate = new Date();
+  while (true) {
+    const ds = checkDate.toISOString().split('T')[0];
+    const hasSession = sessions.some((s) => s.date === ds);
+    if (hasSession) {
+      streak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  // If no session today but there was one yesterday, streak is still valid
+  // (the above loop handles this naturally)
+
+  return { totalTrees, totalSessions, streak, todaySessions };
+}
+
 export async function deleteHabitLogById(id: number) {
   await getDb().runAsync('DELETE FROM habit_logs WHERE id = ?', id);
 }

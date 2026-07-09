@@ -18,8 +18,7 @@ const DEFAULT_NOTIFICATIONS: ScheduledNotification[] = [
     type: "prayer",
     title: "🕌 Fajr Time",
     body: "It's time for Fajr prayer. Rise and shine!",
-    hour: 5,
-    minute: 0,
+    hour: 5, minute: 0,
     days: [0, 1, 2, 3, 4, 5, 6],
     enabled: true,
   },
@@ -28,18 +27,16 @@ const DEFAULT_NOTIFICATIONS: ScheduledNotification[] = [
     type: "prayer",
     title: "🕌 Dhuhr Time",
     body: "Time for Dhuhr prayer. Take a break.",
-    hour: 12,
-    minute: 30,
+    hour: 12, minute: 30,
     days: [0, 1, 2, 3, 4, 5, 6],
     enabled: true,
   },
   {
-    id: "asha",
+    id: "asr",
     type: "prayer",
     title: "🕌 Asr Time",
     body: "Asr prayer time. Stay on track!",
-    hour: 15,
-    minute: 30,
+    hour: 15, minute: 30,
     days: [0, 1, 2, 3, 4, 5, 6],
     enabled: true,
   },
@@ -48,8 +45,7 @@ const DEFAULT_NOTIFICATIONS: ScheduledNotification[] = [
     type: "prayer",
     title: "🕌 Maghrib Time",
     body: "Maghrib prayer. Sunset reminder.",
-    hour: 18,
-    minute: 15,
+    hour: 18, minute: 15,
     days: [0, 1, 2, 3, 4, 5, 6],
     enabled: true,
   },
@@ -58,8 +54,7 @@ const DEFAULT_NOTIFICATIONS: ScheduledNotification[] = [
     type: "prayer",
     title: "🕌 Isha Time",
     body: "Isha prayer. End the day with devotion.",
-    hour: 19,
-    minute: 45,
+    hour: 19, minute: 45,
     days: [0, 1, 2, 3, 4, 5, 6],
     enabled: true,
   },
@@ -68,8 +63,7 @@ const DEFAULT_NOTIFICATIONS: ScheduledNotification[] = [
     type: "habit",
     title: "✅ Habit Check",
     body: "Have you logged your habits today? Don't break the streak!",
-    hour: 20,
-    minute: 0,
+    hour: 20, minute: 0,
     days: [0, 1, 2, 3, 4, 5, 6],
     enabled: true,
   },
@@ -78,8 +72,7 @@ const DEFAULT_NOTIFICATIONS: ScheduledNotification[] = [
     type: "daily",
     title: "📝 Daily Reflection",
     body: "Take 5 minutes to journal your thoughts and review your day.",
-    hour: 21,
-    minute: 0,
+    hour: 21, minute: 0,
     days: [0, 1, 2, 3, 4, 5, 6],
     enabled: true,
   },
@@ -108,25 +101,29 @@ Notifications.setNotificationHandler({
 
 export async function scheduleNotification(
   notif: ScheduledNotification
-): Promise<string | undefined> {
-  const identifier = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: notif.title,
-      body: notif.body,
-      sound: true,
-      priority: Notifications.AndroidNotificationPriority.HIGH,
-      data: { type: notif.type, id: notif.id },
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-      hour: notif.hour,
-      minute: notif.minute,
-      weekday: notif.days?.length
-        ? notif.days[0] + 1
-        : 1,
-    },
-  });
-  return identifier;
+): Promise<void> {
+  const days = notif.days ?? [0, 1, 2, 3, 4, 5, 6];
+  for (const d of days) {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: notif.title,
+          body: notif.body,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+          data: { type: notif.type, id: notif.id },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          hour: notif.hour,
+          minute: notif.minute,
+          weekday: d + 1, // expo uses 1=Sun..7=Sat
+        },
+      });
+    } catch (e) {
+      console.warn("Failed to schedule:", notif.id, "day", d, e);
+    }
+  }
 }
 
 export async function cancelNotification(id: string) {
@@ -155,27 +152,67 @@ export async function saveSchedule(
   );
 }
 
-// ─── Initialize on startup ───
+// ─── Apply schedule (cancel all + reschedule enabled) ───
 
-export async function initNotifications(): Promise<void> {
+export async function applySchedule(
+  notifs?: ScheduledNotification[]
+): Promise<void> {
   const granted = await requestNotificationPermissions();
   if (!granted) return;
 
-  const saved = await getAllScheduled();
-  const enabled = saved.filter((n) => n.enabled);
+  await cancelAllNotifications();
+
+  const list = notifs ?? (await getAllScheduled());
+  const enabled = list.filter((n) => n.enabled);
   for (const n of enabled) {
-    try {
-      await scheduleNotification(n);
-    } catch (e) {
-      console.warn("Failed to schedule:", n.id, e);
-    }
+    await scheduleNotification(n);
   }
 }
 
-export function getNotificationSettings() {
-  return {
-    prayer: DEFAULT_NOTIFICATIONS.filter((n) => n.type === "prayer"),
-    habit: DEFAULT_NOTIFICATIONS.filter((n) => n.type === "habit"),
-    daily: DEFAULT_NOTIFICATIONS.filter((n) => n.type === "daily"),
-  };
+// ─── Initialize on startup ───
+
+export async function initNotifications(): Promise<void> {
+  const saved = await getAllScheduled();
+  await applySchedule(saved);
+}
+
+// ─── Group helpers for UI ───
+
+export interface NotifGroup {
+  type: "prayer" | "habit" | "daily";
+  label: string;
+  icon: string;
+  notifications: ScheduledNotification[];
+  enabled: boolean;
+}
+
+export function getNotificationGroups(
+  notifs: ScheduledNotification[]
+): NotifGroup[] {
+  const prayer = notifs.filter((n) => n.type === "prayer");
+  const habit = notifs.filter((n) => n.type === "habit");
+  const daily = notifs.filter((n) => n.type === "daily");
+  return [
+    {
+      type: "prayer",
+      label: "Prayer Times",
+      icon: "🕌",
+      notifications: prayer,
+      enabled: prayer.some((n) => n.enabled),
+    },
+    {
+      type: "habit",
+      label: "Habit Reminders",
+      icon: "✅",
+      notifications: habit,
+      enabled: habit.some((n) => n.enabled),
+    },
+    {
+      type: "daily",
+      label: "Daily Reflection",
+      icon: "📝",
+      notifications: daily,
+      enabled: daily.some((n) => n.enabled),
+    },
+  ];
 }

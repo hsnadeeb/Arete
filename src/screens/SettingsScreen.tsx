@@ -19,27 +19,54 @@ import { exportToFile, shareBackup } from "../services/exportImport";
 import {
   getAllScheduled,
   saveSchedule,
-  requestNotificationPermissions,
+  applySchedule,
+  getNotificationGroups,
+  type ScheduledNotification,
+  type NotifGroup,
 } from "../services/notifications";
 
 export default function SettingsScreen() {
   const { theme, isDark, toggle: toggleTheme } = useTheme();
   const setSidebarOpen = useStore((s) => s.setSidebarOpen);
+  const setCurrentRoute = useStore((s) => s.setCurrentRoute);
   const streak = useStore((s) => s.streak);
   const monthlyStats = useStore((s) => s.monthlyStats);
 
   const [exporting, setExporting] = useState(false);
-  const [notifEnabled, setNotifEnabled] = useState(true);
-  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifications, setNotifications] = useState<ScheduledNotification[]>(
+    [],
+  );
+  const [loading, setLoading] = useState(true);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const colors = theme.colors;
 
   useEffect(() => {
     getAllScheduled().then((n) => {
-      const prayer = n.filter((x) => x.type === "prayer");
-      setNotifEnabled(prayer.some((p) => p.enabled));
+      setNotifications(n);
+      setLoading(false);
     });
   }, []);
+
+  const handleGroupToggle = async (group: NotifGroup, val: boolean) => {
+    const updated = notifications.map((n) =>
+      n.type === group.type ? { ...n, enabled: val } : n,
+    );
+    setNotifications(updated);
+    await saveSchedule(updated);
+    await applySchedule(updated);
+  };
+
+  const handleNotifToggle = async (id: string, val: boolean) => {
+    const updated = notifications.map((n) =>
+      n.id === id ? { ...n, enabled: val } : n,
+    );
+    setNotifications(updated);
+    await saveSchedule(updated);
+    await applySchedule(updated);
+  };
+
+  const groups = getNotificationGroups(notifications);
 
   const handleExport = async () => {
     setExporting(true);
@@ -61,24 +88,6 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleNotifToggle = async (val: boolean) => {
-    setNotifLoading(true);
-    setNotifEnabled(val);
-    const saved = await getAllScheduled();
-    const updated = saved.map((n) => ({ ...n, enabled: val }));
-    await saveSchedule(updated);
-    if (val) {
-      await requestNotificationPermissions();
-      Alert.alert(
-        "Notifications enabled",
-        "Prayer and habit reminders will appear.",
-      );
-    } else {
-      Alert.alert("Notifications disabled", "You can re-enable anytime.");
-    }
-    setNotifLoading(false);
-  };
-
   const s = theme.spacing;
 
   return (
@@ -86,6 +95,7 @@ export default function SettingsScreen() {
       style={{ flex: 1, backgroundColor: colors.bg }}
       edges={["top"]}
     >
+      {/* Header */}
       <View
         style={[
           styles.header,
@@ -114,41 +124,15 @@ export default function SettingsScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: s.md, gap: s.md, paddingBottom: 60 }}
       >
-        {/* ── Theme ── */}
-        {/*<Card title="Appearance" style={{ backgroundColor: colors.card }}>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              paddingVertical: 8,
-            }}
-          >
-            <Text style={{ color: colors.text, fontSize: 13 }}>Dark Mode</Text>
-            <Switch
-              value={isDark}
-              onValueChange={toggleTheme}
-              trackColor={{
-                false: colors.border,
-                true: colors.accent,
-              }}
-              thumbColor={isDark ? colors.accent : colors.muted}
-            />
-          </View>
-        </Card>*/}
-
         {/* ── Profile ── */}
-        <Card
-          title="Profile"
-          style={{
-            backgroundColor: colors.card,
-            borderLeftColor: colors.accent,
-          }}
-          onPress={() => {
-            setCurrentRoute("Profile");
-          }
-        >
-          <View style={styles.profileRow}>
+        <Card title="Profile" style={{ backgroundColor: colors.card }}>
+          <TouchableOpacity
+            style={styles.profileRow}
+            onPress={() => {
+              setCurrentRoute("Profile");
+            }}
+            activeOpacity={0.7}
+          >
             <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
               <Text style={styles.avatarText}>H</Text>
             </View>
@@ -166,48 +150,29 @@ export default function SettingsScreen() {
                 Your Second Brain
               </Text>
             </View>
-          </View>
+            <Feather
+              name="chevron-right"
+              size={18}
+              color={colors.textTertiary}
+              style={{ marginLeft: "auto" }}
+            />
+          </TouchableOpacity>
         </Card>
 
         {/* ── Stats ── */}
         <Card title="Your Stats" style={{ backgroundColor: colors.card }}>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              paddingVertical: 8,
-              borderBottomWidth: 1,
-              borderBottomColor: colors.divider,
-            }}
-          >
+          <View style={[styles.statRow, { borderBottomColor: colors.divider }]}>
             <Text style={{ color: colors.text, fontSize: 13 }}>Streak</Text>
             <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-              }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
             >
               <Feather name="zap" size={14} color={colors.warning} />
-              <Text
-                style={{
-                  color: colors.text,
-                  fontWeight: "600",
-                }}
-              >
+              <Text style={{ color: colors.text, fontWeight: "600" }}>
                 {streak} days
               </Text>
             </View>
           </View>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              paddingVertical: 8,
-              borderBottomWidth: 1,
-              borderBottomColor: colors.divider,
-            }}
-          >
+          <View style={[styles.statRow, { borderBottomColor: colors.divider }]}>
             <Text style={{ color: colors.text, fontSize: 13 }}>Today</Text>
             <Text style={{ color: colors.text, fontWeight: "600" }}>
               {formatDate(today())}
@@ -216,13 +181,7 @@ export default function SettingsScreen() {
           {monthlyStats && (
             <>
               <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  paddingVertical: 8,
-                  borderBottomWidth: 1,
-                  borderBottomColor: colors.divider,
-                }}
+                style={[styles.statRow, { borderBottomColor: colors.divider }]}
               >
                 <Text style={{ color: colors.text, fontSize: 13 }}>
                   Days tracked this month
@@ -231,13 +190,7 @@ export default function SettingsScreen() {
                   {monthlyStats.days_tracked}
                 </Text>
               </View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  paddingVertical: 8,
-                }}
-              >
+              <View style={styles.statRow}>
                 <Text style={{ color: colors.text, fontSize: 13 }}>
                   Avg mood
                 </Text>
@@ -253,7 +206,120 @@ export default function SettingsScreen() {
           )}
         </Card>
 
-        {/* ── Export / Import ── */}
+        {/* ── Notifications ── */}
+        <Card title="Notifications" style={{ backgroundColor: colors.card }}>
+          {loading ? (
+            <ActivityIndicator size="small" color={colors.accent} />
+          ) : (
+            groups.map((group) => (
+              <View key={group.type}>
+                <View
+                  style={[
+                    styles.notifGroupRow,
+                    { borderBottomColor: colors.divider },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={styles.notifGroupLeft}
+                    onPress={() =>
+                      setExpandedGroup(
+                        expandedGroup === group.type ? null : group.type,
+                      )
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ fontSize: 16 }}>{group.icon}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          color: colors.text,
+                          fontSize: 13,
+                          fontWeight: "500",
+                        }}
+                      >
+                        {group.label}
+                      </Text>
+                      <Text
+                        style={{ color: colors.textTertiary, fontSize: 11 }}
+                      >
+                        {group.notifications.length} notification
+                        {group.notifications.length > 1 ? "s" : ""}
+                        {group.enabled ? " · Active" : " · Off"}
+                      </Text>
+                    </View>
+                    <Feather
+                      name={
+                        expandedGroup === group.type
+                          ? "chevron-down"
+                          : "chevron-right"
+                      }
+                      size={16}
+                      color={colors.textTertiary}
+                    />
+                  </TouchableOpacity>
+                  <Switch
+                    value={group.enabled}
+                    onValueChange={(v) => handleGroupToggle(group, v)}
+                    trackColor={{
+                      false: colors.border,
+                      true: colors.success,
+                    }}
+                    thumbColor={group.enabled ? colors.success : colors.muted}
+                  />
+                </View>
+
+                {expandedGroup === group.type && (
+                  <View style={styles.notifSubList}>
+                    {group.notifications.map((n) => (
+                      <View
+                        key={n.id}
+                        style={[
+                          styles.notifSubRow,
+                          { borderBottomColor: colors.divider },
+                        ]}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={{
+                              color: colors.text,
+                              fontSize: 13,
+                            }}
+                          >
+                            {n.title}
+                          </Text>
+                          <Text
+                            style={{
+                              color: colors.textTertiary,
+                              fontSize: 11,
+                            }}
+                          >
+                            {`${n.hour.toString().padStart(2, "0")}:${n.minute
+                              .toString()
+                              .padStart(
+                                2,
+                                "0",
+                              )} · ${n.days?.length ?? 7} days/week`}
+                          </Text>
+                        </View>
+                        <Switch
+                          value={n.enabled}
+                          onValueChange={(v) => handleNotifToggle(n.id, v)}
+                          trackColor={{
+                            false: colors.border,
+                            true: colors.accent,
+                          }}
+                          thumbColor={n.enabled ? colors.accent : colors.muted}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))
+          )}
+        </Card>
+
+        {/* ── Data ── */}
         <Card title="Data" style={{ backgroundColor: colors.card }}>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: colors.accentBg }]}
@@ -291,38 +357,6 @@ export default function SettingsScreen() {
               Share Backup
             </Text>
           </TouchableOpacity>
-        </Card>
-
-        {/* ── Notifications ── */}
-        <Card title="Notifications" style={{ backgroundColor: colors.card }}>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              paddingVertical: 8,
-            }}
-          >
-            <Text style={{ color: colors.text, fontSize: 13 }}>
-              Prayer & Habit Reminders
-            </Text>
-            <Switch
-              value={notifEnabled}
-              onValueChange={handleNotifToggle}
-              trackColor={{
-                false: colors.border,
-                true: colors.success,
-              }}
-              thumbColor={notifEnabled ? colors.success : colors.muted}
-            />
-          </View>
-          {notifLoading && (
-            <ActivityIndicator
-              size="small"
-              color={colors.accent}
-              style={{ marginTop: 8 }}
-            />
-          )}
         </Card>
 
         {/* ── About ── */}
@@ -383,5 +417,36 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     marginBottom: 8,
+  },
+  statRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+  },
+  notifGroupRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    gap: 8,
+  },
+  notifGroupLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  notifSubList: {
+    paddingLeft: 26,
+    paddingTop: 4,
+  },
+  notifSubRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    gap: 8,
   },
 });

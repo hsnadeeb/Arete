@@ -278,7 +278,7 @@ export const useStore = create<AppStore>()((set, get) => ({
   // ── Sidebar ──
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  currentRoute: "Dashboard",
+  currentRoute: "Greeting",
   setCurrentRoute: (route) => set({ currentRoute: route }),
 
   // ── System ──

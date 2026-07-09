@@ -1,6 +1,7 @@
 import React, { createContext, useEffect, ReactNode } from 'react';
 import { useStore, type AppStore } from '../store';
 import { initDatabase } from '../db/service';
+import { initNotifications } from '../services/notifications';
 
 interface AppContextValue {
   loaded: boolean;
@@ -20,6 +21,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const doHydrate = async () => {
       await initDatabase();
       await hydrate();
+      initNotifications();
     };
     doHydrate();
   }, [hydrate]);

@@ -185,4 +185,12 @@ CREATE TABLE IF NOT EXISTS prayer_timings (
   gregorian_date TEXT,
   fetched_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS focus_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  duration INTEGER NOT NULL,
+  elapsed INTEGER NOT NULL,
+  date TEXT NOT NULL,
+  completed_at TEXT DEFAULT (datetime('now'))
+);
 `;

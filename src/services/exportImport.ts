@@ -55,7 +55,8 @@ export async function exportToFile(): Promise<boolean> {
   if (!json) return false;
 
   const filename = `arete-backup-${new Date().toISOString().split("T")[0]}.json`;
-  const fileUri = FileSystem.documentDirectory + filename;
+  const fileUri = (FileSystem.documentDirectory ?? FileSystem.cacheDirectory) + filename;
+  if (!fileUri) return false;
 
   await FileSystem.writeAsStringAsync(fileUri, json, {
     encoding: FileSystem.EncodingType.UTF8,
@@ -76,7 +77,7 @@ export async function importFromJSON(
 ): Promise<boolean> {
   try {
     const data: ExportData = JSON.parse(jsonString);
-    if (!data.version || !data.dailyLogs) {
+    if (!data.version || !data.daily_logs) {
       throw new Error("Invalid backup format");
     }
 
@@ -166,24 +167,7 @@ export async function importFromJSON(
 }
 
 export async function shareBackup(): Promise<boolean> {
-  const json = await exportToJSON();
-  if (!json) return false;
-
-  const filename = `arete-backup-${new Date().toISOString().split("T")[0]}.json`;
-  const fileUri = FileSystem.documentDirectory + filename;
-
-  await FileSystem.writeAsStringAsync(fileUri, json, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
-
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(fileUri, {
-      mimeType: "application/json",
-      dialogTitle: "Share Arete Backup",
-    });
-  }
-
-  return true;
+  return exportToFile();
 }
 
 export function formatFileSize(bytes: number): string {
