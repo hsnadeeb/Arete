@@ -6,6 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Modal,
+  Alert,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "../context/AppContext";
@@ -37,6 +40,67 @@ function today(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+function renderHabitGrid(
+  habitId: number,
+  color: string,
+  grid: { weeks: { date: string; day: number; month: string }[][]; monthLabels: { label: string; col: number }[] },
+  habitLogs: any[],
+  onToggle: (habitId: number, date: string) => void,
+  T: any,
+  tc: any,
+) {
+  const gap = 3;
+  const screenWidth = Dimensions.get('window').width;
+  const containerPad = 16;
+  const dayLabelW = 24;
+  const availableW = screenWidth - containerPad * 2 - dayLabelW - (grid.weeks.length - 1) * gap;
+  const cellSize = Math.max(10, Math.floor(availableW / grid.weeks.length));
+  const dayLabels = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', marginLeft: 28, marginBottom: 10, height: 14 }}>
+        {grid.monthLabels.map((m, i) => (
+          <View key={i} style={{ position: 'absolute', left: m.col * (cellSize + gap) }}>
+            <Text style={{ fontSize: 10, color: T.textMuted, fontWeight: '500' }}>{m.label}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row' }}>
+        <View style={{ width: 24, gap: gap }}>
+          {dayLabels.map((l, i) => (
+            <Text key={i} style={{ fontSize: 10, color: T.textMuted, height: cellSize, lineHeight: cellSize }}>{l}</Text>
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', gap: gap }}>
+          {grid.weeks.map((week, wi) => (
+            <View key={wi} style={{ gap: gap }}>
+              {week.map((d) => {
+                const done = habitLogs.some((l) => l.habit_id === habitId && l.date === d.date);
+                return (
+                  <TouchableOpacity
+                    key={d.date}
+                    onPress={() => onToggle(habitId, d.date)}
+                    style={{
+                      width: cellSize,
+                      height: cellSize,
+                      borderRadius: 3,
+                      backgroundColor: done ? color : T.border,
+                      opacity: done ? 1 : 0.3,
+                    }}
+                  />
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const HABIT_COLORS = ['#6366f1', '#f97316', '#22c55e', '#ef4444', '#ec4899', '#14b8a6', '#eab308', '#a855f7', '#06b6d4', '#78716c'];
+
 export default function TrackerScreen() {
   const {
     setSidebarOpen,
@@ -58,6 +122,12 @@ export default function TrackerScreen() {
   const [logs, setLogs] = useState<any[]>([]);
   const [habits, setHabits] = useState<any[]>([]);
   const [habitLogs, setHabitLogs] = useState<any[]>([]);
+  const [addHabitModal, setAddHabitModal] = useState(false);
+  const [newHabitName, setNewHabitName] = useState('');
+  const [newHabitEmoji, setNewHabitEmoji] = useState('✅');
+  const [selectedHabit, setSelectedHabit] = useState<any>(null);
+  const [colorFilter, setColorFilter] = useState<string | null>(null);
+  const [newHabitColor, setNewHabitColor] = useState('#6366f1');
 
   useEffect(() => {
     Promise.all([
@@ -71,6 +141,76 @@ export default function TrackerScreen() {
       setHabitLogs(hl);
       setLoaded(true);
     });
+  }, []);
+
+  const handleAddHabit = async () => {
+    if (!newHabitName.trim()) return;
+    await db.addHabit({ name: newHabitName.trim(), emoji: newHabitEmoji, color: newHabitColor, target_per_day: 1 });
+    setNewHabitName('');
+    setAddHabitModal(false);
+    setNewHabitColor('#6366f1');
+    setNewHabitEmoji('✅');
+    const h = await db.getHabits();
+    setHabits(h);
+  };
+
+  const handleToggleHabitDay = async (habitId: number, date: string) => {
+    const existing = habitLogs.find((l) => l.habit_id === habitId && l.date === date);
+    if (existing) {
+      await db.deleteHabitLogById(existing.id);
+    } else {
+      await db.logHabit(habitId, date, 1);
+    }
+    const hl = await db.getHabitLogs();
+    setHabitLogs(hl);
+  };
+
+  const handleDeleteHabit = (id: number, name: string) => {
+    Alert.alert('Delete Habit', `Remove "${name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        await db.deleteHabitById(id);
+        const h = await db.getHabits();
+        setHabits(h);
+        setSelectedHabit(null);
+      }},
+    ]);
+  };
+
+  // Generate grid data: last 90 days arranged by week columns
+  const habitGrid = useMemo(() => {
+    const days: { date: string; day: number; month: string }[] = [];
+    const today = new Date();
+    for (let i = 89; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      days.push({
+        date: d.toISOString().split('T')[0],
+        day: d.getDay(),
+        month: d.toLocaleDateString('en', { month: 'short' }),
+      });
+    }
+    // Group into weeks (columns)
+    const weeks: typeof days[] = [];
+    let currentWeek: typeof days = [];
+    for (const d of days) {
+      currentWeek.push(d);
+      if (d.day === 6 || d === days[days.length - 1]) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+    }
+    // Month labels per column
+    const monthLabels: { label: string; col: number }[] = [];
+    let lastMonth = '';
+    weeks.forEach((w, i) => {
+      const m = w[0]?.month;
+      if (m && m !== lastMonth) {
+        monthLabels.push({ label: m, col: i });
+        lastMonth = m;
+      }
+    });
+    return { weeks, monthLabels };
   }, []);
 
   // ── 7-day week data for charts ──
@@ -696,81 +836,169 @@ export default function TrackerScreen() {
 
         {/* ─── HABITS ─── */}
         {active === "habits" && (
-          <View>
-            <Text style={[styles.tabTitle, { color: T.textMuted }]}>
-              Habits
-            </Text>
-            {habits.map((h) => {
-              const done = habitLogs.find(
-                (l) => l.habit_id === h.id && l.date === today(),
-              );
-              const count = done?.count ?? 0;
-              return (
-                <View
-                  key={h.id}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingVertical: 12,
-                    borderBottomWidth: 1,
-                    borderBottomColor: T.borderSoft,
-                  }}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <Text style={{ fontSize: 18 }}>{h.emoji}</Text>
-                    <Text style={{ fontWeight: "600", color: T.textPrimary }}>
-                      {h.name}
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <Text style={{ color: T.textTertiary }}>
-                      {count}/{h.target_per_day ?? 1}
-                    </Text>
-                    <TouchableOpacity
-                      style={[
-                        styles.habitPlus,
-                        {
-                          backgroundColor: T.accentBg,
-                          borderColor: T.successBorder,
-                        },
-                      ]}
-                      onPress={() =>
-                        db.logHabit(h.id, today(), count + 1).then(() => {
-                          db.getHabitLogs().then(setHabitLogs);
-                        })
-                      }
-                    >
-                      <Text
-                        style={{
-                          color: "#0891b2",
-                          fontWeight: "700",
-                          fontSize: 16,
-                          textAlign: "center",
-                        }}
-                      >
-                        +
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+          <View style={{ paddingBottom: 80 }}>
+            {habits.length === 0 ? (
+              <View style={{ alignItems: 'center', paddingTop: 40, gap: 8 }}>
+                <Text style={{ fontSize: 40 }}>✅</Text>
+                <Text style={{ color: T.textTertiary, fontSize: 14 }}>No habits yet</Text>
+                <Text style={{ color: T.textMuted, fontSize: 12 }}>Tap + to add your first habit</Text>
+              </View>
+            ) : selectedHabit ? (
+              <View>
+                <TouchableOpacity onPress={() => setSelectedHabit(null)} style={[styles.backBtn, { borderColor: T.border }]}>
+                  <Text style={{ color: T.textSecondary }}>← Back</Text>
+                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <Text style={{ fontSize: 24 }}>{selectedHabit.emoji}</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: T.textPrimary }}>{selectedHabit.name}</Text>
+                  <TouchableOpacity onPress={() => handleDeleteHabit(selectedHabit.id, selectedHabit.name)} style={{ marginLeft: 'auto' }}>
+                    <Text style={{ color: tc.error, fontSize: 13 }}>Delete</Text>
+                  </TouchableOpacity>
                 </View>
-              );
-            })}
+                {renderHabitGrid(selectedHabit.id, selectedHabit.color || '#6366f1', habitGrid, habitLogs, handleToggleHabitDay, T, tc)}
+              </View>
+            ) : (
+              <>
+                {/* Color filter bar */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', gap: 8, paddingRight: 8 }}>
+                    <TouchableOpacity
+                      onPress={() => setColorFilter(null)}
+                      style={[styles.filterChip, { backgroundColor: colorFilter === null ? tc.accentBg : T.surface, borderColor: colorFilter === null ? tc.accent : T.border }]}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '500', color: colorFilter === null ? tc.accent : T.textSecondary }}>All</Text>
+                    </TouchableOpacity>
+                    {HABIT_COLORS.map((c) => {
+                      const count = habits.filter((h) => (h.color || '#6366f1') === c).length;
+                      if (count === 0) return null;
+                      return (
+                        <TouchableOpacity
+                          key={c}
+                          onPress={() => setColorFilter(c === colorFilter ? null : c)}
+                          style={[styles.filterChip, { backgroundColor: colorFilter === c ? c + '20' : T.surface, borderColor: colorFilter === c ? c : T.border }]}
+                        >
+                          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c }} />
+                          <Text style={{ fontSize: 12, color: T.textSecondary }}>{count}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+
+                {(colorFilter ? habits.filter((h) => (h.color || '#6366f1') === colorFilter) : habits).map((h) => {
+                  const c = h.color || '#6366f1';
+                  const todayLog = habitLogs.find((l) => l.habit_id === h.id && l.date === today());
+                  const checked = !!todayLog;
+                  return (
+                    <TouchableOpacity
+                      key={h.id}
+                      onPress={() => { setSelectedHabit(h); setColorFilter(null); }}
+                      style={[styles.habitCard, { backgroundColor: T.surface, borderColor: T.borderSoft }]}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <Text style={{ fontSize: 22 }}>{h.emoji}</Text>
+                        <View>
+                          <Text style={{ fontWeight: '600', color: T.textPrimary, fontSize: 15 }}>{h.name}</Text>
+                          <Text style={{ color: T.textTertiary, fontSize: 11, marginTop: 1 }}>
+                            {habitLogs.filter((l) => l.habit_id === h.id && l.date >= new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0]).length} / 90 days
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => handleToggleHabitDay(h.id, today())}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={[styles.checkCircle, { borderColor: checked ? c : T.border, backgroundColor: checked ? c : 'transparent' }]}
+                      >
+                        {checked && <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✓</Text>}
+                      </TouchableOpacity>
+                      <Text style={{ color: T.textMuted, fontSize: 18, marginLeft: 6 }}>›</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </>
+            )}
           </View>
         )}
       </ScrollView>
+
+      {active === 'habits' && (
+        <TouchableOpacity
+          onPress={() => setAddHabitModal(true)}
+          style={[styles.fab, { backgroundColor: tc.accent }]}
+        >
+          <Text style={{ color: '#fff', fontSize: 24, fontWeight: '600', lineHeight: 26 }}>+</Text>
+        </TouchableOpacity>
+      )}
+
+      <Modal visible={addHabitModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setAddHabitModal(false)} />
+          <View style={[styles.modalSheet, { backgroundColor: tc.surface }]}>
+            <Text style={[styles.modalTitle, { color: T.textPrimary }]}>New Habit</Text>
+            <Text style={[styles.modalLabel, { color: T.textSecondary }]}>Emoji</Text>
+            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+              {['✅', '💪', '🏃', '📖', '🧘', '🥗', '💧', '😴', '🎯', '✍️', '🎨', '🧠', '🚴', '🏋️', '🧹', '🌱', '📝', '🎵', '☕', '🙏'].map((e) => (
+                <TouchableOpacity
+                  key={e}
+                  onPress={() => setNewHabitEmoji(e)}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: newHabitEmoji === e ? T.border : 'transparent',
+                    borderWidth: 1,
+                    borderColor: newHabitEmoji === e ? tc.accent : T.border,
+                  }}
+                >
+                  <Text style={{ fontSize: 18 }}>{e}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={[styles.modalLabel, { color: T.textSecondary }]}>Name</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: tc.bg, borderColor: T.border, color: T.textPrimary }]}
+              value={newHabitName}
+              onChangeText={setNewHabitName}
+              placeholder="e.g. Morning run"
+              placeholderTextColor={T.placeholder}
+              autoFocus
+            />
+            <Text style={[styles.modalLabel, { color: T.textSecondary, marginTop: 14 }]}>Color</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+              {HABIT_COLORS.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => setNewHabitColor(c)}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    backgroundColor: c,
+                    borderWidth: newHabitColor === c ? 3 : 1,
+                    borderColor: newHabitColor === c ? T.textPrimary : T.border,
+                  }}
+                />
+              ))}
+            </View>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+              <TouchableOpacity
+                style={[styles.modalCancelBtn, { backgroundColor: tc.bgSecondary }]}
+                onPress={() => { setAddHabitModal(false); setNewHabitName(''); }}
+              >
+                <Text style={{ color: T.textSecondary, fontWeight: '600' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSaveBtn, { backgroundColor: tc.accent }]}
+                onPress={handleAddHabit}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -884,5 +1112,99 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  // ── Habits redesign ──
+  habitCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  backBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  checkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  modalLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+    marginTop: 8,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalSaveBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
   },
 });

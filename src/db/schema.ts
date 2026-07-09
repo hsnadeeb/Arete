@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS habits (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   emoji TEXT DEFAULT '✅',
+  color TEXT DEFAULT '#6366f1',
   target_per_day INTEGER DEFAULT 1,
   unit TEXT,
   created_at TEXT DEFAULT (datetime('now'))

@@ -16,6 +16,7 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     // Copy old row_pos values into sort_order for existing rows
     await db.execAsync("UPDATE dashboard_widgets SET sort_order = row_pos WHERE sort_order = 0");
   } catch (_) {}
+  try { await db.execAsync("ALTER TABLE habits ADD COLUMN color TEXT DEFAULT '#6366f1'"); } catch (_) {}
   return db;
 }
 
@@ -205,10 +206,10 @@ export async function getHabits() {
   );
 }
 
-export async function addHabit(h: { name: string; emoji?: string; target_per_day?: number; unit?: string }) {
+export async function addHabit(h: { name: string; emoji?: string; color?: string; target_per_day?: number; unit?: string }) {
   return await getDb().runAsync(
-    'INSERT INTO habits (name, emoji, target_per_day, unit) VALUES (?, ?, ?, ?)',
-    h.name, h.emoji || '✅', h.target_per_day || 1, h.unit || ''
+    'INSERT INTO habits (name, emoji, color, target_per_day, unit) VALUES (?, ?, ?, ?, ?)',
+    h.name, h.emoji || '✅', h.color || '#6366f1', h.target_per_day || 1, h.unit || ''
   );
 }
 
@@ -487,7 +488,13 @@ export async function deleteGoalById(id: number) {
   await getDb().runAsync('DELETE FROM goals WHERE id = ?', id);
 }
 export async function deleteHabitById(id: number) {
+  await getDb().runAsync('DELETE FROM habit_logs WHERE habit_id = ?', id);
   await getDb().runAsync('DELETE FROM habits WHERE id = ?', id);
+}
+
+export async function deleteAllHabitData() {
+  await getDb().runAsync('DELETE FROM habit_logs');
+  await getDb().runAsync('DELETE FROM habits');
 }
 export async function deleteHabitLogById(id: number) {
   await getDb().runAsync('DELETE FROM habit_logs WHERE id = ?', id);
