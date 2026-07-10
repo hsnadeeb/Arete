@@ -352,7 +352,7 @@ export default function GreetingScreen() {
 
           {/* Floating sparkles */}
           {nextItem &&
-            sparkles.map((s, i) => {
+            sparkles.map((sp, i) => {
               const angleOffset = (i / sparkles.length) * Math.PI * 2;
               const orbitR = 120;
               const cx = Math.cos(angleOffset) * orbitR;
@@ -369,8 +369,8 @@ export default function GreetingScreen() {
                         outputRange: [0.15, 0.45],
                       }),
                       transform: [
-                        { translateX: s.x },
-                        { translateY: s.y },
+                        { translateX: sp.x },
+                        { translateY: sp.y },
                         { translateX: cx },
                         { translateY: cy },
                       ],

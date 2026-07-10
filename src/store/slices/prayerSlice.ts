@@ -36,10 +36,10 @@ export const createPrayerSlice = (
     }
   },
 
-  toggle: async (name: string, onTime: boolean) => {
+  toggle: async (name: string) => {
     const repo = getPrayerRepo();
     const today = new Date().toISOString().split('T')[0];
-    await repo.toggle(today, name, onTime);
+    await repo.toggle(today, name);
     // Re-fetch to sync state
     const prayers = await repo.getByDate(today);
     set({ prayers });

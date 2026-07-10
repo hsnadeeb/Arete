@@ -43,7 +43,7 @@ export interface AppStore {
   // ── Prayer ──
   prayers: PrayerLogRow[];
   setPrayers: (p: PrayerLogRow[]) => void;
-  togglePrayer: (name: string, onTime: boolean) => Promise<void>;
+  togglePrayer: (name: string, onTime?: boolean) => Promise<void>;
 
   // ── Transactions ──
   transactions: TransactionRow[];
@@ -138,7 +138,7 @@ export const useStore = create<AppStore>()((set, get) => ({
   // ── Prayer ──
   prayers: [],
   setPrayers: (p) => set({ prayers: p }),
-  togglePrayer: async (name) => {
+  togglePrayer: async (name, onTime?) => {
     const repo = getPrayerRepo();
     const today = new Date().toISOString().split('T')[0];
     await repo.toggle(today, name);
@@ -273,7 +273,22 @@ export const useStore = create<AppStore>()((set, get) => ({
         gregorian_date: dateInfo.gregorianDate,
       });
       set({
-        prayerTimings: timings,
+        prayerTimings: {
+          id: 0,
+          date: today,
+          city: 'Mumbai',
+          country: 'India',
+          fajr: timings.fajr,
+          sunrise: timings.sunrise,
+          dhuhr: timings.dhuhr,
+          asr: timings.asr,
+          maghrib: timings.maghrib,
+          isha: timings.isha,
+          hijri_date: timings.hijri_date,
+          hijri_month: timings.hijri_month,
+          hijri_year: timings.hijri_year,
+          gregorian_date: timings.gregorian_date,
+        },
         islamicDate: dateInfo,
         timingsLoading: false,
       });

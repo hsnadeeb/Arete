@@ -813,7 +813,7 @@ export default function DashboardScreen() {
 
   const handleReorder = useCallback(
     (items: WidgetLayout[]) => {
-      setWidgetLayouts(items.map((w, i) => ({ ...w, sort_order: i })));
+      setWidgetLayouts(items.map((w, i) => ({ ...w, sort_order: i, id: w.id ?? 0, visible: w.visible ? 1 : 0 })) as any);
     },
     [setWidgetLayouts],
   );
@@ -1057,7 +1057,7 @@ export default function DashboardScreen() {
       </View>
 
       <ReorderableList
-        data={visible}
+        data={visible.map((w) => ({ ...w, visible: !!w.visible }))}
         onReorder={handleReorder}
         renderItem={renderCard}
         editing={editing}

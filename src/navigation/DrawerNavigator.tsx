@@ -15,7 +15,7 @@ import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import BottomNavBar from "../components/BottomNavBar";
 
 import DashboardScreen from "../screens/DashboardScreen";
-import TrackerScreen from "../screens/TrackerScreen";
+import TrackerScreen from "../screens/tracker";
 import JournalScreen from "../screens/JournalScreen";
 import BudgetScreen from "../screens/BudgetScreen";
 import PlannerScreen from "../screens/PlannerScreen";

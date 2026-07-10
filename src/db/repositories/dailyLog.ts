@@ -36,7 +36,7 @@ export class DailyLogRepository {
     if (existing) {
       const keys = Object.keys(fields) as (keyof DailyLogRow)[];
       const sets = keys.map((k) => `${k} = ?`).join(', ');
-      const vals = keys.map((k) => fields[k]);
+      const vals = keys.map((k) => fields[k]).filter((v): v is NonNullable<typeof v> => v !== undefined);
       await this.db.runAsync(
         `UPDATE ${TABLE} SET ${sets} WHERE date = ?`,
         ...vals,
