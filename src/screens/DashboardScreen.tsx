@@ -443,25 +443,27 @@ function ExpensesWidget() {
   };
   return (
     <Card>
-      <View style={[{ display: "flex" }]}>
-        <Text style={[s.cardTitle, { color: tc.textTertiary }]}>
-          Expenses · ${total.toFixed(2)}
-        </Text>
+      <View>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text style={[s.cardTitle, { color: tc.textTertiary }]}>
+            Expenses · ${total.toFixed(2)}
+          </Text>
 
-        <TouchableOpacity
-          style={[s.addExpBtn, { backgroundColor: tc.success }]}
-          onPress={() => setShow(true)}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Icon
-              name={LUCIDE_ICONS.plus}
-              size={14}
-              color="#fff"
-              label="add expense"
-            />
-            <Text style={s.addExpBtnText}>Add Expense</Text>
-          </View>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.addExpBtn, { backgroundColor: tc.success }]}
+            onPress={() => setShow(true)}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Icon
+                name={LUCIDE_ICONS.plus}
+                size={14}
+                color="#fff"
+                label="add expense"
+              />
+              <Text style={s.addExpBtnText}>Add Expense</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
       {exps.length > 0 ? (
         <View>

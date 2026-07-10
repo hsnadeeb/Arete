@@ -616,19 +616,14 @@ async function seedDashboardWidgets(
 
 async function clearSeedableData(dbInstance: SQLiteDatabase): Promise<void> {
   // Order matters because of FK constraints
-  await dbInstance.runAsync('DELETE FROM habit_logs');
-  await dbInstance.runAsync('DELETE FROM habits');
-  await dbInstance.runAsync('DELETE FROM dashboard_widgets');
-  await dbInstance.runAsync('DELETE FROM timetable');
-  await dbInstance.runAsync('DELETE FROM budget_categories');
-  await dbInstance.runAsync('DELETE FROM goals');
-  await dbInstance.runAsync('DELETE FROM journal_entries');
-  await dbInstance.runAsync('DELETE FROM transactions');
-  await dbInstance.runAsync('DELETE FROM nutrition_logs');
-  await dbInstance.runAsync('DELETE FROM gym_logs');
-  await dbInstance.runAsync('DELETE FROM prayer_logs');
-  await dbInstance.runAsync('DELETE FROM daily_logs');
-  await dbInstance.runAsync('DELETE FROM daily_affirmations');
+  const tables = [
+    'habit_logs', 'habits', 'dashboard_widgets', 'timetable',
+    'budget_categories', 'goals', 'journal_entries', 'transactions',
+    'nutrition_logs', 'gym_logs', 'prayer_logs', 'daily_logs', 'daily_affirmations',
+  ];
+  for (const table of tables) {
+    try { await dbInstance.runAsync(`DELETE FROM ${table}`); } catch (_) {}
+  }
 }
 
 /**
@@ -649,22 +644,15 @@ export async function wipeAllData(): Promise<{ preserved: string[]; wiped: strin
   const dbInstance = await db.initDatabase();
 
   // Children first (FK targets), parents last.
-  await dbInstance.runAsync('DELETE FROM habit_logs');
-  await dbInstance.runAsync('DELETE FROM ai_program_items');
-  await dbInstance.runAsync('DELETE FROM habits');
-  await dbInstance.runAsync('DELETE FROM timetable');
-  await dbInstance.runAsync('DELETE FROM budget_categories');
-  await dbInstance.runAsync('DELETE FROM goals');
-  await dbInstance.runAsync('DELETE FROM journal_entries');
-  await dbInstance.runAsync('DELETE FROM transactions');
-  await dbInstance.runAsync('DELETE FROM nutrition_logs');
-  await dbInstance.runAsync('DELETE FROM gym_logs');
-  await dbInstance.runAsync('DELETE FROM prayer_logs');
-  await dbInstance.runAsync('DELETE FROM daily_logs');
-  await dbInstance.runAsync('DELETE FROM daily_affirmations');
-  await dbInstance.runAsync('DELETE FROM prayer_timings');
-  await dbInstance.runAsync('DELETE FROM focus_sessions');
-  await dbInstance.runAsync('DELETE FROM ai_programs');
+  const tables = [
+    'habit_logs', 'ai_program_items', 'habits', 'timetable',
+    'budget_categories', 'goals', 'journal_entries', 'transactions',
+    'nutrition_logs', 'gym_logs', 'prayer_logs', 'daily_logs',
+    'daily_affirmations', 'prayer_timings', 'focus_sessions', 'ai_programs',
+  ];
+  for (const table of tables) {
+    try { await dbInstance.runAsync(`DELETE FROM ${table}`); } catch (_) {}
+  }
   // NOTE: intentionally NOT wiped:
   //   - ai_providers       → holds user API keys
   //   - dashboard_widgets  → UI layout, not user data
