@@ -1,158 +1,194 @@
 /**
  * Typography constants for consistent styling across the app.
- * Replaces inline font/emoji overuse with a structured system.
+ * Single source of truth for text styling and icon naming.
  */
 
+import * as icons from 'lucide-react-native';
+
+/**
+ * Union of all lucide-react-native icon names. Derived from the package's
+ * own named exports, so the type stays in sync if lucide adds/removes icons.
+ */
+export type LucideIconName = keyof typeof icons;
+
+/**
+ * Text-style presets. Colors are intentionally omitted so consumers can apply
+ * theme colors at the call site (e.g. `style={[TYPOGRAPHY.body, { color: tc.text }]}`).
+ * The accent preset is the only exception and uses the brand accent color.
+ */
 export const TYPOGRAPHY = {
   /** Title / heading sizes */
-  h1: { fontSize: 24, fontWeight: '700' as const, color: '#1c1917', letterSpacing: -0.3 },
-  h2: { fontSize: 20, fontWeight: '700' as const, color: '#1c1917', letterSpacing: -0.2 },
-  h3: { fontSize: 18, fontWeight: '600' as const, color: '#1c1917' },
-  h4: { fontSize: 16, fontWeight: '600' as const, color: '#1c1917' },
+  h1: { fontSize: 24, fontWeight: '700' as const, letterSpacing: -0.3 },
+  h2: { fontSize: 20, fontWeight: '700' as const, letterSpacing: -0.2 },
+  h3: { fontSize: 18, fontWeight: '600' as const },
+  h4: { fontSize: 16, fontWeight: '600' as const },
 
   /** Body text */
-  body: { fontSize: 14, fontWeight: '400' as const, color: '#292524', lineHeight: 20 },
-  bodySm: { fontSize: 13, fontWeight: '400' as const, color: '#292524', lineHeight: 18 },
-  caption: { fontSize: 12, color: '#a8a29e', lineHeight: 16 },
-  captionSm: { fontSize: 11, color: '#a8a29e', lineHeight: 15 },
-  label: { fontSize: 10, color: '#a8a29e', lineHeight: 14 },
+  body: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
+  bodySm: { fontSize: 13, fontWeight: '400' as const, lineHeight: 18 },
+  caption: { fontSize: 12, fontWeight: '400' as const, lineHeight: 16 },
+  captionSm: { fontSize: 11, fontWeight: '400' as const, lineHeight: 15 },
+  label: { fontSize: 10, fontWeight: '500' as const, lineHeight: 14, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
 
   /** Meta / subtle */
-  meta: { fontSize: 11, color: '#a8a29e', fontWeight: '500' as const },
-  metaBold: { fontSize: 11, color: '#a8a29e', fontWeight: '600' as const },
+  meta: { fontSize: 11, fontWeight: '500' as const },
+  metaBold: { fontSize: 11, fontWeight: '600' as const },
 
   /** Numeric / monospaced variant */
-  mono: { fontSize: 14, fontWeight: '600' as const, color: '#1c1917', fontVariant: ['tabular-nums'] as const },
-  monoLg: { fontSize: 18, fontWeight: '700' as const, color: '#1c1917', fontVariant: ['tabular-nums'] as const },
+  mono: { fontSize: 14, fontWeight: '600' as const, fontVariant: ['tabular-nums'] as any },
+  monoLg: { fontSize: 18, fontWeight: '700' as const, fontVariant: ['tabular-nums'] as any },
 
-  /** Accent text */
+  /** Accent text — uses the brand accent color */
   accent: { fontSize: 13, fontWeight: '600' as const, color: '#6366f1' },
   accentSm: { fontSize: 11, fontWeight: '600' as const, color: '#6366f1' },
 
   /** Button text */
-  btn: { fontSize: 14, fontWeight: '600' as const, color: '#ffffff' },
-  btnSm: { fontSize: 12, fontWeight: '600' as const, color: '#ffffff' },
+  btn: { fontSize: 14, fontWeight: '600' as const },
+  btnSm: { fontSize: 12, fontWeight: '600' as const },
+
+  /** Card / section title (uppercase eyebrow text) */
+  title: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.4,
+  },
+
+  /** Stat blocks: big numeric value + small uppercase label */
+  statValue: { fontSize: 18, fontWeight: '700' as const },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.3,
+  },
+
+  /** Empty-state text */
+  emptyTitle: { fontSize: 18, fontWeight: '700' as const, textAlign: 'center' as const },
+  emptySubtitle: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20, textAlign: 'center' as const },
+
+  /** Modal header */
+  modalTitle: { fontSize: 20, fontWeight: '700' as const },
+
+  /** TextInput */
+  input: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
 } as const;
 
-/** Icon / emoji replacement system — uses Unicode symbols instead of emoji */
-export const ICONS = {
-  prayer: {
-    fajr: '\u2600',      // ☀ (sunrise)
-    sunrise: '\u2600',    // ☀
-    dhuhr: '\u2600',      // ☀
-    asr: '\u26C5',        // ⛅
-    maghrib: '\u26C5',    // ⛅
-    isha: '\u263E',       // ☾
-  },
-  nav: {
-    menu: '\u2630',       // ☰
-    arrowUp: '\u25B2',    // ▲
-    arrowDown: '\u25BC', // ▼
-    arrowRight: '\u25B6', // ▶
-    close: '\u2715',       // ✕
-    check: '\u2713',       // ✓
-    edit: '\u270E',        // ✎
-  },
-  status: {
-    done: '\u2713',       // ✓
-    qada: '\u23F3',       // ⏳
-    pending: '\u25FB',    // ◻
-    loading: '\u25C6',    // ◆
-  },
-  mood: ['\u25CF', '\u25D0', '\u25D1', '\u25D2', '\u25D3'], // solid → empty circles
-  health: {
-    weight: '\u2696',    // ⚖
-    water: '\u26F0',     // ⛰ (alternative for water drop)
-    steps: '\u26F4',     // ⛴
-    sleep: '\u2722',     // ✢
-  },
-  common: {
-    star: '\u2605',
-    heart: '\u2661',
-    plus: '\u002B',
-    minus: '\u2212',
-    hash: '\u0023',
-    at: '\u0040',
-  },
-} as const;
+/**
+ * Semantic name → lucide-react-native icon name mapping.
+ * Components reference these by semantic key (e.g. `LUCIDE_ICONS.menu`),
+ * keeping the rest of the codebase free of direct lucide references.
+ *
+ * Where lucide doesn't ship a direct equivalent (e.g. yoga, slot-machine)
+ * we map to the closest visual match available in lucide-react-native.
+ */
+export const LUCIDE_ICONS: Record<string, LucideIconName> = {
+  // Navigation
+  menu: 'Menu',
+  arrowUp: 'ArrowUp',
+  arrowDown: 'ArrowDown',
+  arrowRight: 'ArrowRight',
+  arrowLeft: 'ArrowLeft',
+  close: 'X',
+  x: 'X',
+  check: 'Check',
+  checkCircle: 'CheckCircle',
+  edit: 'Pencil',
+  plus: 'Plus',
+  cpu: 'Cpu',
+  download: 'Download',
+  share2: 'Share2',
+  database: 'Database',
+  list: 'List',
+  pause: 'Pause',
+  play: 'Play',
 
-/** Map emoji strings used in DB/PRAYER_EMOJIS to ICONS */
-export const EMOJI_TO_ICON: Record<string, string> = {
-  '\uD83C\uDF06': ICONS.prayer.fajr,   // 🌅 → ☀
-  '\u2600\uFE0F': ICONS.prayer.dhuhr, // ☀️ → ☀
-  '\uD83C\uDF1E': ICONS.prayer.dhuhr, // 🌞 → ☀
-  '\uD83C\uDF24\uFE0F': ICONS.prayer.asr, // 🌤️ → ⛅
-  '\uD83C\uDF07': ICONS.prayer.maghrib, // 🌇 → ⛅
-  '\uD83C\uDF19': ICONS.prayer.isha, // 🌙 → ☾
-  '\uD83D\uDD25': ICONS.common.star, // 🔥
-  '\uD83D\uDD04': '\u21BB', // 🔄
-  '\uD83D\uDCB0': '\u0024', // 💰 → $
-  '\uD83D\uDCB8': '\u0024', // 💸 → $
-  '\uD83D\uDCB6': '\u0024', // 💶 → $
-  '\uD83D\uDCCB': '\u2202', // 📋
-  '\uD83D\uDCCA': '\u2206', // 📊
-  '\uD83D\uDCA7': '\u2601', // 💧
-  '\uD83D\uDEB6': '\u221E', // 🚶
-  '\uD83D\uDCA1': '\u2600', // 💡 → ☀
-  '\uD83E\uDDD8': '\u2728', // 🧘
-  '\uD83D\uDED1': '\u2205', // 🚫
-  '\uD83D\uDCDC': '\u2202', // 📖
-  '\uD83C\uDF1F': '\u2605', // 🌟
-  '\u26A1': '\u26A1', // ⚡
-  '\uD83D\uDCAA': '\u272A', // 💪
-  '\uD83C\uDF89': '\u2728', // 🎉
-  '\uD83C\uDFAF': '\u2728', // 🎯
-  '\uD83D\uDE42': '\u263A', // 🙂 → ☺
-  '\uD83D\uDE0A': '\u263A', // 😊 → ☺
-  '\uD83D\uDE2D': '\u2639', // 😢 → ☹
-  '\uD83D\uDE1F': '\u2639', // 😟 → ☹
-  '\uD83D\uDE10': '\u2639', // 😑 → ☹
-  '\uD83D\uDE22': '\u2639', // 😢 → ☹
-  '\uD83D\uDC4D': '\u2713', // 👍 → ✓
-  '\uD83D\uDC4E': '\u2717', // 👎 → ✗
-  '\u2705': '\u2713', // ✅ → ✓
-  '\u2716': '\u2715', // ✖ → ✕
-  '\u2795': '\u002B', // ➕ → +
-  '\u2796': '\u2212', // ➖ → −
-  '\u2797': '\u002B', // ➗ → +
-  '\u2B50': '\u2605', // ⭐ → ★
-  '\u26A0\uFE0F': '\u26A0', // ⚠️ → ⚠
-  '\u2714\uFE0F': '\u2713', // ✔️ → ✓
-  '\u274C': '\u2715', // ❌ → ✕
-  '\uD83D\uDD14': '\u21BB', // 🔔
-  '\u23F0': '\u23F0', // ⏰
-  '\uD83D\uDCC5': '\u25C6', // 📅
-  '\uD83C\uDF7D\uFE0F': '\u2722', // 🍽️
-  '\uD83C\uDF4E': '\u2728', // 🍎
-  '\uD83D\uDE82': '\u26A1', // 🚇
-  '\uD83D\uDED2': '\u2711', // 🛍️
-  '\uD83D\uDC8A': '\u2695', // 💊
-  '\uD83D\uDCDA': '\u25C6', // 📚
-  '\uD83C\uDFAC': '\u2665', // 🎬
-  '\uD83C\uDF92': '\u2728', // 🏋️
-  '\uD83C\uDFC3': '\u272A', // 🏃
-};
+  // Chevrons
+  chevronRight: 'ChevronRight',
+  chevronLeft: 'ChevronLeft',
+  chevronUp: 'ChevronUp',
+  chevronDown: 'ChevronDown',
 
-/** Accessibility: Label for each icon */
-export const ICON_LABELS: Record<string, string> = {
-  '\u2630': 'Menu',
-  '\u25B2': 'Up',
-  '\u25BC': 'Down',
-  '\u2713': 'Done',
-  '\u2715': 'Close',
-  '\u270E': 'Edit',
-  '\u2600': 'Sun',
-  '\u26C5': 'Clouds',
-  '\u263E': 'Moon',
-  '\u2728': 'Star',
-  '\u26A0': 'Warning',
-  '\u23F0': 'Alarm',
-  '\u2696': 'Weight scale',
-  '\u26F0': 'Mountain',
-  '\u26F4': 'Ship',
-  '\u2722': 'Star',
-  '\u221E': 'Infinity',
-  '\u2205': 'Empty set',
-  '\u2206': 'Delta',
-  '\u2202': 'Partial derivative',
+  // Weather / time
+  sun: 'Sun',
+  moon: 'Moon',
+  cloud: 'Cloud',
+  sunrise: 'Sunrise',
+  sunset: 'Sunset',
+
+  // Health / activity
+  droplet: 'Droplet',
+  activity: 'Activity',
+  weight: 'Weight',
+  run: 'PersonStanding',
+
+  // Charts / data
+  trendingUp: 'TrendingUp',
+  trendingDown: 'TrendingDown',
+  barChart: 'ChartBar',
+  barChart2: 'ChartColumn',
+
+  // Documents / calendar
+  fileText: 'FileText',
+  calendar: 'Calendar',
+  image: 'Image',
+  search: 'Search',
+
+  // Mood
+  smile: 'Smile',
+  frown: 'Frown',
+  meh: 'Meh',
+
+  // Money / shopping
+  dollarSign: 'DollarSign',
+  shoppingBag: 'ShoppingBag',
+
+  // Reading / media
+  book: 'Book',
+  film: 'Film',
+  pill: 'Pill',
+  coffee: 'Coffee',
+
+  // Places / work
+  briefcase: 'Briefcase',
+  home: 'House',
+  school: 'School',
+  bank: 'Landmark',
+  building: 'Building',
+  hospital: 'Hospital',
+  rocket: 'Rocket',
+  gift: 'Gift',
+
+  // Achievements / status
+  award: 'Award',
+  target: 'Target',
+  zap: 'Zap',
+  star: 'Star',
+  bell: 'Bell',
+  clock: 'Clock',
+  compass: 'Compass',
+
+  // Settings / user
+  settings: 'Settings',
+  user: 'User',
+  users: 'Users',
+  sliders: 'SlidersHorizontal',
+  layout: 'LayoutGrid',
+  trash2: 'Trash2',
+  refreshCw: 'RefreshCw',
+
+  // Misc
+  grid: 'LayoutGrid',
+  noEntry: 'Ban',
+  tool: 'Wrench',
+  yoga: 'PersonStanding',
+  baby: 'Baby',
+  dice: 'Dices',
+  slotMachine: 'Dices',
+  train: 'TrainFront',
+  door: 'DoorClosed',
+  medicalCross: 'Cross',
+  apple: 'Apple',
+  pin: 'Pin',
+  hand: 'Hand',
 };

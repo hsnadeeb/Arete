@@ -13,9 +13,10 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../components/Card";
+import { Icon, getIconName } from "../components/Icons";
+import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import { useStore } from "../store";
 import { useTheme } from "../context/ThemeContext";
 import { today, formatDate } from "../types";
@@ -290,7 +291,7 @@ export default function SettingsScreen() {
           onPress={() => setSidebarOpen(true)}
           style={{ padding: 8 }}
         >
-          <Feather name="menu" size={20} color={colors.text} />
+          <Icon name={LUCIDE_ICONS.menu} size={20} color={colors.text} />
         </TouchableOpacity>
         <Text
           style={{
@@ -334,8 +335,8 @@ export default function SettingsScreen() {
                 Your Second Brain
               </Text>
             </View>
-            <Feather
-              name="chevron-right"
+            <Icon
+              name={LUCIDE_ICONS.chevronRight}
               size={18}
               color={colors.textTertiary}
               style={{ marginLeft: "auto" }}
@@ -350,7 +351,7 @@ export default function SettingsScreen() {
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
             >
-              <Feather name="zap" size={14} color={colors.warning} />
+              <Icon name={LUCIDE_ICONS.zap} size={14} color={colors.warning} />
               <Text style={{ color: colors.text, fontWeight: "600" }}>
                 {streak} days
               </Text>
@@ -412,7 +413,7 @@ export default function SettingsScreen() {
                     }
                     activeOpacity={0.7}
                   >
-                    <Text style={{ fontSize: 16 }}>{group.icon}</Text>
+                    <Icon name={getIconName(group.icon)} size={16} color={colors.textSecondary} />
                     <View style={{ flex: 1 }}>
                       <Text
                         style={{
@@ -431,11 +432,11 @@ export default function SettingsScreen() {
                         {group.enabled ? " · Active" : " · Off"}
                       </Text>
                     </View>
-                    <Feather
+                    <Icon
                       name={
                         expandedGroup === group.type
-                          ? "chevron-down"
-                          : "chevron-right"
+                          ? LUCIDE_ICONS.chevronDown
+                          : LUCIDE_ICONS.chevronRight
                       }
                       size={16}
                       color={colors.textTertiary}
@@ -513,7 +514,7 @@ export default function SettingsScreen() {
             {exporting ? (
               <ActivityIndicator size="small" color={colors.accent} />
             ) : (
-              <Feather name="download" size={16} color={colors.accent} />
+              <Icon name={LUCIDE_ICONS.download} size={16} color={colors.accent} />
             )}
             <Text
               style={{
@@ -530,7 +531,7 @@ export default function SettingsScreen() {
             onPress={handleShare}
             disabled={exporting}
           >
-            <Feather name="share-2" size={16} color={colors.success} />
+            <Icon name={LUCIDE_ICONS.share2} size={16} color={colors.success} />
             <Text
               style={{
                 color: colors.success,
@@ -551,7 +552,7 @@ export default function SettingsScreen() {
             {importing ? (
               <ActivityIndicator size="small" color={colors.accent} />
             ) : (
-              <Feather name="file-text" size={16} color={colors.accent} />
+              <Icon name={LUCIDE_ICONS.fileText} size={16} color={colors.accent} />
             )}
             <Text
               style={{
@@ -604,7 +605,7 @@ export default function SettingsScreen() {
             {seedBusy ? (
               <ActivityIndicator size="small" color={colors.accent} />
             ) : (
-              <Feather name="database" size={16} color={colors.accent} />
+              <Icon name={LUCIDE_ICONS.database} size={16} color={colors.accent} />
             )}
             <Text
               style={{
@@ -627,7 +628,7 @@ export default function SettingsScreen() {
             {deleting ? (
               <ActivityIndicator size="small" color={colors.error} />
             ) : (
-              <Feather name="trash-2" size={16} color={colors.error} />
+              <Icon name={LUCIDE_ICONS.trash2} size={16} color={colors.error} />
             )}
             <Text
               style={{
@@ -646,7 +647,7 @@ export default function SettingsScreen() {
             ]}
             onPress={handleShowCounts}
           >
-            <Feather name="list" size={16} color={colors.text} />
+            <Icon name={LUCIDE_ICONS.list} size={16} color={colors.text} />
             <Text
               style={{
                 color: colors.text,
@@ -708,7 +709,7 @@ export default function SettingsScreen() {
                 onPress={handleImportCancel}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Feather name="x" size={22} color={colors.text} />
+                <Icon name={LUCIDE_ICONS.x} size={22} color={colors.text} />
               </TouchableOpacity>
             </View>
             <Text
@@ -799,7 +800,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { color: "#fff", fontSize: 20, fontWeight: "700" },
+  avatarText: { color: "#fff", ...TYPOGRAPHY.h2 },
   actionBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -860,11 +861,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    ...TYPOGRAPHY.h3,
   },
   modalSubtitle: {
-    fontSize: 12,
+    ...TYPOGRAPHY.caption,
     lineHeight: 17,
     marginBottom: 14,
   },
@@ -874,7 +874,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     padding: 12,
-    fontSize: 11,
+    ...TYPOGRAPHY.captionSm,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
     marginBottom: 16,
   },

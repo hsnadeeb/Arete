@@ -14,16 +14,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
 import { Card } from "../components/Card";
-import * as db from "../db/service";
+import { Icon } from "../components/Icons";
 import {
-  PRAYER_NAMES,
-  PRAYER_EMOJIS,
+  PRAYER_ICONS,
   PRAYER_DISPLAY,
   PRAYER_TIMES_ORDER,
   getNextPrayer,
-  WIDGET_DEFINITIONS,
   WidgetLayout,
 } from "../types";
+import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import { getIslamicGreeting } from "../services/prayerApi";
 
 const EXPENSE_CATEGORIES = [
@@ -37,16 +36,16 @@ const EXPENSE_CATEGORIES = [
   "Savings",
   "Other",
 ];
-const CATEGORY_EMOJIS: Record<string, string> = {
-  Food: "🍎",
-  Transport: "🚇",
-  Shopping: "🛍️",
-  Bills: "📄",
-  Healthcare: "💊",
-  Learning: "📚",
-  Entertainment: "🎬",
-  Savings: "💰",
-  Other: "📌",
+const CATEGORY_ICONS: Record<string, keyof typeof LUCIDE_ICONS> = {
+  Food: "apple",
+  Transport: "train",
+  Shopping: "shoppingBag",
+  Bills: "fileText",
+  Healthcare: "pill",
+  Learning: "book",
+  Entertainment: "film",
+  Savings: "dollarSign",
+  Other: "pin",
 };
 
 function t12(time: string): string {
@@ -115,7 +114,22 @@ function AtAGlanceWidget() {
           <Text style={[s.npLabel, { color: tc.textTertiary }]}>
             All prayers completed today
           </Text>
-          <Text style={[s.npAlhamd, { color: tc.success }]}>الحمد لله 🤲</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              marginTop: 4,
+            }}
+          >
+            <Text style={[s.npAlhamd, { color: tc.success }]}>الحمد لله</Text>
+            <Icon
+              name={LUCIDE_ICONS.hand}
+              size={16}
+              color={tc.success}
+              label="praying hands"
+            />
+          </View>
         </View>
       )}
 
@@ -144,7 +158,13 @@ function AtAGlanceWidget() {
                   isNext && { borderColor: tc.accent, borderWidth: 2 },
                 ]}
               >
-                <Text style={s.pStripEmoji}>{PRAYER_EMOJIS[prayer]}</Text>
+                <Icon
+                  name={PRAYER_ICONS[prayer]?.name ?? LUCIDE_ICONS.sun}
+                  size={14}
+                  color={done ? "#fff" : tc.textTertiary}
+                  style={{ marginBottom: 2 }}
+                  label={PRAYER_DISPLAY[prayer]}
+                />
                 <Text
                   style={[
                     s.pStripLabel,
@@ -175,9 +195,24 @@ function AtAGlanceWidget() {
           style={[s.refreshPrayerBtn, { backgroundColor: tc.accentBg }]}
           onPress={refreshPrayerTimings}
         >
-          <Text style={[s.refreshPrayerBtnText, { color: tc.accent }]}>
-            🔮 Load Prayer Timings
-          </Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+            }}
+          >
+            <Icon
+              name={LUCIDE_ICONS.compass}
+              size={14}
+              color={tc.accent}
+              label="load timings"
+            />
+            <Text style={[s.refreshPrayerBtnText, { color: tc.accent }]}>
+              Load Prayer Timings
+            </Text>
+          </View>
         </TouchableOpacity>
       )}
       {timingsLoading && (
@@ -191,52 +226,6 @@ function AtAGlanceWidget() {
   );
 }
 
-// function QuickStatsWidget() {
-//   const { theme } = useTheme();
-//   const tc = theme.colors;
-//   const { dailyLog } = useApp();
-//   const items = [
-//     {
-//       l: "Weight",
-//       v: dailyLog?.weight ? `${dailyLog.weight} kg` : "\u2014",
-//       c: tc.info,
-//     },
-//     {
-//       l: "Water",
-//       v: dailyLog?.water_ml
-//         ? `${(dailyLog.water_ml / 1000).toFixed(1)}L`
-//         : "\u2014",
-//       c: "#0ea5e9",
-//     },
-//     {
-//       l: "Steps",
-//       v: dailyLog?.steps?.toLocaleString() || "\u2014",
-//       c: tc.warning,
-//     },
-//     {
-//       l: "Mood",
-//       v: dailyLog?.mood
-//         ? `${"\u2022".repeat(dailyLog.mood)}${"\u25CB".repeat(5 - dailyLog.mood)}`
-//         : "\u2014",
-//       c: tc.accent,
-//     },
-//   ];
-//   return (
-//     <Card title="Quick Stats" titleStyle={{ color: tc.textTertiary }}>
-//       <View style={s.statGrid}>
-//         {items.map((it) => (
-//           <View key={it.l} style={s.statTile}>
-//             <Text style={[s.statValue, { color: it.c }]}>{it.v}</Text>
-//             <Text style={[s.statLabel, { color: tc.textTertiary }]}>
-//               {it.l}
-//             </Text>
-//           </View>
-//         ))}
-//       </View>
-//     </Card>
-//   );
-// }
-
 function QuickLogWidget() {
   const { theme } = useTheme();
   const tc = theme.colors;
@@ -246,7 +235,8 @@ function QuickLogWidget() {
   const [st, setSt] = useState("");
   const rows = [
     {
-      l: "⚖️  Weight",
+      l: "Weight",
+      icon: LUCIDE_ICONS.weight,
       v: w,
       s: setW,
       ph: "kg",
@@ -260,7 +250,8 @@ function QuickLogWidget() {
       b: "Log",
     },
     {
-      l: "💧  Water",
+      l: "Water",
+      icon: LUCIDE_ICONS.droplet,
       v: wa,
       s: setWa,
       ph: "ml",
@@ -274,7 +265,8 @@ function QuickLogWidget() {
       b: "Add",
     },
     {
-      l: "🚶  Steps",
+      l: "Steps",
+      icon: LUCIDE_ICONS.activity,
       v: st,
       s: setSt,
       ph: "0",
@@ -326,9 +318,24 @@ function QuickLogWidget() {
           </View>
         ))}
       </View>
-      {rows.map((r) => (
+      {rows.map((r: any) => (
         <View key={r.l} style={s.qlRow}>
-          <Text style={[s.qlLabel, { color: tc.textSecondary }]}>{r.l}</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              width: 72,
+            }}
+          >
+            <Icon
+              name={r.icon}
+              size={14}
+              color={tc.textSecondary}
+              label={r.l}
+            />
+            <Text style={[s.qlLabel, { color: tc.textSecondary }]}>{r.l}</Text>
+          </View>
           <View style={s.qlInputRow}>
             <TextInput
               style={[
@@ -363,11 +370,11 @@ function MoodWidget() {
   const tc = theme.colors;
   const { dailyLog, logMood } = useApp();
   const moods = [
-    { v: 1, e: "😢", l: "Awful" },
-    { v: 2, e: "😟", l: "Bad" },
-    { v: 3, e: "😑", l: "Meh" },
-    { v: 4, e: "🙂", l: "Good" },
-    { v: 5, e: "😊", l: "Great" },
+    { v: 1, icon: LUCIDE_ICONS.frown, l: "Awful" },
+    { v: 2, icon: LUCIDE_ICONS.frown, l: "Bad" },
+    { v: 3, icon: LUCIDE_ICONS.meh, l: "Meh" },
+    { v: 4, icon: LUCIDE_ICONS.smile, l: "Good" },
+    { v: 5, icon: LUCIDE_ICONS.smile, l: "Great" },
   ];
   return (
     <Card title="Mood" titleStyle={{ color: tc.textTertiary }}>
@@ -385,7 +392,13 @@ function MoodWidget() {
             ]}
             onPress={() => logMood(m.v)}
           >
-            <Text style={s.moodEmoji}>{m.e}</Text>
+            <Icon
+              name={m.icon}
+              size={22}
+              color={dailyLog?.mood === m.v ? tc.accent : tc.textTertiary}
+              style={{ marginBottom: 4 }}
+              label={m.l}
+            />
             <Text
               style={[
                 s.moodLabel,
@@ -429,17 +442,6 @@ function ExpensesWidget() {
     setShow(false);
   };
   return (
-    // <Card
-    //   title={`Expenses · $${total.toFixed(2)}`}
-    //   titleStyle={{ color: tc.textTertiary }}
-    // >
-    //   <TouchableOpacity
-    //     style={[s.addExpBtn, { backgroundColor: tc.success }]}
-    //     onPress={() => setShow(true)}
-    //   >
-    //     <Text style={s.addExpBtnText}>➕ New Expense</Text>
-    //   </TouchableOpacity>
-
     <Card>
       <View style={[{ display: "flex" }]}>
         <Text style={[s.cardTitle, { color: tc.textTertiary }]}>
@@ -450,7 +452,15 @@ function ExpensesWidget() {
           style={[s.addExpBtn, { backgroundColor: tc.success }]}
           onPress={() => setShow(true)}
         >
-          <Text style={s.addExpBtnText}>➕ Add Expense</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Icon
+              name={LUCIDE_ICONS.plus}
+              size={14}
+              color="#fff"
+              label="add expense"
+            />
+            <Text style={s.addExpBtnText}>Add Expense</Text>
+          </View>
         </TouchableOpacity>
       </View>
       {exps.length > 0 ? (
@@ -460,9 +470,26 @@ function ExpensesWidget() {
               key={t.id || i}
               style={[s.expRow, { borderBottomColor: tc.divider }]}
             >
-              <Text style={[s.expCat, { color: tc.heading }]}>
-                {CATEGORY_EMOJIS[t.category]} {t.category}
-              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  width: 90,
+                }}
+              >
+                <Icon
+                  name={
+                    LUCIDE_ICONS[CATEGORY_ICONS[t.category]] ?? LUCIDE_ICONS.pin
+                  }
+                  size={14}
+                  color={tc.heading}
+                  label={t.category}
+                />
+                <Text style={[s.expCat, { color: tc.heading }]}>
+                  {t.category}
+                </Text>
+              </View>
               <Text
                 style={[s.expDesc, { color: tc.textTertiary }]}
                 numberOfLines={1}
@@ -488,9 +515,24 @@ function ExpensesWidget() {
             onPress={() => setShow(false)}
           />
           <View style={[s.modal, { backgroundColor: tc.surface }]}>
-            <Text style={[s.modalTitle, { color: tc.heading }]}>
-              💰 Add Expense
-            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 16,
+              }}
+            >
+              <Icon
+                name={LUCIDE_ICONS.dollarSign}
+                size={20}
+                color={tc.heading}
+                label="add expense"
+              />
+              <Text style={[s.modalTitle, { color: tc.heading }]}>
+                Add Expense
+              </Text>
+            </View>
             <Text style={[s.label, { color: tc.textSecondary }]}>Category</Text>
             <View style={s.catGrid}>
               {EXPENSE_CATEGORIES.map((c) => (
@@ -509,7 +551,13 @@ function ExpensesWidget() {
                   ]}
                   onPress={() => setCat(c)}
                 >
-                  <Text style={s.catIcon}>{CATEGORY_EMOJIS[c]}</Text>
+                  <Icon
+                    name={LUCIDE_ICONS[CATEGORY_ICONS[c]] ?? LUCIDE_ICONS.pin}
+                    size={14}
+                    color={cat === c ? tc.success : tc.textSecondary}
+                    style={{ marginRight: 4 }}
+                    label={c}
+                  />
                   <Text
                     style={[
                       s.catLabel,
@@ -692,14 +740,12 @@ function ReorderableList({
                 onPress={() => moveUp(index)}
                 disabled={index === 0}
               >
-                <Text
-                  style={[
-                    s.editArrowText,
-                    index === 0 && s.editArrowTextDisabled,
-                  ]}
-                >
-                  ▲
-                </Text>
+                <Icon
+                  name={LUCIDE_ICONS.arrowUp}
+                  size={16}
+                  color="#fff"
+                  label="move up"
+                />
               </TouchableOpacity>
               <Text style={[s.editIndex, { color: tc.accent }]}>
                 {index + 1}
@@ -712,14 +758,12 @@ function ReorderableList({
                 onPress={() => moveDown(index)}
                 disabled={index === data.length - 1}
               >
-                <Text
-                  style={[
-                    s.editArrowText,
-                    index === data.length - 1 && s.editArrowTextDisabled,
-                  ]}
-                >
-                  ▼
-                </Text>
+                <Icon
+                  name={LUCIDE_ICONS.arrowDown}
+                  size={16}
+                  color="#fff"
+                  label="move down"
+                />
               </TouchableOpacity>
             </View>
           )}
@@ -805,7 +849,12 @@ export default function DashboardScreen() {
             onPress={() => setSidebarOpen(true)}
             style={s.menuBtn}
           >
-            <Text style={[s.menuIcon, { color: tc.heading }]}>☰</Text>
+            <Icon
+              name={LUCIDE_ICONS.menu}
+              size={20}
+              color={tc.heading}
+              label="menu"
+            />
           </TouchableOpacity>
           <View style={s.topCenter}>
             <Text style={[s.greeting, { color: tc.heading }]}>Loading...</Text>
@@ -837,7 +886,12 @@ export default function DashboardScreen() {
             onPress={() => setSidebarOpen(true)}
             style={s.menuBtn}
           >
-            <Text style={[s.menuIcon, { color: tc.heading }]}>☰</Text>
+            <Icon
+              name={LUCIDE_ICONS.menu}
+              size={20}
+              color={tc.heading}
+              label="menu"
+            />
           </TouchableOpacity>
           <View style={s.topCenter}>
             <Text style={[s.greeting, { color: tc.heading }]}>{greeting}</Text>
@@ -846,11 +900,22 @@ export default function DashboardScreen() {
             </Text>
           </View>
           <TouchableOpacity onPress={refresh} style={s.iconBtn}>
-            <Text style={s.iconBtnText}>🔄</Text>
+            <Icon
+              name={LUCIDE_ICONS.refreshCw}
+              size={16}
+              color={tc.heading}
+              label="refresh"
+            />
           </TouchableOpacity>
         </View>
         <View style={s.emptyContainer}>
-          <Text style={s.emptyIcon}>📊</Text>
+          <Icon
+            name={LUCIDE_ICONS.barChart2}
+            size={48}
+            color={tc.textTertiary}
+            style={{ marginBottom: 8 }}
+            label="dashboard"
+          />
           <Text style={[s.emptyTitle, { color: tc.heading }]}>
             Welcome to your Dashboard
           </Text>
@@ -861,7 +926,17 @@ export default function DashboardScreen() {
             style={[s.emptyRefreshBtn, { backgroundColor: tc.accent }]}
             onPress={refresh}
           >
-            <Text style={s.emptyRefreshBtnText}>🔄 Refresh</Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
+              <Icon
+                name={LUCIDE_ICONS.refreshCw}
+                size={14}
+                color="#fff"
+                label="refresh"
+              />
+              <Text style={s.emptyRefreshBtnText}>Refresh</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -880,7 +955,12 @@ export default function DashboardScreen() {
           onPress={() => setSidebarOpen(true)}
           style={s.menuBtn}
         >
-          <Text style={[s.menuIcon, { color: tc.heading }]}>☰</Text>
+          <Icon
+            name={LUCIDE_ICONS.menu}
+            size={20}
+            color={tc.heading}
+            label="menu"
+          />
         </TouchableOpacity>
         <View style={s.topCenter}>
           {!editing ? (
@@ -893,26 +973,67 @@ export default function DashboardScreen() {
               </Text>
             </>
           ) : (
-            <Text style={[s.editHint, { color: tc.accent }]}>
-              ⬆️⬇️ Use arrows to reorder
-            </Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
+              <Icon
+                name={LUCIDE_ICONS.arrowUp}
+                size={14}
+                color={tc.accent}
+                label="reorder"
+              />
+              <Icon
+                name={LUCIDE_ICONS.arrowDown}
+                size={14}
+                color={tc.accent}
+                label="reorder"
+              />
+              <Text style={[s.editHint, { color: tc.accent }]}>
+                Use arrows to reorder
+              </Text>
+            </View>
           )}
         </View>
         {!editing ? (
           <>
             <TouchableOpacity onPress={refresh} style={s.iconBtn}>
-              <Text style={s.iconBtnText}>🔄</Text>
+              <Icon
+                name={LUCIDE_ICONS.refreshCw}
+                size={16}
+                color={tc.heading}
+                label="refresh"
+              />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setEditing(true)}
               style={[s.editBtn, { backgroundColor: tc.bgSecondary }]}
             >
-              <Text style={[s.editBtnText, { color: tc.accent }]}>✎ Edit</Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <Icon
+                  name={LUCIDE_ICONS.edit}
+                  size={12}
+                  color={tc.accent}
+                  label="edit"
+                />
+                <Text style={[s.editBtnText, { color: tc.accent }]}>Edit</Text>
+              </View>
             </TouchableOpacity>
             <View style={[s.streak, { backgroundColor: tc.warningBg }]}>
-              <Text style={[s.streakText, { color: tc.warning }]}>
-                🔥 {streak}
-              </Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <Icon
+                  name={LUCIDE_ICONS.zap}
+                  size={12}
+                  color={tc.warning}
+                  label="streak"
+                />
+                <Text style={[s.streakText, { color: tc.warning }]}>
+                  {streak}
+                </Text>
+              </View>
             </View>
           </>
         ) : (
@@ -920,7 +1041,17 @@ export default function DashboardScreen() {
             onPress={exitEdit}
             style={[s.doneBtn, { backgroundColor: tc.accent }]}
           >
-            <Text style={s.doneBtnText}>✓ Done</Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            >
+              <Icon
+                name={LUCIDE_ICONS.check}
+                size={14}
+                color="#fff"
+                label="done"
+              />
+              <Text style={s.doneBtnText}>Done</Text>
+            </View>
           </TouchableOpacity>
         )}
       </View>
@@ -930,7 +1061,7 @@ export default function DashboardScreen() {
         onReorder={handleReorder}
         renderItem={renderCard}
         editing={editing}
-        contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
+        contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 48 }}
       />
     </SafeAreaView>
   );
@@ -1106,7 +1237,7 @@ const s = StyleSheet.create({
     paddingVertical: 6,
     gap: 8,
   },
-  qlLabel: { fontSize: 13, fontWeight: "600", width: 72 },
+  qlLabel: { ...TYPOGRAPHY.bodySm, fontWeight: "600" },
   qlInputRow: { flex: 1, flexDirection: "row", gap: 8, alignItems: "center" },
   qlInput: {
     flex: 1,

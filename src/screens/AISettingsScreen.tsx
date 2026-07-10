@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStore } from '../store';
 import { useTheme } from '../context/ThemeContext';
 import { Card } from '../components/Card';
+import { Icon } from '../components/Icons';
+import { LUCIDE_ICONS, TYPOGRAPHY } from '../constants/typography';
 import * as db from '../db/service';
 import { PROVIDERS, askAi } from '../services/ai';
 
@@ -106,7 +107,7 @@ export default function AISettingsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.menuBtn}>
-          <Feather name="menu" size={20} color={colors.text} />
+          <Icon name={LUCIDE_ICONS.menu} size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>AI Settings</Text>
       </View>
@@ -150,7 +151,7 @@ export default function AISettingsScreen() {
                     {p.label}
                   </Text>
                   {configured && (
-                    <Feather name="check-circle" size={12} color={colors.success} style={{ marginLeft: 4 }} />
+                    <Icon name={LUCIDE_ICONS.checkCircle} size={12} color={colors.success} style={{ marginLeft: 4 }} />
                   )}
                 </TouchableOpacity>
               );

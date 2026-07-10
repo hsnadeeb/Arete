@@ -8,7 +8,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '../../components/Icons';
+import { LUCIDE_ICONS, TYPOGRAPHY } from '../../constants/typography';
 import { useTheme } from '../../context/ThemeContext';
 import * as SQLite from 'expo-sqlite';
 
@@ -28,7 +29,7 @@ export default function DataRestoreScreen({ visible, hasOldData, onStartFresh, o
       <SafeAreaView style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
         <View style={[styles.container, { backgroundColor: tc.bg }]}>
           <View style={[styles.iconContainer, { backgroundColor: tc.accentBg }]}>
-            <Feather name="database" size={48} color={tc.accent} />
+            <Icon name={LUCIDE_ICONS.database} size={48} color={tc.accent} />
           </View>
 
           <Text style={[styles.title, { color: tc.text }]}>Existing Data Found</Text>
@@ -42,7 +43,7 @@ export default function DataRestoreScreen({ visible, hasOldData, onStartFresh, o
               onPress={onStartFresh}
             >
               <View style={[styles.optionIcon, { backgroundColor: '#fee2e2' }]}>
-                <Feather name="trash-2" size={24} color="#ef4444" />
+                <Icon name={LUCIDE_ICONS.trash2} size={24} color="#ef4444" />
               </View>
               <View style={styles.optionContent}>
                 <Text style={[styles.optionTitle, { color: tc.text }]}>Start Fresh</Text>
@@ -57,7 +58,7 @@ export default function DataRestoreScreen({ visible, hasOldData, onStartFresh, o
               onPress={onKeepData}
             >
               <View style={[styles.optionIcon, { backgroundColor: '#d1fae5' }]}>
-                <Feather name="check-circle" size={24} color="#10b981" />
+                <Icon name={LUCIDE_ICONS.checkCircle} size={24} color="#10b981" />
               </View>
               <View style={styles.optionContent}>
                 <Text style={[styles.optionTitle, { color: tc.text }]}>Keep Existing Data</Text>
@@ -105,8 +106,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    ...TYPOGRAPHY.h1,
     textAlign: 'center',
     marginBottom: 12,
   },
@@ -140,13 +140,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.h4,
     marginBottom: 4,
   },
   optionDescription: {
-    fontSize: 14,
-    lineHeight: 20,
+    ...TYPOGRAPHY.body,
   },
   laterButton: {
     padding: 12,

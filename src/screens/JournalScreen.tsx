@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStore } from '../store';
 import { useTheme } from '../context/ThemeContext';
+import { Icon } from '../components/Icons';
+import { LUCIDE_ICONS, TYPOGRAPHY } from '../constants/typography';
 import * as db from '../db/service';
 import { Card } from '../components/Card';
 import { generateAiProgram } from '../services/ai';
@@ -155,7 +156,7 @@ export default function JournalScreen() {
               onPress={() => handleToggleItem(item.id, item.is_completed)}
             >
               <View style={[styles.checkbox, item.is_completed ? { backgroundColor: colors.success, borderColor: colors.success } : { borderColor: colors.border }]}>
-                {item.is_completed ? <Feather name="check" size={12} color="#fff" /> : null}
+                {item.is_completed ? <Icon name={LUCIDE_ICONS.check} size={12} color="#fff" /> : null}
               </View>
               <View style={{ flex: 1 }}>
                 <View style={[styles.row, { alignItems: 'center', gap: 6 }]}>
@@ -183,16 +184,16 @@ export default function JournalScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.menuBtn}>
-          <Feather name="menu" size={20} color={colors.text} />
+          <Icon name={LUCIDE_ICONS.menu} size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Journal</Text>
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12, gap: 12, paddingBottom: 60 }}>
         <View style={[styles.tabRow, { gap: 6 }]}>
           {[
-            { key: 'note' as const, label: 'Note', icon: '✏️' },
-            { key: 'gym' as const, label: 'Gym', icon: '🏋️' },
-            { key: 'food' as const, label: 'Food', icon: '🍽️' },
+            { key: 'note' as const, label: 'Note', icon: LUCIDE_ICONS.edit },
+            { key: 'gym' as const, label: 'Gym', icon: LUCIDE_ICONS.run },
+            { key: 'food' as const, label: 'Food', icon: LUCIDE_ICONS.coffee },
           ].map((t) => (
             <TouchableOpacity
               key={t.key}
@@ -203,7 +204,7 @@ export default function JournalScreen() {
               ]}
               onPress={() => setTab(t.key)}
             >
-              <Text>{t.icon}</Text>
+              <Icon name={t.icon} size={14} color={tab === t.key ? colors.accent : colors.text} />
               <Text style={{ color: tab === t.key ? colors.accent : colors.text, fontWeight: tab === t.key ? '600' : '500' }}>{t.label}</Text>
             </TouchableOpacity>
           ))}
@@ -237,7 +238,7 @@ export default function JournalScreen() {
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <>
-                      <Feather name="zap" size={14} color="#fff" />
+                      <Icon name={LUCIDE_ICONS.zap} size={14} color="#fff" />
                       <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Generate Weekly</Text>
                     </>
                   )}
@@ -248,7 +249,7 @@ export default function JournalScreen() {
                     onPress={() => handleRegenerate('gym')}
                     disabled={generating}
                   >
-                    <Feather name="refresh-cw" size={14} color={colors.warning} />
+                    <Icon name={LUCIDE_ICONS.refreshCw} size={14} color={colors.warning} />
                     <Text style={{ color: colors.warning, fontWeight: '600', fontSize: 13 }}>Regenerate</Text>
                   </TouchableOpacity>
                 )}
@@ -284,7 +285,7 @@ export default function JournalScreen() {
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <>
-                      <Feather name="zap" size={14} color="#fff" />
+                      <Icon name={LUCIDE_ICONS.zap} size={14} color="#fff" />
                       <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Generate Weekly</Text>
                     </>
                   )}
@@ -295,7 +296,7 @@ export default function JournalScreen() {
                     onPress={() => handleRegenerate('food')}
                     disabled={generating}
                   >
-                    <Feather name="refresh-cw" size={14} color={colors.warning} />
+                    <Icon name={LUCIDE_ICONS.refreshCw} size={14} color={colors.warning} />
                     <Text style={{ color: colors.warning, fontWeight: '600', fontSize: 13 }}>Regenerate</Text>
                   </TouchableOpacity>
                 )}
@@ -346,10 +347,10 @@ export default function JournalScreen() {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 48, borderBottomWidth: 1 },
   menuBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 16, fontWeight: '600', marginLeft: 4 },
+  title: { ...TYPOGRAPHY.h4, marginLeft: 4 },
   tabRow: { flexDirection: 'row' },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
-  inp: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 8 },
+  inp: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, ...TYPOGRAPHY.input, marginBottom: 8 },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
   saveBtn: { padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 4 },
   row: { flexDirection: 'row' },
@@ -357,6 +358,6 @@ const styles = StyleSheet.create({
   generateBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 12, borderRadius: 10 },
   programItem: { flexDirection: 'row', paddingVertical: 10, borderBottomWidth: 1, gap: 10, alignItems: 'flex-start' },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  dayBadge: { fontSize: 10, fontWeight: '700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
-  itemTitle: { fontSize: 14, fontWeight: '500', flexShrink: 1 },
+  dayBadge: { ...TYPOGRAPHY.captionSm, fontWeight: '700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
+  itemTitle: { ...TYPOGRAPHY.body, fontWeight: '500', flexShrink: 1 },
 });

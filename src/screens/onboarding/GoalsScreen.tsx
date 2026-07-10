@@ -7,16 +7,17 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '../../components/Icons';
+import { LUCIDE_ICONS, TYPOGRAPHY } from '../../constants/typography';
 import { useTheme } from '../../context/ThemeContext';
 
 const GOALS = [
-  { id: 'fitness', label: 'Fitness & Health', icon: 'activity', emoji: '💪' },
-  { id: 'productivity', label: 'Productivity', icon: 'clock', emoji: '🎯' },
-  { id: 'mindfulness', label: 'Mindfulness', icon: 'moon', emoji: '🧘' },
-  { id: 'learning', label: 'Learning', icon: 'book', emoji: '📚' },
-  { id: 'finance', label: 'Finance', icon: 'dollar-sign', emoji: '💰' },
-  { id: 'social', label: 'Social', icon: 'users', emoji: '👥' },
+  { id: 'fitness', label: 'Fitness & Health', iconKey: 'activity' as const },
+  { id: 'productivity', label: 'Productivity', iconKey: 'clock' as const },
+  { id: 'mindfulness', label: 'Mindfulness', iconKey: 'moon' as const },
+  { id: 'learning', label: 'Learning', iconKey: 'book' as const },
+  { id: 'finance', label: 'Finance', iconKey: 'dollarSign' as const },
+  { id: 'social', label: 'Social', iconKey: 'users' as const },
 ];
 
 export default function GoalsScreen({ onNext, onBack }: { onNext: (goals: string[]) => void; onBack: () => void }) {
@@ -63,10 +64,10 @@ export default function GoalsScreen({ onNext, onBack }: { onNext: (goals: string
               ]}
               onPress={() => toggleGoal(goal.id)}
             >
-              <Text style={styles.emoji}>{goal.emoji}</Text>
+              <Icon name={LUCIDE_ICONS[goal.iconKey]} size={24} color={tc.text} />
               <Text style={[styles.goalLabel, { color: tc.text }]}>{goal.label}</Text>
               {selectedGoals.includes(goal.id) && (
-                <Feather name="check-circle" size={24} color={tc.accent} />
+                <Icon name={LUCIDE_ICONS.checkCircle} size={24} color={tc.accent} />
               )}
             </TouchableOpacity>
           ))}
@@ -133,10 +134,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 12,
   },
-  emoji: {
-    fontSize: 28,
-    marginRight: 16,
-  },
   goalLabel: {
     flex: 1,
     fontSize: 16,
@@ -154,8 +151,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.h4,
   },
   nextButton: {
     flex: 1,
@@ -164,7 +160,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   nextButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.h4,
   },
 });

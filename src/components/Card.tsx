@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, ViewStyle } from "react-native";
+import { TYPOGRAPHY } from "../constants/typography";
 
 interface CardProps {
   title?: string;
@@ -61,11 +62,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontSize: 13,
-    fontWeight: "600",
+    ...TYPOGRAPHY.title,
     color: "#9b9a97",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
     marginBottom: 12,
   },
   tile: {
@@ -73,22 +71,19 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   tileValue: {
-    fontSize: 22,
-    fontWeight: "700",
+    fontSize: TYPOGRAPHY.h2.fontSize,
+    fontWeight: TYPOGRAPHY.h2.fontWeight,
     color: "#37352f",
     letterSpacing: -0.3,
   },
   tileUnit: {
-    fontSize: 12,
+    ...TYPOGRAPHY.caption,
     color: "#9b9a97",
     marginTop: -2,
   },
   tileLabel: {
-    fontSize: 11,
+    ...TYPOGRAPHY.statLabel,
     color: "#9b9a97",
-    fontWeight: "500",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
   },
   row: {
     flexDirection: "row",
@@ -98,7 +93,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#f5f5f5",
   },
   rowLabel: {
-    fontSize: 13,
+    ...TYPOGRAPHY.bodySm,
     color: "#37352f",
     fontWeight: "500",
     width: 100,

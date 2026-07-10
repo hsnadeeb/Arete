@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
+import { Icon } from '../components/Icons';
+import { LUCIDE_ICONS, TYPOGRAPHY } from '../constants/typography';
 import { Card, Row } from '../components/Card';
 import { today, BUDGET_CATEGORIES } from '../types';
 import * as db from '../db/service';
@@ -71,7 +73,7 @@ export default function BudgetScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: T.bg }]} edges={['top']}>
       <View style={[styles.topbar, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.menuBtn}>
-          <Text style={[styles.menuIcon, { color: T.textSecondary }]}>☰</Text>
+          <Icon name={LUCIDE_ICONS.menu} size={18} color={T.textSecondary} />
         </TouchableOpacity>
         <Text style={[styles.topTitle, { color: T.textPrimary }]}>Budget</Text>
       </View>
@@ -156,32 +158,31 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   menuBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  menuIcon: { fontSize: 18 },
-  topTitle: { fontSize: 16, fontWeight: '600', marginLeft: 4 },
+  topTitle: { ...TYPOGRAPHY.h4, marginLeft: 4 },
   scroll: { flex: 1 },
-  content: { padding: 16, paddingBottom: 48 },
+  content: { paddingHorizontal: 8, paddingBottom: 48 },
   input: {
     borderWidth: 1, borderRadius: 8, paddingHorizontal: 12,
-    paddingVertical: 10, fontSize: 14, marginBottom: 8,
+    paddingVertical: 10, ...TYPOGRAPHY.input, marginBottom: 8,
   },
   addBtn: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 4 },
-  addBtnText: { fontSize: 14, fontWeight: '600' },
+  addBtnText: { ...TYPOGRAPHY.btn },
   summary: { flexDirection: 'row', justifyContent: 'space-between' },
   summaryItem: { flex: 1, alignItems: 'center' },
-  summaryLabel: { fontSize: 11, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.3 },
-  summaryValue: { fontSize: 20, fontWeight: '700', marginTop: 4 },
+  summaryLabel: { ...TYPOGRAPHY.statLabel },
+  summaryValue: { ...TYPOGRAPHY.monoLg, marginTop: 4 },
   divider: { width: 1 },
-  expenseAmount: { fontSize: 14, fontWeight: '600' },
+  expenseAmount: { ...TYPOGRAPHY.body, fontWeight: '600' },
   catRow: { marginBottom: 8 },
   catPicker: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1 },
-  catPickerText: { fontSize: 14, fontWeight: '500' },
+  catPickerText: { ...TYPOGRAPHY.input, fontWeight: '500' },
   catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
   catChip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1 },
   catChipActive: {},
-  catChipText: { fontSize: 12 },
+  catChipText: { ...TYPOGRAPHY.caption },
   catChipTextActive: {},
   txRow: { flexDirection: 'row', gap: 8 },
   txHint: { marginBottom: 4 },
-  txHintText: { fontSize: 11 },
-  txAmount: { fontSize: 14, fontWeight: '600' },
+  txHintText: { ...TYPOGRAPHY.captionSm },
+  txAmount: { ...TYPOGRAPHY.body, fontWeight: '600' },
 });

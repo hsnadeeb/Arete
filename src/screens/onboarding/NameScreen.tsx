@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { TYPOGRAPHY } from '../../constants/typography';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function NameScreen({ onNext, onBack }: { onNext: (name: string) => void; onBack: () => void }) {
@@ -125,8 +126,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.h4,
   },
   nextButton: {
     flex: 1,
@@ -135,7 +135,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   nextButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.h4,
   },
 });

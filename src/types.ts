@@ -1,5 +1,4 @@
-import type { ComponentProps } from "react";
-import Feather from "@expo/vector-icons/Feather";
+import { LUCIDE_ICONS, type LucideIconName } from "./constants/typography";
 
 export interface DailyLog {
   id: number;
@@ -138,7 +137,6 @@ export interface IslamicDate {
   dayOfWeek: string;
 }
 
-type FeatherIconName = ComponentProps<typeof Feather>["name"];
 
 export const PRAYER_NAMES = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 export const PRAYER_TIMES_ORDER = [
@@ -189,25 +187,16 @@ export function formatDate(date: string): string {
 export const PRAYER_ICONS: Record<
   string,
   {
-    name: FeatherIconName;
+    name: LucideIconName;
     color: string;
   }
 > = {
-  fajr: { name: "sunrise", color: "#f59e0b" },
-  sunrise: { name: "sun", color: "#f59e0b" },
-  dhuhr: { name: "sun", color: "#f59e0b" },
-  asr: { name: "cloud", color: "#8b5cf6" },
-  maghrib: { name: "sunset", color: "#e03e3e" },
-  isha: { name: "moon", color: "#6366f1" },
-};
-
-export const PRAYER_EMOJIS: Record<string, string> = {
-  fajr: "🌅",
-  sunrise: "☀️",
-  dhuhr: "🌞",
-  asr: "🌤️",
-  maghrib: "🌇",
-  isha: "🌙",
+  fajr: { name: LUCIDE_ICONS.sunrise, color: "#f59e0b" },
+  sunrise: { name: LUCIDE_ICONS.sun, color: "#f59e0b" },
+  dhuhr: { name: LUCIDE_ICONS.sun, color: "#f59e0b" },
+  asr: { name: LUCIDE_ICONS.cloud, color: "#8b5cf6" },
+  maghrib: { name: LUCIDE_ICONS.sunset, color: "#e03e3e" },
+  isha: { name: LUCIDE_ICONS.moon, color: "#6366f1" },
 };
 
 export const PRAYER_DISPLAY: Record<string, string> = {
@@ -231,7 +220,7 @@ export interface WidgetLayout {
 export interface WidgetDefinition {
   key: string;
   title: string;
-  icon: string;
+  icon: LucideIconName;
   accentColor: string;
 }
 
@@ -239,27 +228,27 @@ export const WIDGET_DEFINITIONS: WidgetDefinition[] = [
   {
     key: "at-a-glance",
     title: "At a Glance",
-    icon: "compass",
+    icon: LUCIDE_ICONS.compass,
     accentColor: "#8b5cf6",
   },
   {
     key: "quick-stats",
     title: "Quick Stats",
-    icon: "bar-chart-2",
+    icon: LUCIDE_ICONS.barChart2,
     accentColor: "#0b6bcf",
   },
-  { key: "quick-log", title: "Quick Log", icon: "zap", accentColor: "#0ea5e9" },
-  { key: "mood", title: "Mood", icon: "smile", accentColor: "#6366f1" },
+  { key: "quick-log", title: "Quick Log", icon: LUCIDE_ICONS.zap, accentColor: "#0ea5e9" },
+  { key: "mood", title: "Mood", icon: LUCIDE_ICONS.smile, accentColor: "#6366f1" },
   {
     key: "expenses",
     title: "Expenses",
-    icon: "dollar-sign",
+    icon: LUCIDE_ICONS.dollarSign,
     accentColor: "#059669",
   },
   {
     key: "monthly-stats",
     title: "Monthly Stats",
-    icon: "trending-up",
+    icon: LUCIDE_ICONS.trendingUp,
     accentColor: "#d97706",
   },
 ];

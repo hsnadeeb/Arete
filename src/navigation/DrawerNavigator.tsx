@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   Animated,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStore } from "../store";
 import { useTheme } from "../context/ThemeContext";
+import { Icon } from "../components/Icons";
+import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import BottomNavBar from "../components/BottomNavBar";
 
 import DashboardScreen from "../screens/DashboardScreen";
@@ -53,10 +54,10 @@ const SCREENS: { name: RouteName; component: React.FC }[] = [
   { name: "AISettings", component: AISettingsScreen },
 ];
 
-const NAV_ITEMS: { name: RouteName; label: string; icon: string }[] = [
+const NAV_ITEMS: { name: RouteName; label: string; icon: keyof typeof LUCIDE_ICONS }[] = [
   { name: "Greeting", label: "Home", icon: "home" },
   { name: "Focus", label: "Focus", icon: "target" },
-  { name: "Budget", label: "Budget", icon: "dollar-sign" },
+  { name: "Budget", label: "Budget", icon: "dollarSign" },
   { name: "Profile", label: "Profile", icon: "user" },
   { name: "Settings", label: "Settings", icon: "settings" },
   { name: "AISettings", label: "AI Settings", icon: "cpu" },
@@ -205,8 +206,8 @@ export default function DrawerNavigator() {
                 }}
                 activeOpacity={0.7}
               >
-                <Feather
-                  name={item.icon as any}
+                <Icon
+                  name={LUCIDE_ICONS[item.icon]}
                   size={18}
                   color={
                     focused ? theme.colors.accent : theme.colors.textTertiary
@@ -233,8 +234,8 @@ export default function DrawerNavigator() {
           onPress={toggle}
           activeOpacity={0.7}
         >
-          <Feather
-            name={isDark ? "sun" : "moon"}
+          <Icon
+            name={isDark ? LUCIDE_ICONS.sun : LUCIDE_ICONS.moon}
             size={18}
             color={theme.colors.textSecondary}
           />
@@ -282,8 +283,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: {
-    fontSize: 16,
-    fontWeight: "700",
+    ...TYPOGRAPHY.h4,
   },
   navItem: {
     flexDirection: "row",
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   navItemLabel: {
-    fontSize: 14,
+    ...TYPOGRAPHY.body,
     fontWeight: "500",
   },
   navItemLabelActive: {
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   themeToggleLabel: {
-    fontSize: 14,
+    ...TYPOGRAPHY.body,
     fontWeight: "500",
   },
 });

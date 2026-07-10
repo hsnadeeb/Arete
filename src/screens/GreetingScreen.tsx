@@ -9,9 +9,11 @@ import {
   Easing,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+
 import { useStore } from "../store";
 import { useTheme } from "../context/ThemeContext";
+import { Icon } from "../components/Icons";
+import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 
 function formatTime(d: Date): string {
   return d.toLocaleTimeString("en-US", {
@@ -336,7 +338,7 @@ export default function GreetingScreen() {
                 </Animated.View>
               ) : (
                 <View style={s.bubbleTextWrap}>
-                  <Feather name="clock" size={22} color={tc.textTertiary} />
+                  <Icon name={LUCIDE_ICONS.clock} size={22} color={tc.textTertiary} label="clock" />
                   <Text style={[s.bubbleHead, { color: tc.textTertiary, marginTop: 8 }]}>
                     All Clear
                   </Text>
@@ -390,7 +392,7 @@ export default function GreetingScreen() {
           activeOpacity={0.85}
         >
           <Text style={s.enterBtnText}>Enter Brain</Text>
-          <Feather name="arrow-right" size={18} color="#fff" />
+          <Icon name={LUCIDE_ICONS.arrowRight} size={18} color="#fff" label="enter" />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -398,7 +400,7 @@ export default function GreetingScreen() {
           onPress={() => setCurrentRoute("Focus")}
           activeOpacity={0.7}
         >
-          <Feather name="target" size={16} color={tc.accent} />
+          <Icon name={LUCIDE_ICONS.target} size={16} color={tc.accent} label="focus" />
           <Text style={[s.focusBtnText, { color: tc.textSecondary }]}>Focus</Text>
         </TouchableOpacity>
       </View>
@@ -411,15 +413,15 @@ const s = StyleSheet.create({
   contentArea: { flex: 1, paddingHorizontal: 28 },
   topSection: { alignItems: "center" },
   timeRow: { flexDirection: "row", alignItems: "flex-end", gap: 6 },
-  time: { fontSize: 60, fontWeight: "700", letterSpacing: -1, fontVariant: ["tabular-nums"] },
+  time: { ...TYPOGRAPHY.monoLg, fontSize: 60, letterSpacing: -1 },
   timeAmPm: { fontSize: 18, fontWeight: "600", paddingBottom: 10 },
   date: { fontSize: 15, fontWeight: "500", marginTop: 2 },
-  hijri: { fontSize: 13, fontWeight: "400", marginTop: 4 },
+  hijri: { ...TYPOGRAPHY.body, marginTop: 4 },
   progressSection: { marginTop: 20, gap: 10 },
   progressRow: { gap: 6 },
   progressMeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  progressLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
-  progressPct: { fontSize: 11, fontWeight: "600", fontVariant: ["tabular-nums"] },
+  progressLabel: { ...TYPOGRAPHY.label },
+  progressPct: { ...TYPOGRAPHY.captionSm, fontWeight: "600" },
   progressTrack: { height: 4, borderRadius: 2, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 2 },
   bubbleStage: {
@@ -443,9 +445,9 @@ const s = StyleSheet.create({
     borderWidth: 1, alignItems: "center", justifyContent: "center",
   },
   bubbleTextWrap: { alignItems: "center", paddingHorizontal: 16 },
-  bubbleHead: { fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1 },
+  bubbleHead: { ...TYPOGRAPHY.label, letterSpacing: 1 },
   bubbleTitle: { fontSize: 17, fontWeight: "700", marginTop: 6, textAlign: "center" },
-  bubbleSub: { fontSize: 12, fontWeight: "500", marginTop: 4 },
+  bubbleSub: { ...TYPOGRAPHY.caption, marginTop: 4 },
   sparkle: {
     position: "absolute", width: 6, height: 6, borderRadius: 3,
   },
@@ -453,11 +455,11 @@ const s = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, paddingVertical: 16, borderRadius: 16,
   },
-  enterBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  enterBtnText: { color: "#fff", ...TYPOGRAPHY.h4 },
   focusBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, paddingVertical: 14, borderRadius: 16, borderWidth: 1, marginTop: 10,
   },
-  focusBtnText: { fontSize: 14, fontWeight: "600" },
+  focusBtnText: { ...TYPOGRAPHY.btn },
   bottomButtons: { paddingHorizontal: 28, paddingBottom: 20, gap: 10 },
 });

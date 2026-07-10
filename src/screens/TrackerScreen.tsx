@@ -14,8 +14,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
 import { Card } from "../components/Card";
+import { Icon, getIconName } from "../components/Icons";
+import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import { BarChart, ProgressRing } from "../components/Charts";
 import * as db from "../db/service";
+import type { LucideIconName } from "../constants/typography";
 
 type Tab =
   | "overview"
@@ -26,14 +29,14 @@ type Tab =
   | "mood"
   | "habits";
 
-const TABS: { key: Tab; label: string; icon: string; color: string }[] = [
-  { key: "overview", label: "Today", icon: "📊", color: "#6366f1" },
-  { key: "weight", label: "Weight", icon: "⚖️", color: "#0b6bcf" },
-  { key: "water", label: "Water", icon: "💧", color: "#0ea5e9" },
-  { key: "steps", label: "Steps", icon: "🚶", color: "#f59e0b" },
-  { key: "sleep", label: "Sleep", icon: "🌙", color: "#8b5cf6" },
-  { key: "mood", label: "Mood", icon: "😊", color: "#f97316" },
-  { key: "habits", label: "Habits", icon: "✅", color: "#0891b2" },
+const TABS: { key: Tab; label: string; icon: LucideIconName; color: string }[] = [
+  { key: "overview", label: "Today", icon: "BarChart", color: "#6366f1" },
+  { key: "weight", label: "Weight", icon: "Weight", color: "#0b6bcf" },
+  { key: "water", label: "Water", icon: "Droplet", color: "#0ea5e9" },
+  { key: "steps", label: "Steps", icon: "Footprints", color: "#f59e0b" },
+  { key: "sleep", label: "Sleep", icon: "Moon", color: "#8b5cf6" },
+  { key: "mood", label: "Mood", icon: "Smile", color: "#f97316" },
+  { key: "habits", label: "Habits", icon: "CheckCircle", color: "#0891b2" },
 ];
 
 function today(): string {
@@ -62,14 +65,14 @@ function renderHabitGrid(
       <View style={{ flexDirection: 'row', marginLeft: 28, marginBottom: 10, height: 14 }}>
         {grid.monthLabels.map((m, i) => (
           <View key={i} style={{ position: 'absolute', left: m.col * (cellSize + gap) }}>
-            <Text style={{ fontSize: 10, color: T.textMuted, fontWeight: '500' }}>{m.label}</Text>
+            <Text style={[TYPOGRAPHY.captionSm, { color: T.textMuted, fontWeight: '500' }]}>{m.label}</Text>
           </View>
         ))}
       </View>
       <View style={{ flexDirection: 'row' }}>
         <View style={{ width: 24, gap: gap }}>
           {dayLabels.map((l, i) => (
-            <Text key={i} style={{ fontSize: 10, color: T.textMuted, height: cellSize, lineHeight: cellSize }}>{l}</Text>
+            <Text key={i} style={[TYPOGRAPHY.captionSm, { color: T.textMuted, height: cellSize, lineHeight: cellSize }]}>{l}</Text>
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: gap }}>
@@ -306,7 +309,7 @@ export default function TrackerScreen() {
           ]}
         >
           <TouchableOpacity onPress={() => setSidebarOpen(true)}>
-            <Text style={{ fontSize: 22, color: T.textPrimary }}>☰</Text>
+            <Icon name={LUCIDE_ICONS.menu} size={22} color={T.textPrimary} />
           </TouchableOpacity>
           <Text style={{ marginLeft: 8, color: T.textPrimary }}>
             Loading...
@@ -330,12 +333,12 @@ export default function TrackerScreen() {
           { backgroundColor: T.surface, borderBottomColor: T.borderSoft },
         ]}
       >
-        <TouchableOpacity
-          onPress={() => setSidebarOpen(true)}
-          style={styles.hamburger}
-        >
-          <Text style={{ fontSize: 20, color: T.textPrimary }}>☰</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setSidebarOpen(true)}
+            style={styles.hamburger}
+          >
+            <Icon name={LUCIDE_ICONS.menu} size={20} color={T.textPrimary} />
+          </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: T.textPrimary }]}>
           {todayStr}
         </Text>
@@ -363,7 +366,7 @@ export default function TrackerScreen() {
               ]}
               onPress={() => goToPage(TABS.indexOf(t))}
             >
-              <Text style={{ fontSize: 13 }}>{t.icon}</Text>
+              <Text style={[TYPOGRAPHY.bodySm, { color: T.textMuted, fontWeight: '600' }]}>{t.icon}</Text>
               <Text
                 style={[
                   styles.pillLabel,
@@ -404,7 +407,7 @@ export default function TrackerScreen() {
                 <View
                   style={[styles.statIcon, { backgroundColor: "#0b6bcf20" }]}
                 >
-                  <Text>⚖️</Text>
+                  <Icon name={LUCIDE_ICONS.weight} size={18} color="#0b6bcf" />
                 </View>
                 <View style={styles.statData}>
                   <Text style={[styles.statLabel, { color: T.textTertiary }]}>
@@ -430,7 +433,7 @@ export default function TrackerScreen() {
                 <View
                   style={[styles.statIcon, { backgroundColor: "#0ea5e920" }]}
                 >
-                  <Text>💧</Text>
+                  <Icon name={LUCIDE_ICONS.droplet} size={18} color="#0ea5e9" />
                 </View>
                 <View style={styles.statData}>
                   <Text style={[styles.statLabel, { color: T.textTertiary }]}>
@@ -468,7 +471,7 @@ export default function TrackerScreen() {
                 <View
                   style={[styles.statIcon, { backgroundColor: "#f59e0b20" }]}
                 >
-                  <Text>🚶</Text>
+                  <Icon name={LUCIDE_ICONS.run} size={18} color="#f59e0b" />
                 </View>
                 <View style={styles.statData}>
                   <Text style={[styles.statLabel, { color: T.textTertiary }]}>
@@ -506,7 +509,7 @@ export default function TrackerScreen() {
                 <View
                   style={[styles.statIcon, { backgroundColor: "#8b5cf620" }]}
                 >
-                  <Text>😊</Text>
+                  <Icon name={LUCIDE_ICONS.smile} size={18} color="#8b5cf6" />
                 </View>
                 <View style={styles.statData}>
                   <Text style={[styles.statLabel, { color: T.textTertiary }]}>
@@ -544,7 +547,7 @@ export default function TrackerScreen() {
                 <View
                   style={[styles.statIcon, { backgroundColor: "#6366f120" }]}
                 >
-                  <Text>🌙</Text>
+                  <Icon name={LUCIDE_ICONS.moon} size={18} color="#6366f1" />
                 </View>
                 <View style={styles.statData}>
                   <Text style={[styles.statLabel, { color: T.textTertiary }]}>
@@ -589,7 +592,7 @@ export default function TrackerScreen() {
               <Text style={[styles.bigVal, { color: T.textPrimary }]}>
                 {dailyLog?.weight ?? "—"}
               </Text>
-              <Text style={{ fontSize: 14, color: T.textMuted }}>kg</Text>
+              <Text style={[TYPOGRAPHY.body, { color: T.textMuted }]}>kg</Text>
             </View>
             <View style={styles.actionRow}>
               <TextInput
@@ -713,7 +716,7 @@ export default function TrackerScreen() {
               <Text style={[styles.bigVal, { color: "#f59e0b" }]}>
                 {dailyLog?.steps?.toLocaleString() ?? "0"}
               </Text>
-              <Text style={{ fontSize: 14, color: T.textMuted }}>/ 10,000</Text>
+              <Text style={[TYPOGRAPHY.body, { color: T.textMuted }]}>/ 10,000</Text>
             </View>
             <View
               style={{
@@ -846,10 +849,12 @@ export default function TrackerScreen() {
                   ]}
                   onPress={() => logMood(m)}
                 >
-                  <Text style={{ fontSize: 28 }}>
-                    {["😢", "😟", "😐", "🙂", "😊"][m - 1]}
-                  </Text>
-                  <Text style={{ fontSize: 11, color: T.textTertiary }}>
+                  <Icon
+                    name={([LUCIDE_ICONS.frown, LUCIDE_ICONS.frown, LUCIDE_ICONS.meh, LUCIDE_ICONS.smile, LUCIDE_ICONS.smile] as LucideIconName[])[m - 1]}
+                    size={28}
+                    color={dailyLog?.mood === m ? T.moodBorder : T.textTertiary}
+                  />
+                  <Text style={[TYPOGRAPHY.captionSm, { color: T.textTertiary }]}>
                     {["Awful", "Bad", "Meh", "Good", "Great"][m - 1]}
                   </Text>
                 </TouchableOpacity>
@@ -880,9 +885,9 @@ export default function TrackerScreen() {
             <View style={{ paddingBottom: 80 }}>
             {habits.length === 0 ? (
               <View style={{ alignItems: 'center', paddingTop: 40, gap: 8 }}>
-                <Text style={{ fontSize: 40 }}>✅</Text>
-                <Text style={{ color: T.textTertiary, fontSize: 14 }}>No habits yet</Text>
-                <Text style={{ color: T.textMuted, fontSize: 12 }}>Tap + to add your first habit</Text>
+                <Icon name={LUCIDE_ICONS.checkCircle} size={40} color={T.textTertiary} />
+                <Text style={[TYPOGRAPHY.body, { color: T.textTertiary }]}>No habits yet</Text>
+                <Text style={[TYPOGRAPHY.caption, { color: T.textMuted }]}>Tap + to add your first habit</Text>
               </View>
             ) : selectedHabit ? (
               <View>
@@ -890,10 +895,10 @@ export default function TrackerScreen() {
                   <Text style={{ color: T.textSecondary }}>← Back</Text>
                 </TouchableOpacity>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <Text style={{ fontSize: 24 }}>{selectedHabit.emoji}</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: T.textPrimary }}>{selectedHabit.name}</Text>
+                  <Icon name={getIconName(selectedHabit.emoji)} size={24} color={selectedHabit.color || tc.accent} />
+                  <Text style={[TYPOGRAPHY.h3, { color: T.textPrimary }]}>{selectedHabit.name}</Text>
                   <TouchableOpacity onPress={() => handleDeleteHabit(selectedHabit.id, selectedHabit.name)} style={{ marginLeft: 'auto' }}>
-                    <Text style={{ color: tc.error, fontSize: 13 }}>Delete</Text>
+                    <Text style={[TYPOGRAPHY.bodySm, { color: tc.error }]}>Delete</Text>
                   </TouchableOpacity>
                 </View>
                 {renderHabitGrid(selectedHabit.id, selectedHabit.color || '#6366f1', habitGrid, habitLogs, handleToggleHabitDay, T, tc)}
@@ -907,7 +912,7 @@ export default function TrackerScreen() {
                       onPress={() => setColorFilter(null)}
                       style={[styles.filterChip, { backgroundColor: colorFilter === null ? tc.accentBg : T.surface, borderColor: colorFilter === null ? tc.accent : T.border }]}
                     >
-                      <Text style={{ fontSize: 12, fontWeight: '500', color: colorFilter === null ? tc.accent : T.textSecondary }}>All</Text>
+                      <Text style={[TYPOGRAPHY.btnSm, { color: colorFilter === null ? tc.accent : T.textSecondary }]}>All</Text>
                     </TouchableOpacity>
                     {HABIT_COLORS.map((c) => {
                       const count = habits.filter((h) => (h.color || '#6366f1') === c).length;
@@ -919,7 +924,7 @@ export default function TrackerScreen() {
                           style={[styles.filterChip, { backgroundColor: colorFilter === c ? c + '20' : T.surface, borderColor: colorFilter === c ? c : T.border }]}
                         >
                           <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c }} />
-                          <Text style={{ fontSize: 12, color: T.textSecondary }}>{count}</Text>
+                          <Text style={[TYPOGRAPHY.btnSm, { color: T.textSecondary }]}>{count}</Text>
                         </TouchableOpacity>
                       );
                     })}
@@ -937,10 +942,10 @@ export default function TrackerScreen() {
                       style={[styles.habitCard, { backgroundColor: T.surface, borderColor: T.borderSoft }]}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                        <Text style={{ fontSize: 22 }}>{h.emoji}</Text>
+                        <Icon name={getIconName(h.emoji)} size={22} color={c} />
                         <View>
-                          <Text style={{ fontWeight: '600', color: T.textPrimary, fontSize: 15 }}>{h.name}</Text>
-                          <Text style={{ color: T.textTertiary, fontSize: 11, marginTop: 1 }}>
+                          <Text style={[TYPOGRAPHY.body, { fontWeight: '600', color: T.textPrimary }]}>{h.name}</Text>
+                          <Text style={[TYPOGRAPHY.captionSm, { color: T.textTertiary, marginTop: 1 }]}>
                             {habitLogs.filter((l) => l.habit_id === h.id && l.date >= new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0]).length} / 90 days
                           </Text>
                         </View>
@@ -950,9 +955,9 @@ export default function TrackerScreen() {
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         style={[styles.checkCircle, { borderColor: checked ? c : T.border, backgroundColor: checked ? c : 'transparent' }]}
                       >
-                        {checked && <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✓</Text>}
+                        {checked && <Icon name={LUCIDE_ICONS.check} size={12} color="#fff" />}
                       </TouchableOpacity>
-                      <Text style={{ color: T.textMuted, fontSize: 18, marginLeft: 6 }}>›</Text>
+                      <Icon name={LUCIDE_ICONS.chevronRight} size={18} color={T.textMuted} />
                     </TouchableOpacity>
                   );
                 })}
@@ -976,8 +981,8 @@ export default function TrackerScreen() {
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setAddHabitModal(false)} />
           <View style={[styles.modalSheet, { backgroundColor: tc.surface }]}>
-            <Text style={[styles.modalTitle, { color: T.textPrimary }]}>New Habit</Text>
-            <Text style={[styles.modalLabel, { color: T.textSecondary }]}>Emoji</Text>
+            <Text style={[TYPOGRAPHY.h3, { color: T.textPrimary, marginBottom: 16 }]}>New Habit</Text>
+            <Text style={[TYPOGRAPHY.btnSm, { color: T.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, marginTop: 8 }]}>Emoji</Text>
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
               {['✅', '💪', '🏃', '📖', '🧘', '🥗', '💧', '😴', '🎯', '✍️', '🎨', '🧠', '🚴', '🏋️', '🧹', '🌱', '📝', '🎵', '☕', '🙏'].map((e) => (
                 <TouchableOpacity
@@ -998,7 +1003,7 @@ export default function TrackerScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            <Text style={[styles.modalLabel, { color: T.textSecondary }]}>Name</Text>
+            <Text style={[TYPOGRAPHY.btnSm, { color: T.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, marginTop: 8 }]}>Name</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: tc.bg, borderColor: T.border, color: T.textPrimary }]}
               value={newHabitName}
@@ -1007,7 +1012,7 @@ export default function TrackerScreen() {
               placeholderTextColor={T.placeholder}
               autoFocus
             />
-            <Text style={[styles.modalLabel, { color: T.textSecondary, marginTop: 14 }]}>Color</Text>
+            <Text style={[TYPOGRAPHY.btnSm, { color: T.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, marginTop: 14 }]}>Color</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
               {HABIT_COLORS.map((c) => (
                 <TouchableOpacity
@@ -1055,7 +1060,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   hamburger: { width: 32 },
-  headerTitle: { fontSize: 14, fontWeight: "600", marginLeft: 8 },
+  headerTitle: { ...TYPOGRAPHY.body, fontWeight: "600", marginLeft: 8 },
 
   // ── Pills ──
   tabBar: {
@@ -1071,24 +1076,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
   },
-  pillLabel: { fontSize: 12 },
+  pillLabel: { ...TYPOGRAPHY.caption },
 
   // ── Shared ──
   tabTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    ...TYPOGRAPHY.title,
     marginBottom: 8,
   },
-  bigVal: { fontSize: 32, fontWeight: "700" },
+  bigVal: { ...TYPOGRAPHY.monoLg },
   bigValRow: {
     flexDirection: "row",
     alignItems: "baseline",
     justifyContent: "center",
     gap: 4,
   },
-  trendLabel: { fontSize: 11, marginBottom: 8 },
+  trendLabel: { ...TYPOGRAPHY.captionSm, marginBottom: 8 },
   statRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1105,7 +1107,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   statData: { flexDirection: "column", gap: 2 },
-  statLabel: { fontSize: 12, fontWeight: "500" },
+  statLabel: { ...TYPOGRAPHY.statLabel },
   statVal: { fontSize: 22, fontWeight: "700", marginTop: 1 },
   miniTrendRow: { flexDirection: "row", alignItems: "flex-end", gap: 4 },
   trendDot: { width: 8, height: 8, borderRadius: 4 },
@@ -1121,7 +1123,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 15,
+    ...TYPOGRAPHY.input,
   },
   btn: {
     backgroundColor: "#6366f1",
@@ -1130,7 +1132,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  btnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  btnText: { color: "#fff", ...TYPOGRAPHY.btn },
   waterCup: {
     width: 44,
     height: 44,
@@ -1218,13 +1220,11 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TYPOGRAPHY.h3,
     marginBottom: 16,
   },
   modalLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...TYPOGRAPHY.btnSm,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
@@ -1235,7 +1235,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    fontSize: 15,
+    ...TYPOGRAPHY.input,
   },
   modalCancelBtn: {
     flex: 1,

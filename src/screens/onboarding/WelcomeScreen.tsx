@@ -8,6 +8,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Icon } from '../../components/Icons';
+import { LUCIDE_ICONS, TYPOGRAPHY } from '../../constants/typography';
 import { useTheme } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -33,19 +35,19 @@ export default function WelcomeScreen({ onNext }: { onNext: () => void }) {
         <View style={styles.features}>
           <View style={styles.feature}>
             <View style={[styles.featureIcon, { backgroundColor: tc.accentBg }]}>
-              <Text style={styles.featureEmoji}>📊</Text>
+              <Icon name={LUCIDE_ICONS.barChart2} size={24} color={tc.accent} />
             </View>
             <Text style={[styles.featureText, { color: tc.text }]}>Track Everything</Text>
           </View>
           <View style={styles.feature}>
             <View style={[styles.featureIcon, { backgroundColor: tc.accentBg }]}>
-              <Text style={styles.featureEmoji}>🎯</Text>
+              <Icon name={LUCIDE_ICONS.target} size={24} color={tc.accent} />
             </View>
             <Text style={[styles.featureText, { color: tc.text }]}>Set Goals</Text>
           </View>
           <View style={styles.feature}>
             <View style={[styles.featureIcon, { backgroundColor: tc.accentBg }]}>
-              <Text style={styles.featureEmoji}>📈</Text>
+              <Icon name={LUCIDE_ICONS.trendingUp} size={24} color={tc.accent} />
             </View>
             <Text style={[styles.featureText, { color: tc.text }]}>See Progress</Text>
           </View>
@@ -117,9 +119,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  featureEmoji: {
-    fontSize: 28,
-  },
   featureText: {
     fontSize: 12,
     fontWeight: '500',
@@ -131,7 +130,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.h4,
   },
 });

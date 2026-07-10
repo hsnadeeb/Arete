@@ -9,7 +9,8 @@ import {
   Vibration,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Icon } from "../components/Icons";
+import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import { useStore } from "../store";
 import { useTheme } from "../context/ThemeContext";
 import * as db from "../db/service";
@@ -27,12 +28,12 @@ const BRN_L = "#8d6e63";
 const FLW = ["#f48fb1", "#ce93d8", "#ffcc02"];
 
 const LEVELS = [
-  { minTrees: 0, title: "Seedling", icon: "🌱" },
-  { minTrees: 5, title: "Sprout", icon: "🌿" },
-  { minTrees: 15, title: "Sapling", icon: "🌳" },
-  { minTrees: 30, title: "Forest Keeper", icon: "🌲" },
-  { minTrees: 50, title: "Forest Guardian", icon: "🏞️" },
-  { minTrees: 100, title: "Ancient Forest", icon: "🌲🌲" },
+  { minTrees: 0, title: "Seedling", iconKey: "Sprout" as const },
+  { minTrees: 5, title: "Sprout", iconKey: "TreePine" as const },
+  { minTrees: 15, title: "Sapling", iconKey: "TreePine" as const },
+  { minTrees: 30, title: "Forest Keeper", iconKey: "TreeDeciduous" as const },
+  { minTrees: 50, title: "Forest Guardian", iconKey: "Mountain" as const },
+  { minTrees: 100, title: "Ancient Forest", iconKey: "TreePine" as const },
 ];
 
 function hash(i: number, t: number): number {
@@ -221,7 +222,7 @@ export default function FocusScreen() {
       {/* Header */}
       <View style={[s.header, { borderBottomColor: tc.divider }]}>
         <TouchableOpacity onPress={() => setCurrentRoute("Greeting")} style={s.backBtn}>
-          <Feather name="arrow-left" size={20} color={tc.textSecondary} />
+          <Icon name={LUCIDE_ICONS.arrowLeft} size={20} color={tc.textSecondary} />
         </TouchableOpacity>
         <View style={s.headerCenter}>
           {DURATIONS.map((d) => (
@@ -242,7 +243,7 @@ export default function FocusScreen() {
       {milestone !== null && (
         <Animated.View style={[s.mToast, { opacity: animMilestone, transform: [{ translateY: animMilestone.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
           <Text style={s.mToastText}>
-            {milestone === 100 ? "🎉 Session Complete!" : `🌱 ${milestone}% — Keep going!`}
+            {milestone === 100 ? "Session Complete!" : `${milestone}% — Keep going!`}
           </Text>
         </Animated.View>
       )}
@@ -251,9 +252,9 @@ export default function FocusScreen() {
       <View style={s.body}>
         {/* Level badge */}
         <View style={[s.levelBadge, { backgroundColor: tc.bgSecondary, borderColor: tc.borderLight }]}>
-          <Text style={s.levelIcon}>{level.icon}</Text>
-          <Text style={[s.levelTitle, { color: tc.text }]}>{level.title}</Text>
-          <Text style={[s.levelSub, { color: tc.textTertiary }]}>
+          <Icon name={level.iconKey as any} size={18} color={tc.text} />
+          <Text style={[TYPOGRAPHY.bodySm, { fontWeight: "700", color: tc.text }]}>{level.title}</Text>
+          <Text style={[TYPOGRAPHY.captionSm, { color: tc.textTertiary }]}>
             {stats.totalTrees} trees · {toNext > 0 ? `${toNext} to next` : "Max level"}
           </Text>
         </View>
@@ -294,18 +295,18 @@ export default function FocusScreen() {
         {/* Controls */}
         <View style={s.controls}>
           <TouchableOpacity onPress={handleReset} style={[s.ctrlBtn, { backgroundColor: tc.bgSecondary }]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Feather name="refresh-cw" size={18} color={tc.textTertiary} />
+            <Icon name={LUCIDE_ICONS.refreshCw} size={18} color={tc.textTertiary} />
           </TouchableOpacity>
           {running ? (
             <TouchableOpacity onPress={handlePause} style={[s.mainBtn, { backgroundColor: tc.warningBg }]}>
-              <Feather name="pause" size={22} color={tc.warning} />
+              <Icon name={LUCIDE_ICONS.pause} size={22} color={tc.warning} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity onPress={handleStart} style={[s.mainBtn, { backgroundColor: done ? tc.successBg : tc.accentBg }]}>
-              <Feather name={done ? "check" : "play"} size={22} color={done ? tc.success : tc.accent} />
+              <Icon name={done ? LUCIDE_ICONS.check : LUCIDE_ICONS.play} size={22} color={done ? tc.success : tc.accent} />
             </TouchableOpacity>
           )}
-          <View style={[s.ctrlBtn, { opacity: 0 }]}><Feather name="refresh-cw" size={18} color="transparent" /></View>
+          <View style={[s.ctrlBtn, { opacity: 0 }]}><Icon name={LUCIDE_ICONS.refreshCw} size={18} color="transparent" /></View>
         </View>
       </View>
     </SafeAreaView>
@@ -321,14 +322,14 @@ const s = StyleSheet.create({
   backBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   headerCenter: { flex: 1, flexDirection: "row", justifyContent: "center", gap: 8 },
   durChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
-  durChipText: { fontSize: 13 },
+  durChipText: { ...TYPOGRAPHY.bodySm },
   mToast: {
     position: "absolute", top: 60, left: 0, right: 0,
     alignItems: "center", zIndex: 100,
   },
   mToastText: {
     backgroundColor: "rgba(0,0,0,0.75)", color: "#fff",
-    fontSize: 14, fontWeight: "700",
+    ...TYPOGRAPHY.body, fontWeight: "700",
     paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20,
     overflow: "hidden",
   },
@@ -338,27 +339,24 @@ const s = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
     borderWidth: 1, marginBottom: 8,
   },
-  levelIcon: { fontSize: 18 },
-  levelTitle: { fontSize: 13, fontWeight: "700" },
-  levelSub: { fontSize: 10, fontWeight: "500" },
   treeArea: { flex: 1, justifyContent: "center", alignItems: "center" },
   treeWrap: { width: 200, height: 220, position: "relative" },
   pot: { position: "absolute", bottom: 0, left: 72, width: 56, height: 22, borderRadius: 6, borderWidth: 1, alignItems: "center", justifyContent: "center", zIndex: 5 },
-  potText: { fontSize: 9, fontWeight: "700", color: "#fff" },
+  potText: { ...TYPOGRAPHY.captionSm, fontWeight: "700", color: "#fff" },
   trunk: { position: "absolute", borderRadius: 4, zIndex: 2 },
   leaf: { position: "absolute", zIndex: 3 },
   flower: { position: "absolute", zIndex: 4 },
   timerSection: { alignItems: "center", marginBottom: 16 },
-  timerText: { fontSize: 32, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  timerLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 4 },
+  timerText: { ...TYPOGRAPHY.monoLg, fontSize: 32 },
+  timerLabel: { ...TYPOGRAPHY.label, marginTop: 4 },
   forestStats: {
     flexDirection: "row", alignItems: "center",
     borderRadius: 16, borderWidth: 1,
     paddingVertical: 12, paddingHorizontal: 20, marginBottom: 16,
   },
   statItem: { flex: 1, alignItems: "center", gap: 2 },
-  statVal: { fontSize: 18, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  statLbl: { fontSize: 10, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.3 },
+  statVal: { ...TYPOGRAPHY.mono },
+  statLbl: { ...TYPOGRAPHY.label },
   statDiv: { width: 1, height: 28 },
   controls: { flexDirection: "row", alignItems: "center", gap: 24 },
   ctrlBtn: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },

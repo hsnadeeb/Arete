@@ -7,14 +7,15 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '../../components/Icons';
+import { LUCIDE_ICONS, TYPOGRAPHY } from '../../constants/typography';
 import { useTheme } from '../../context/ThemeContext';
 
 const PREFERENCES = [
-  { id: 'daily_reminders', label: 'Daily Reminders', description: 'Get gentle nudges to stay on track', icon: 'bell' },
-  { id: 'weekly_reports', label: 'Weekly Reports', description: 'See your progress every week', icon: 'bar-chart-2' },
-  { id: 'morning_motivation', label: 'Morning Motivation', description: 'Start your day with inspiration', icon: 'sun' },
-  { id: 'evening_reflection', label: 'Evening Reflection', description: 'End your day with gratitude', icon: 'moon' },
+  { id: 'daily_reminders', label: 'Daily Reminders', description: 'Get gentle nudges to stay on track', iconKey: 'bell' as const },
+  { id: 'weekly_reports', label: 'Weekly Reports', description: 'See your progress every week', iconKey: 'barChart2' as const },
+  { id: 'morning_motivation', label: 'Morning Motivation', description: 'Start your day with inspiration', iconKey: 'sun' as const },
+  { id: 'evening_reflection', label: 'Evening Reflection', description: 'End your day with gratitude', iconKey: 'moon' as const },
 ];
 
 export default function PreferencesScreen({ onNext, onBack }: { onNext: (prefs: string[]) => void; onBack: () => void }) {
@@ -60,14 +61,14 @@ export default function PreferencesScreen({ onNext, onBack }: { onNext: (prefs: 
               onPress={() => togglePref(pref.id)}
             >
               <View style={[styles.iconContainer, { backgroundColor: selectedPrefs.includes(pref.id) ? tc.accent + '20' : tc.bgSecondary }]}>
-                <Feather name={pref.icon as any} size={24} color={selectedPrefs.includes(pref.id) ? tc.accent : tc.textSecondary} />
+                <Icon name={LUCIDE_ICONS[pref.iconKey]} size={24} color={selectedPrefs.includes(pref.id) ? tc.accent : tc.textSecondary} />
               </View>
               <View style={styles.prefContent}>
                 <Text style={[styles.prefLabel, { color: tc.text }]}>{pref.label}</Text>
                 <Text style={[styles.prefDescription, { color: tc.textSecondary }]}>{pref.description}</Text>
               </View>
               {selectedPrefs.includes(pref.id) && (
-                <Feather name="check-circle" size={24} color={tc.accent} />
+                <Icon name={LUCIDE_ICONS.checkCircle} size={24} color={tc.accent} />
               )}
             </TouchableOpacity>
           ))}
@@ -145,12 +146,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   prefLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.h4,
     marginBottom: 4,
   },
   prefDescription: {
-    fontSize: 14,
+    ...TYPOGRAPHY.body,
   },
   buttons: {
     flexDirection: 'row',
@@ -164,8 +164,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.h4,
   },
   nextButton: {
     flex: 1,
@@ -174,7 +173,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   nextButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.h4,
   },
 });

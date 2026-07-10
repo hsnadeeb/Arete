@@ -62,7 +62,7 @@ function buildContextString(ctx: AiContext): string {
   if (ctx.habits.length > 0) {
     sections.push('=== HABITS ===');
     sections.push(ctx.habits.map((h: any) =>
-      `${h.emoji} ${h.name} (target: ${h.target_per_day} ${h.unit || 'times'}/day)`
+      `${h.name} (target: ${h.target_per_day} ${h.unit || 'times'}/day)`
     ).join('\n'));
   }
 

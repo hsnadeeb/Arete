@@ -8,10 +8,11 @@ import {
   Switch,
   Alert,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useStore } from "../store";
 import { useTheme } from "../context/ThemeContext";
+import { Icon } from "../components/Icons";
+import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import { WIDGET_DEFINITIONS } from "../types";
 import { getWidgetRepo } from "../db/repositories/widget";
 
@@ -115,20 +116,20 @@ export default function WidgetEditor() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
+          <Icon name={LUCIDE_ICONS.arrowLeft} size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, flex: 1 }}>
+        <Text style={[TYPOGRAPHY.h4, { color: colors.text, flex: 1 }]}>
           Customize Widgets
         </Text>
         <TouchableOpacity onPress={loadWidgets} style={styles.iconBtn}>
-          <Feather name="refresh-cw" size={16} color={colors.textSecondary} />
+          <Icon name={LUCIDE_ICONS.refreshCw} size={16} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 12, gap: 12, paddingBottom: 60 }}
       >
-        <Text style={{ fontSize: 13, color: colors.textTertiary, marginBottom: 4 }}>
+        <Text style={[TYPOGRAPHY.bodySm, { color: colors.textTertiary, marginBottom: 4 }]}>
           Toggle visibility and reorder. Changes save automatically.
         </Text>
         {widgets.map((w, i) => (
@@ -178,7 +179,7 @@ function WidgetCard({
     >
       <View style={styles.cardRow}>
         <View style={[styles.cardIcon, { backgroundColor: widget.accentColor + "20" }]}>
-          <Feather name={widget.icon as any} size={20} color={widget.accentColor} />
+          <Icon name={widget.icon as any} size={20} color={widget.accentColor} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.cardTitle, { color: colors.text }]}>{widget.title}</Text>
@@ -197,17 +198,17 @@ function WidgetCard({
           onPress={onMoveUp}
           disabled={index === 0}
         >
-          <Feather name="chevron-up" size={16} color={index === 0 ? colors.disabled : colors.text} />
+          <Icon name={LUCIDE_ICONS.chevronUp} size={16} color={index === 0 ? colors.disabled : colors.text} />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.moveBtn, { backgroundColor: colors.bgSecondary }]}
           onPress={onMoveDown}
           disabled={index === total - 1}
         >
-          <Feather name="chevron-down" size={16} color={index === total - 1 ? colors.disabled : colors.text} />
+          <Icon name={LUCIDE_ICONS.chevronDown} size={16} color={index === total - 1 ? colors.disabled : colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
-        <Text style={{ color: colors.textTertiary, fontSize: 11, alignSelf: "center" }}>
+        <Text style={[TYPOGRAPHY.meta, { color: colors.textTertiary, alignSelf: "center" }]}>
           Position {index + 1} of {total}
         </Text>
       </View>

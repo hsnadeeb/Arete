@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
+import { Icon } from '../components/Icons';
+import { LUCIDE_ICONS, TYPOGRAPHY } from '../constants/typography';
 import { DAY_NAMES } from '../types';
 import * as db from '../db/service';
 
@@ -216,7 +218,7 @@ export default function PlannerScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: T.bg }]} edges={['top']}>
       <View style={[styles.topbar, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.menuBtn}>
-          <Text style={[styles.menuIcon, { color: T.textSecondary }]}>☰</Text>
+          <Icon name={LUCIDE_ICONS.menu} size={18} color={T.textSecondary} />
         </TouchableOpacity>
         <Text style={[styles.topTitle, { color: T.textPrimary }]}>Calendar</Text>
         <TouchableOpacity style={[styles.todayBtn, { backgroundColor: T.borderSoft }]} onPress={goToday}>
@@ -227,13 +229,13 @@ export default function PlannerScreen() {
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* ─── Month Header ─── */}
         <View style={[styles.monthHeader, { backgroundColor: T.surface, borderBottomColor: T.borderSoft }]}>
-          <TouchableOpacity onPress={() => navigate(-1)} style={[styles.navBtn, { backgroundColor: T.borderSoft }]}>
-            <Text style={[styles.navBtnText, { color: T.textPrimary }]}>〈</Text>
-          </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigate(-1)} style={[styles.navBtn, { backgroundColor: T.borderSoft }]}>
+              <Icon name={LUCIDE_ICONS.chevronLeft} size={16} color={T.textPrimary} />
+            </TouchableOpacity>
           <Text style={[styles.monthTitle, { color: T.textPrimary }]}>{MONTHS[month]} {year}</Text>
-          <TouchableOpacity onPress={() => navigate(1)} style={[styles.navBtn, { backgroundColor: T.borderSoft }]}>
-            <Text style={[styles.navBtnText, { color: T.textPrimary }]}>〉</Text>
-          </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigate(1)} style={[styles.navBtn, { backgroundColor: T.borderSoft }]}>
+              <Icon name={LUCIDE_ICONS.chevronRight} size={16} color={T.textPrimary} />
+            </TouchableOpacity>
         </View>
 
         {/* ─── Day Names ─── */}
@@ -452,7 +454,7 @@ export default function PlannerScreen() {
                   onPress={() => setRepeatType(r)}
                 >
                   <Text style={[styles.repeatBtnText, { color: T.textSecondary }, repeatType === r && { color: T.accent }]}>
-                    {r === 'weekly' ? '🔁 Weekly' : r === 'daily' ? '📅 Daily' : '📌 Once'}
+                    {r === 'weekly' ? 'Weekly' : r === 'daily' ? 'Daily' : 'Once'}
                   </Text>
                 </TouchableOpacity>
               ))}

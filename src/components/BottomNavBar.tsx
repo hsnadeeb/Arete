@@ -1,15 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../store';
 import { useTheme } from '../context/ThemeContext';
+import { Icon } from './Icons';
+import { LUCIDE_ICONS, TYPOGRAPHY } from '../constants/typography';
 
 const BOTTOM_NAV_TABS = [
-  { name: 'Dashboard', label: 'Dashboard', icon: 'grid' as const },
-  { name: 'Planner', label: 'Schedule', icon: 'calendar' as const },
-  { name: 'Trackers', label: 'Trackers', icon: 'bar-chart-2' as const },
-  { name: 'Journal', label: 'Journal', icon: 'file-text' as const },
+  { name: 'Dashboard', label: 'Dashboard', icon: LUCIDE_ICONS.grid },
+  { name: 'Planner', label: 'Schedule', icon: LUCIDE_ICONS.calendar },
+  { name: 'Trackers', label: 'Trackers', icon: LUCIDE_ICONS.barChart2 },
+  { name: 'Journal', label: 'Journal', icon: LUCIDE_ICONS.fileText },
 ];
 
 export default function BottomNavBar() {
@@ -45,14 +46,15 @@ export default function BottomNavBar() {
             onPress={() => setCurrentRoute(tab.name)}
             activeOpacity={0.7}
           >
-            <Feather
+            <Icon
               name={tab.icon}
               size={20}
               color={isActive ? tc.accent : tc.textTertiary}
+              label={tab.label}
             />
             <Text
               style={[
-                styles.label,
+                TYPOGRAPHY.label,
                 {
                   color: isActive ? tc.accent : tc.textTertiary,
                 },
@@ -85,8 +87,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     gap: 2,
   },
-  label: {
-    fontSize: 10,
-    fontWeight: '500',
-  },
+  label: {},
+
 });

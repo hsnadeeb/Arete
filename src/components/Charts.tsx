@@ -1,5 +1,7 @@
 import React, { useMemo, useState, useCallback } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, LayoutChangeEvent } from "react-native";
+import { Icon } from "./Icons";
+import { TYPOGRAPHY } from "../constants/typography";
 
 // ═══════════════════════════════════════════
 // 7-Day Bar Chart — plain RN, no lib
@@ -264,7 +266,7 @@ export function StatCard({
   unit,
   trend = [],
   color = "#6366f1",
-  icon = "📊",
+        icon = "BarChart",
 }: {
   title: string;
   value: string | number;
@@ -277,7 +279,7 @@ export function StatCard({
     <View style={[styles.statCard]}>
       <View style={styles.statLeft}>
         <View style={[styles.statIconBg, { backgroundColor: color + "20" }]}>
-          <Text style={{ fontSize: 18 }}>{icon}</Text>
+              <Icon name={icon as any} size={18} color="#6b7280" />
         </View>
         <View>
           <Text style={styles.statTitle}>{title}</Text>
@@ -312,8 +314,8 @@ const styles = StyleSheet.create({
   },
   barCol: { alignItems: "center", paddingHorizontal: 2 },
   bar: { minHeight: 4 },
-  barValue: { fontSize: 11, fontWeight: "600" },
-  barLabel: { fontSize: 10, color: "#9ca3af", marginTop: 2 },
+  barValue: { ...TYPOGRAPHY.captionSm, fontWeight: "600" },
+  barLabel: { ...TYPOGRAPHY.captionSm, color: "#9ca3af", marginTop: 2 },
 
   // Progress Ring
   ringContainer: {
@@ -324,8 +326,8 @@ const styles = StyleSheet.create({
   ringBg: { position: "absolute" },
   ringFill: { position: "absolute", borderColor: "transparent" },
   ringCenter: { position: "absolute", alignItems: "center" },
-  ringValue: { fontSize: 16, fontWeight: "700" },
-  ringLabel: { fontSize: 10, color: "#9ca3af", marginTop: 2 },
+  ringValue: { ...TYPOGRAPHY.mono },
+  ringLabel: { ...TYPOGRAPHY.captionSm, color: "#9ca3af", marginTop: 2 },
 
   // Mini Trend
   trendContainer: { flexDirection: "row", alignItems: "flex-end", gap: 3 },
@@ -334,7 +336,7 @@ const styles = StyleSheet.create({
   // Week Comparison
   compContainer: { flexDirection: "row", gap: 3 },
   compCol: { flex: 1, alignItems: "center", gap: 2 },
-  compLabel: { fontSize: 10, color: "#9ca3af" },
+  compLabel: { ...TYPOGRAPHY.captionSm, color: "#9ca3af" },
   compStack: { flexDirection: "column", alignItems: "center", gap: 1 },
 
   // Stat Card
@@ -358,8 +360,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  statTitle: { fontSize: 12, color: "#64748b", fontWeight: "500" },
-  statValueText: { fontSize: 20, fontWeight: "700", marginTop: 1 },
+  statTitle: { ...TYPOGRAPHY.caption, color: "#64748b", fontWeight: "500" },
+  statValueText: { ...TYPOGRAPHY.monoLg, marginTop: 1 },
   compPrevBar: { width: 20, borderRadius: 4 },
   compCurrBar: { width: 20, borderRadius: 4 },
 });
