@@ -108,3 +108,18 @@ export interface AiProgramItemRow {
   sort_order: number;
   created_at?: string;
 }
+
+export interface UserProfileRow {
+  id: number;
+  name: string;
+  gender: string;
+  date_of_birth: string;
+  height_cm: number;
+  weight_kg: number;
+  target_weight_kg: number;
+  activity_level: string;
+  goals: string;
+  preferences: string;
+  created_at?: string;
+  updated_at?: string;
+}

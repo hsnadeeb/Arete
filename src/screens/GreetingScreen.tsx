@@ -14,6 +14,7 @@ import { useStore } from "../store";
 import { useTheme } from "../context/ThemeContext";
 import { Icon } from "../components/Icons";
 import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
+import { getGreeting } from "../services/prayerApi";
 
 function formatTime(d: Date): string {
   return d.toLocaleTimeString("en-US", {
@@ -55,6 +56,7 @@ export default function GreetingScreen() {
   const islamicDate = useStore((s) => s.islamicDate);
   const prayerTimings = useStore((s) => s.prayerTimings);
   const refreshPrayerTimings = useStore((s) => s.refreshPrayerTimings);
+  const userProfile = useStore((s) => s.userProfile);
 
   const [now, setNow] = useState(new Date());
 
@@ -219,6 +221,9 @@ export default function GreetingScreen() {
 
         {/* Time & Date */}
         <View style={s.topSection}>
+          <Text style={[s.greetingText, { color: tc.textSecondary }]}>
+            {getGreeting(userProfile?.name)}
+          </Text>
           <View style={s.timeRow}>
             <Text style={[s.time, { color: tc.heading }]}>{timeDigits}</Text>
             <Text style={[s.timeAmPm, { color: tc.textSecondary }]}>
@@ -412,6 +417,7 @@ const s = StyleSheet.create({
   screen: { flex: 1 },
   contentArea: { flex: 1, paddingHorizontal: 28 },
   topSection: { alignItems: "center" },
+  greetingText: { ...TYPOGRAPHY.body, marginBottom: 4 },
   timeRow: { flexDirection: "row", alignItems: "flex-end", gap: 6 },
   time: { ...TYPOGRAPHY.monoLg, fontSize: 60, letterSpacing: -1 },
   timeAmPm: { fontSize: 18, fontWeight: "600", paddingBottom: 10 },

@@ -3,15 +3,23 @@ import { View } from 'react-native';
 import WelcomeScreen from './WelcomeScreen';
 import NameScreen from './NameScreen';
 import GoalsScreen from './GoalsScreen';
+import BodyScreen from './BodyScreen';
 import PreferencesScreen from './PreferencesScreen';
 import DataRestoreScreen from './DataRestoreScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SQLite from 'expo-sqlite';
-import { getDb, initDatabase } from '../../db/service';
+import { initDatabase, getDb, resetDb, updateUserProfile } from '../../db/service';
 
 interface OnboardingData {
   name: string;
   goals: string[];
+  body: {
+    gender: string;
+    dateOfBirth: string;
+    heightCm: string;
+    weightKg: string;
+    targetWeightKg: string;
+    activityLevel: string;
+  };
   preferences: string[];
 }
 
@@ -28,10 +36,8 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
 
   const checkForExistingData = async () => {
     try {
-      // Check if database has any data
-      const db = await SQLite.openDatabaseAsync('hasan-os.db');
-      const result = await db.getFirstAsync<any>('SELECT id FROM daily_logs LIMIT 1');
-      await db.closeAsync();
+      await initDatabase();
+      const result = await getDb().getFirstAsync<any>('SELECT id FROM daily_logs LIMIT 1');
 
       if (result) {
         setHasOldData(true);
@@ -46,12 +52,10 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
 
   const clearAllData = async () => {
     try {
-      // Clear AsyncStorage
       await AsyncStorage.clear();
 
-      // Delete and recreate database
       try {
-        const db = await SQLite.openDatabaseAsync('hasan-os.db');
+        const db = getDb();
         await db.execAsync('DROP TABLE IF EXISTS daily_logs');
         await db.execAsync('DROP TABLE IF EXISTS prayer_logs');
         await db.execAsync('DROP TABLE IF EXISTS gym_logs');
@@ -62,12 +66,13 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
         await db.execAsync('DROP TABLE IF EXISTS dashboard_widgets');
         await db.execAsync('DROP TABLE IF EXISTS prayer_timings');
         await db.execAsync('DROP TABLE IF EXISTS focus_sessions');
-        await db.closeAsync();
+        await db.execAsync('DROP TABLE IF EXISTS user_profile');
       } catch (e) {
         console.error('Error clearing database:', e);
       }
 
-      // Reinitialize database with fresh schema
+      // Reset the cached connection so initDatabase() reopens fresh
+      resetDb();
       await initDatabase();
 
       console.log('All data cleared successfully');
@@ -79,9 +84,6 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
   const handleStartFresh = async () => {
     setShowRestorePopup(false);
     await clearAllData();
-    // Reset the db reference in the service module
-    const { resetDb } = await import('../../db/service');
-    if (resetDb) resetDb();
     setStep(0);
   };
 
@@ -100,19 +102,43 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
     setStep(3);
   };
 
+  const handleBodyNext = (body: OnboardingData['body']) => {
+    setData(prev => ({ ...prev, body }));
+    setStep(4);
+  };
+
   const handlePreferencesComplete = async (preferences: string[]) => {
     const finalData: OnboardingData = {
       name: data.name || '',
       goals: data.goals || [],
+      body: data.body || { gender: '', dateOfBirth: '', heightCm: '', weightKg: '', targetWeightKg: '', activityLevel: 'moderate' },
       preferences,
     };
 
-    // Save onboarding completion
+    // Save to AsyncStorage
     await AsyncStorage.setItem('onboarding_completed', 'true');
     await AsyncStorage.setItem('user_name', finalData.name);
     await AsyncStorage.setItem('user_goals', JSON.stringify(finalData.goals));
     await AsyncStorage.setItem('user_preferences', JSON.stringify(finalData.preferences));
-    await AsyncStorage.setItem('fresh_install', 'false'); // Mark that fresh setup is complete
+    await AsyncStorage.setItem('fresh_install', 'false');
+
+    // Persist profile to DB
+    try {
+      await initDatabase();
+      await updateUserProfile({
+        name: finalData.name,
+        gender: finalData.body.gender,
+        date_of_birth: finalData.body.dateOfBirth,
+        height_cm: finalData.body.heightCm ? parseFloat(finalData.body.heightCm) : 0,
+        weight_kg: finalData.body.weightKg ? parseFloat(finalData.body.weightKg) : 0,
+        target_weight_kg: finalData.body.targetWeightKg ? parseFloat(finalData.body.targetWeightKg) : 0,
+        activity_level: finalData.body.activityLevel,
+        goals: JSON.stringify(finalData.goals),
+        preferences: JSON.stringify(finalData.preferences),
+      });
+    } catch (e) {
+      console.error('Failed to save profile to DB:', e);
+    }
 
     onComplete(finalData);
   };
@@ -124,7 +150,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
   };
 
   if (!dataChecked) {
-    return null; // Loading state
+    return null;
   }
 
   return (
@@ -144,6 +170,8 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
           case 2:
             return <GoalsScreen onNext={handleGoalsNext} onBack={handleBack} />;
           case 3:
+            return <BodyScreen onNext={handleBodyNext} onBack={handleBack} />;
+          case 4:
             return <PreferencesScreen onNext={handlePreferencesComplete} onBack={handleBack} />;
           default:
             return <WelcomeScreen onNext={() => setStep(1)} />;

@@ -39,7 +39,7 @@ export default function PreferencesScreen({ onNext, onBack }: { onNext: (prefs: 
     <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}>
       <View style={styles.content}>
         <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: tc.accent, width: '100%' }]} />
+          <View style={[styles.progressBar, { backgroundColor: tc.accent, width: '80%' }]} />
         </View>
 
         <Text style={[styles.title, { color: tc.text }]}>Customize your experience</Text>

@@ -193,4 +193,19 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
   date TEXT NOT NULL,
   completed_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS user_profile (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL DEFAULT '',
+  gender TEXT DEFAULT '',
+  date_of_birth TEXT DEFAULT '',
+  height_cm REAL DEFAULT 0,
+  weight_kg REAL DEFAULT 0,
+  target_weight_kg REAL DEFAULT 0,
+  activity_level TEXT DEFAULT 'moderate',
+  goals TEXT DEFAULT '[]',
+  preferences TEXT DEFAULT '[]',
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
 `;

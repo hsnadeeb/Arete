@@ -23,7 +23,7 @@ import {
   WidgetLayout,
 } from "../types";
 import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
-import { getIslamicGreeting } from "../services/prayerApi";
+import { getIslamicGreeting, getGreeting } from "../services/prayerApi";
 
 const EXPENSE_CATEGORIES = [
   "Food",
@@ -444,7 +444,13 @@ function ExpensesWidget() {
   return (
     <Card>
       <View>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <Text style={[s.cardTitle, { color: tc.textTertiary }]}>
             Expenses · ${total.toFixed(2)}
           </Text>
@@ -453,7 +459,9 @@ function ExpensesWidget() {
             style={[s.addExpBtn, { backgroundColor: tc.success }]}
             onPress={() => setShow(true)}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
               <Icon
                 name={LUCIDE_ICONS.plus}
                 size={14}
@@ -791,10 +799,11 @@ export default function DashboardScreen() {
     widgetLayouts,
     setWidgetLayouts,
     saveWidgetLayouts,
+    userProfile,
   } = useApp();
 
   const [editing, setEditing] = useState(false);
-  const greeting = useMemo(() => getIslamicGreeting(), []);
+  // const greeting = useMemo(() => getIslamicGreeting, []);
   const todayStr = useMemo(
     () =>
       new Date().toLocaleDateString("en-US", {
@@ -815,7 +824,14 @@ export default function DashboardScreen() {
 
   const handleReorder = useCallback(
     (items: WidgetLayout[]) => {
-      setWidgetLayouts(items.map((w, i) => ({ ...w, sort_order: i, id: w.id ?? 0, visible: w.visible ? 1 : 0 })) as any);
+      setWidgetLayouts(
+        items.map((w, i) => ({
+          ...w,
+          sort_order: i,
+          id: w.id ?? 0,
+          visible: w.visible ? 1 : 0,
+        })) as any,
+      );
     },
     [setWidgetLayouts],
   );
@@ -896,7 +912,7 @@ export default function DashboardScreen() {
             />
           </TouchableOpacity>
           <View style={s.topCenter}>
-            <Text style={[s.greeting, { color: tc.heading }]}>{greeting}</Text>
+            <Text style={[s.greeting, { color: tc.heading }]}>{getGreeting(userProfile?.name)}</Text>
             <Text style={[s.dateSmall, { color: tc.textTertiary }]}>
               {todayStr}
             </Text>
@@ -919,7 +935,7 @@ export default function DashboardScreen() {
             label="dashboard"
           />
           <Text style={[s.emptyTitle, { color: tc.heading }]}>
-            Welcome to your Dashboard
+            {userProfile?.name ? `Welcome, ${userProfile.name}` : 'Welcome to your Dashboard'}
           </Text>
           <Text style={[s.emptySubtitle, { color: tc.textTertiary }]}>
             Tap refresh to load your data and start tracking.
@@ -967,9 +983,7 @@ export default function DashboardScreen() {
         <View style={s.topCenter}>
           {!editing ? (
             <>
-              <Text style={[s.greeting, { color: tc.heading }]}>
-                {greeting}
-              </Text>
+              <Text style={[s.greeting, { color: tc.heading }]}>{getGreeting(userProfile?.name)}</Text>
               <Text style={[s.dateSmall, { color: tc.textTertiary }]}>
                 {todayStr}
               </Text>

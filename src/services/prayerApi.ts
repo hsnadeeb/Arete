@@ -9,6 +9,8 @@ const SHIA_METHOD = 0;
 // Default location (can be made configurable later)
 const DEFAULT_CITY = 'Mumbai';
 const DEFAULT_COUNTRY = 'India';
+const DEFAULT_LAT = 19.0760;
+const DEFAULT_LNG = 72.8777;
 
 export interface PrayerApiResponse {
   timings: {
@@ -22,7 +24,7 @@ export interface PrayerApiResponse {
   };
   date: {
     readable: string;
-    timestamp: string;
+    timestamp: string | number;
     gregorian: {
       date: string;
       format: string;
@@ -64,23 +66,27 @@ export async function fetchPrayerTimings(
   city: string = DEFAULT_CITY,
   country: string = DEFAULT_COUNTRY
 ): Promise<PrayerApiResponse | null> {
-  try {
-    const url = `${API_BASE}/timingsByCity/${date}?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=${SHIA_METHOD}`;
-    const response = await fetch(url, { method: 'GET' });
-    if (!response.ok) {
-      console.warn(`Prayer API returned ${response.status}`);
-      return null;
+  // Try the requested date first, fall back to today if it fails (e.g. future dates)
+  const dates = [date];
+  const today = new Date().toISOString().split('T')[0];
+  if (date !== today) dates.push(today);
+
+  for (const d of dates) {
+    try {
+      const [y, m, dd] = d.split('-');
+      const apiDate = `${dd}-${m}-${y}`;
+      const url = `${API_BASE}/timings/${apiDate}?latitude=${DEFAULT_LAT}&longitude=${DEFAULT_LNG}&method=${SHIA_METHOD}`;
+      const response = await fetch(url, { method: 'GET' });
+      if (!response.ok) continue;
+      const json = await response.json();
+      if (json.code === 200 && json.data) return json.data as PrayerApiResponse;
+    } catch (error) {
+      console.warn('Failed to fetch prayer timings:', error);
+      continue;
     }
-    const json = await response.json();
-    if (json.code !== 200 || !json.data) {
-      console.warn('Prayer API returned unexpected response', json.code);
-      return null;
-    }
-    return json.data as PrayerApiResponse;
-  } catch (error) {
-    console.warn('Failed to fetch prayer timings:', error);
-    return null;
   }
+  console.warn('Prayer API: all date attempts failed');
+  return null;
 }
 
 /**
@@ -127,12 +133,21 @@ export function extractTimings(data: PrayerApiResponse): {
 }
 
 /**
+ * Get time-appropriate greeting with optional user name
+ */
+export function getGreeting(name?: string | null): string {
+  const h = new Date().getHours();
+  let timeGreeting: string;
+  if (h < 12) timeGreeting = 'Good morning';
+  else if (h < 17) timeGreeting = 'Good afternoon';
+  else timeGreeting = 'Good evening';
+  return name ? `${timeGreeting}, ${name}` : timeGreeting;
+}
+
+/**
  * Get Islamic greeting based on time of day
  */
 export function getIslamicGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'Assalamu Alaykum';
-  if (h < 18) return 'Assalamu Alaykum';
   return 'Assalamu Alaykum';
 }
 

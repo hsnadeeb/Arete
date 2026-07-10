@@ -1,35 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Icon } from '../../components/Icons';
-import { LUCIDE_ICONS, TYPOGRAPHY } from '../../constants/typography';
-import { useTheme } from '../../context/ThemeContext';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Icon } from "../../components/Icons";
+import { LUCIDE_ICONS, TYPOGRAPHY } from "../../constants/typography";
+import { useTheme } from "../../context/ThemeContext";
 
 const GOALS = [
-  { id: 'fitness', label: 'Fitness & Health', iconKey: 'activity' as const },
-  { id: 'productivity', label: 'Productivity', iconKey: 'clock' as const },
-  { id: 'mindfulness', label: 'Mindfulness', iconKey: 'moon' as const },
-  { id: 'learning', label: 'Learning', iconKey: 'book' as const },
-  { id: 'finance', label: 'Finance', iconKey: 'dollarSign' as const },
-  { id: 'social', label: 'Social', iconKey: 'users' as const },
+  { id: "fitness", label: "Fitness & Health", iconKey: "activity" as const },
+  { id: "productivity", label: "Productivity", iconKey: "clock" as const },
+  { id: "mindfulness", label: "Mindfulness", iconKey: "moon" as const },
+  { id: "learning", label: "Learning", iconKey: "book" as const },
+  { id: "finance", label: "Finance", iconKey: "dollarSign" as const },
+  { id: "social", label: "Social", iconKey: "users" as const },
 ];
 
-export default function GoalsScreen({ onNext, onBack }: { onNext: (goals: string[]) => void; onBack: () => void }) {
+export default function GoalsScreen({
+  onNext,
+  onBack,
+}: {
+  onNext: (goals: string[]) => void;
+  onBack: () => void;
+}) {
   const { theme } = useTheme();
   const tc = theme.colors;
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
 
   const toggleGoal = (goalId: string) => {
-    setSelectedGoals(prev =>
+    setSelectedGoals((prev) =>
       prev.includes(goalId)
-        ? prev.filter(id => id !== goalId)
-        : [...prev, goalId]
+        ? prev.filter((id) => id !== goalId)
+        : [...prev, goalId],
     );
   };
 
@@ -43,31 +49,56 @@ export default function GoalsScreen({ onNext, onBack }: { onNext: (goals: string
     <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}>
       <View style={styles.content}>
         <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: tc.accent, width: '66%' }]} />
+          <View
+            style={[
+              styles.progressBar,
+              { backgroundColor: tc.accent, width: "50%" },
+            ]}
+          />
         </View>
 
-        <Text style={[styles.title, { color: tc.text }]}>What are your goals?</Text>
+        <Text style={[styles.title, { color: tc.text }]}>
+          What are your goals?
+        </Text>
         <Text style={[styles.subtitle, { color: tc.textSecondary }]}>
           Select areas you want to focus on (choose at least one)
         </Text>
 
-        <ScrollView style={styles.goalsContainer} showsVerticalScrollIndicator={false}>
-          {GOALS.map(goal => (
+        <ScrollView
+          style={styles.goalsContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {GOALS.map((goal) => (
             <TouchableOpacity
               key={goal.id}
               style={[
                 styles.goalCard,
                 {
-                  backgroundColor: selectedGoals.includes(goal.id) ? tc.accentBg : tc.surface,
-                  borderColor: selectedGoals.includes(goal.id) ? tc.accent : tc.border,
+                  backgroundColor: selectedGoals.includes(goal.id)
+                    ? tc.accentBg
+                    : tc.surface,
+                  borderColor: selectedGoals.includes(goal.id)
+                    ? tc.accent
+                    : tc.border,
                 },
               ]}
               onPress={() => toggleGoal(goal.id)}
             >
-              <Icon name={LUCIDE_ICONS[goal.iconKey]} size={24} color={tc.text} />
-              <Text style={[styles.goalLabel, { color: tc.text }]}>{goal.label}</Text>
+              <Icon
+                name={LUCIDE_ICONS[goal.iconKey]}
+                size={24}
+                color={tc.text}
+              />
+              <Text style={[styles.goalLabel, { color: tc.text }]}>
+                {"   "}
+                {goal.label}
+              </Text>
               {selectedGoals.includes(goal.id) && (
-                <Icon name={LUCIDE_ICONS.checkCircle} size={24} color={tc.accent} />
+                <Icon
+                  name={LUCIDE_ICONS.checkCircle}
+                  size={24}
+                  color={tc.accent}
+                />
               )}
             </TouchableOpacity>
           ))}
@@ -79,14 +110,22 @@ export default function GoalsScreen({ onNext, onBack }: { onNext: (goals: string
           style={[styles.backButton, { borderColor: tc.border }]}
           onPress={onBack}
         >
-          <Text style={[styles.backButtonText, { color: tc.textSecondary }]}>Back</Text>
+          <Text style={[styles.backButtonText, { color: tc.textSecondary }]}>
+            Back
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.nextButton, { backgroundColor: tc.accent, opacity: selectedGoals.length > 0 ? 1 : 0.5 }]}
+          style={[
+            styles.nextButton,
+            {
+              backgroundColor: tc.accent,
+              opacity: selectedGoals.length > 0 ? 1 : 0.5,
+            },
+          ]}
           onPress={handleNext}
           disabled={selectedGoals.length === 0}
         >
-          <Text style={[styles.nextButtonText, { color: '#fff' }]}>Next</Text>
+          <Text style={[styles.nextButtonText, { color: "#fff" }]}>Next</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -103,19 +142,19 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     height: 4,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
     borderRadius: 2,
     marginBottom: 32,
-    alignSelf: 'flex-start',
-    width: '100%',
+    alignSelf: "flex-start",
+    width: "100%",
   },
   progressBar: {
-    height: '100%',
+    height: "100%",
     borderRadius: 2,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
   },
   subtitle: {
@@ -127,8 +166,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   goalCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
@@ -137,10 +176,10 @@ const styles = StyleSheet.create({
   goalLabel: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   buttons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   backButton: {
@@ -148,7 +187,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   backButtonText: {
     ...TYPOGRAPHY.h4,
@@ -157,7 +196,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   nextButtonText: {
     ...TYPOGRAPHY.h4,

@@ -840,3 +840,38 @@ export async function seedAllData() {
     );
   }
 }
+
+// ─── User Profile ───
+
+export async function getUserProfile(): Promise<any> {
+  const row = await getDb().getFirstAsync<any>('SELECT * FROM user_profile LIMIT 1');
+  if (row) return row;
+  // Create default profile if none exists
+  await getDb().runAsync(
+    `INSERT INTO user_profile (name, gender, date_of_birth, height_cm, weight_kg, target_weight_kg, activity_level, goals, preferences)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    '', '', '', 0, 0, 0, 'moderate', '[]', '[]'
+  );
+  return await getDb().getFirstAsync<any>('SELECT * FROM user_profile LIMIT 1');
+}
+
+export async function updateUserProfile(fields: Partial<{
+  name: string;
+  gender: string;
+  date_of_birth: string;
+  height_cm: number;
+  weight_kg: number;
+  target_weight_kg: number;
+  activity_level: string;
+  goals: string;
+  preferences: string;
+}>): Promise<void> {
+  const keys = Object.keys(fields) as (keyof typeof fields)[];
+  if (keys.length === 0) return;
+  const sets = keys.map((k) => `${k} = ?`).join(', ');
+  const vals = keys.map((k) => (fields as any)[k]);
+  await getDb().runAsync(
+    `UPDATE user_profile SET ${sets}, updated_at = datetime('now') WHERE id = (SELECT id FROM user_profile LIMIT 1)`,
+    ...vals
+  );
+}

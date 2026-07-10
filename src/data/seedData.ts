@@ -620,6 +620,7 @@ async function clearSeedableData(dbInstance: SQLiteDatabase): Promise<void> {
     'habit_logs', 'habits', 'dashboard_widgets', 'timetable',
     'budget_categories', 'goals', 'journal_entries', 'transactions',
     'nutrition_logs', 'gym_logs', 'prayer_logs', 'daily_logs', 'daily_affirmations',
+    'user_profile',
   ];
   for (const table of tables) {
     try { await dbInstance.runAsync(`DELETE FROM ${table}`); } catch (_) {}
@@ -649,6 +650,7 @@ export async function wipeAllData(): Promise<{ preserved: string[]; wiped: strin
     'budget_categories', 'goals', 'journal_entries', 'transactions',
     'nutrition_logs', 'gym_logs', 'prayer_logs', 'daily_logs',
     'daily_affirmations', 'prayer_timings', 'focus_sessions', 'ai_programs',
+    'user_profile',
   ];
   for (const table of tables) {
     try { await dbInstance.runAsync(`DELETE FROM ${table}`); } catch (_) {}
@@ -676,6 +678,7 @@ export async function wipeAllData(): Promise<{ preserved: string[]; wiped: strin
       'prayer_timings',
       'focus_sessions',
       'ai_programs',
+      'user_profile',
     ],
   };
 }
@@ -779,6 +782,7 @@ export async function verifySeedData(): Promise<Record<string, number>> {
     'budget_categories',
     'daily_affirmations',
     'dashboard_widgets',
+    'user_profile',
   ];
 
   const counts: Record<string, number> = {};

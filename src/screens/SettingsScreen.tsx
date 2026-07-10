@@ -48,6 +48,7 @@ export default function SettingsScreen() {
   const wipeDatabase = useStore((s) => s.wipeDatabase);
   const deleting = useStore((s) => s.deleting);
   const refresh = useStore((s) => s.refresh);
+  const userProfile = useStore((s) => s.userProfile);
 
   const [exporting, setExporting] = useState(false);
   const [notifications, setNotifications] = useState<ScheduledNotification[]>(
@@ -319,9 +320,11 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
-              <Text style={styles.avatarText}>H</Text>
+              <Text style={styles.avatarText}>
+                {userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : '?'}
+              </Text>
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text
                 style={{
                   color: colors.heading,
@@ -329,17 +332,17 @@ export default function SettingsScreen() {
                   fontWeight: "600",
                 }}
               >
-                Hasan Adeeb
+                {userProfile?.name || 'Set up your profile'}
               </Text>
               <Text style={{ color: colors.textTertiary, fontSize: 12 }}>
-                Your Second Brain
+                {userProfile?.weight_kg ? `${userProfile.weight_kg} kg` : 'Add your stats'}
+                {userProfile?.height_cm ? ` · ${userProfile.height_cm} cm` : ''}
               </Text>
             </View>
             <Icon
               name={LUCIDE_ICONS.chevronRight}
               size={18}
               color={colors.textTertiary}
-              style={{ marginLeft: "auto" }}
             />
           </TouchableOpacity>
         </Card>

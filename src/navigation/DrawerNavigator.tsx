@@ -21,7 +21,6 @@ import BudgetScreen from "../screens/BudgetScreen";
 import PlannerScreen from "../screens/PlannerScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
-import WidgetEditor from "../screens/WidgetEditor";
 import AISettingsScreen from "../screens/AISettingsScreen";
 
 import GreetingScreen from "../screens/GreetingScreen";
@@ -37,7 +36,6 @@ type RouteName =
   | "Planner"
   | "Settings"
   | "Profile"
-  | "Widgets"
   | "AISettings";
 
 const SCREENS: { name: RouteName; component: React.FC }[] = [
@@ -50,18 +48,20 @@ const SCREENS: { name: RouteName; component: React.FC }[] = [
   { name: "Planner", component: PlannerScreen },
   { name: "Settings", component: SettingsScreen },
   { name: "Profile", component: ProfileScreen },
-  { name: "Widgets", component: WidgetEditor },
   { name: "AISettings", component: AISettingsScreen },
 ];
 
-const NAV_ITEMS: { name: RouteName; label: string; icon: keyof typeof LUCIDE_ICONS }[] = [
+const NAV_ITEMS: {
+  name: RouteName;
+  label: string;
+  icon: keyof typeof LUCIDE_ICONS;
+}[] = [
   { name: "Greeting", label: "Home", icon: "home" },
   { name: "Focus", label: "Focus", icon: "target" },
   { name: "Budget", label: "Budget", icon: "dollarSign" },
   { name: "Profile", label: "Profile", icon: "user" },
   { name: "Settings", label: "Settings", icon: "settings" },
   { name: "AISettings", label: "AI Settings", icon: "cpu" },
-  { name: "Widgets", label: "Widgets", icon: "grid" },
 ];
 
 export default function DrawerNavigator() {
@@ -94,7 +94,7 @@ export default function DrawerNavigator() {
   const ActiveScreen =
     SCREENS.find((s) => s.name === currentRoute)?.component || DashboardScreen;
 
-  const mainRoutes = ['Dashboard', 'Planner', 'Trackers', 'Journal'];
+  const mainRoutes = ["Dashboard", "Planner", "Trackers", "Journal"];
   const showBottomNav = mainRoutes.includes(currentRoute);
 
   // Screen transition animation
@@ -172,25 +172,10 @@ export default function DrawerNavigator() {
         ]}
         pointerEvents={sidebarOpen ? "auto" : "none"}
       >
-        <TouchableOpacity
-          style={styles.sidebarHeader}
-          onPress={() => {
-            setCurrentRoute("Profile");
-            setSidebarOpen(false);
-          }}
-          activeOpacity={0.7}
+        <ScrollView
+          style={{ flex: 1, marginTop: 150 }}
+          showsVerticalScrollIndicator={false}
         >
-          <View
-            style={[styles.avatar, { backgroundColor: theme.colors.accent }]}
-          >
-            <Text
-              style={[styles.avatarText, { color: theme.colors.textInverse }]}
-            >
-              HA
-            </Text>
-          </View>
-        </TouchableOpacity>
-        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
           {NAV_ITEMS.map((item) => {
             const focused = currentRoute === item.name;
             return (
@@ -229,6 +214,7 @@ export default function DrawerNavigator() {
             );
           })}
         </ScrollView>
+
         <TouchableOpacity
           style={[styles.themeToggle, { borderTopColor: theme.colors.divider }]}
           onPress={toggle}

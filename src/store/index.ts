@@ -11,6 +11,7 @@ import type { TimetableRow } from '../db/db-types';
 import type { DashboardWidgetRow } from '../db/db-types';
 import type { MonthlyStatsRow } from '../db/db-types';
 import type { PrayerTimingRow } from '../db/db-types';
+import type { UserProfileRow } from '../db/db-types';
 import type { IslamicDate } from '../types';
 import { getDailyLogRepo } from '../db/repositories/dailyLog';
 import { getPrayerRepo } from '../db/repositories/prayer';
@@ -18,7 +19,7 @@ import { getTimetableRepo } from '../db/repositories/timetable';
 import { getTransactionRepo } from '../db/repositories/transaction';
 import { getWidgetRepo } from '../db/repositories/widget';
 import { getStatsRepo } from '../db/repositories/stats';
-import { initDatabase, deleteTransactionById, savePrayerTimings, getDb, seedWidgetLayouts } from '../db/service';
+import { initDatabase, deleteTransactionById, savePrayerTimings, getDb, seedWidgetLayouts, getUserProfile, updateUserProfile } from '../db/service';
 import { runSeed as runSeedData, wipeAllData, type SeedOptions, type SeedResult } from '../data/seedData';
 import { fetchPrayerTimings, extractTimings, getIslamicDateInfo } from '../services/prayerApi';
 
@@ -77,6 +78,11 @@ export interface AppStore {
   islamicDate: IslamicDate | null;
   timingsLoading: boolean;
   refreshPrayerTimings: () => Promise<void>;
+
+  // ── User Profile ──
+  userProfile: UserProfileRow | null;
+  refreshProfile: () => Promise<void>;
+  updateProfile: (fields: Partial<Pick<UserProfileRow, 'name' | 'gender' | 'date_of_birth' | 'height_cm' | 'weight_kg' | 'target_weight_kg' | 'activity_level' | 'goals' | 'preferences'>>) => Promise<void>;
 
   // ── Sidebar ──
   sidebarOpen: boolean;
@@ -304,6 +310,26 @@ export const useStore = create<AppStore>()((set, get) => ({
   currentRoute: "Greeting",
   setCurrentRoute: (route) => set({ currentRoute: route }),
 
+  // ── User Profile ──
+  userProfile: null,
+  refreshProfile: async () => {
+    try {
+      const profile = await getUserProfile();
+      set({ userProfile: profile });
+    } catch (e) {
+      console.error('Failed to load profile:', e);
+    }
+  },
+  updateProfile: async (fields) => {
+    try {
+      await updateUserProfile(fields);
+      const profile = await getUserProfile();
+      set({ userProfile: profile });
+    } catch (e) {
+      console.error('Failed to update profile:', e);
+    }
+  },
+
   // ── System ──
   seeding: false,
   deleting: false,
@@ -347,7 +373,7 @@ export const useStore = create<AppStore>()((set, get) => ({
       await seedWidgetLayouts();
 
       // Fetch all initial data in parallel
-      const [dailyLog, prayers, txns, timetable, widgets, stats, todayTimings] = await Promise.allSettled([
+      const [dailyLog, prayers, txns, timetable, widgets, stats, todayTimings, profile] = await Promise.allSettled([
         getDailyLogRepo().getByDate(today),
         getPrayerRepo().getByDate(today),
         getTransactionRepo().getByMonth(month),
@@ -356,6 +382,8 @@ export const useStore = create<AppStore>()((set, get) => ({
         getStatsRepo().getMonthly(month),
         // Check if today's prayer timings exist in DB
         getDb().getFirstAsync<any>('SELECT * FROM prayer_timings WHERE date = ?', today),
+        // User profile
+        getUserProfile(),
       ]);
 
       // Filter today's transactions
@@ -373,6 +401,7 @@ export const useStore = create<AppStore>()((set, get) => ({
         // If timings exist in DB, use them; otherwise show empty
         prayerTimings: todayTimings.status === 'fulfilled' ? todayTimings.value : null,
         timingsLoading: false,
+        userProfile: profile.status === 'fulfilled' ? profile.value : null,
         loaded: true,
         hydrating: false,
       });
