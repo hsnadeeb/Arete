@@ -18,7 +18,8 @@ import { getTimetableRepo } from '../db/repositories/timetable';
 import { getTransactionRepo } from '../db/repositories/transaction';
 import { getWidgetRepo } from '../db/repositories/widget';
 import { getStatsRepo } from '../db/repositories/stats';
-import { initDatabase, seedAllData, deleteTransactionById, savePrayerTimings, getDb, getPrayerTimings } from '../db/service';
+import { initDatabase, deleteTransactionById, savePrayerTimings, getDb, seedWidgetLayouts } from '../db/service';
+import { runSeed as runSeedData, wipeAllData, type SeedOptions, type SeedResult } from '../data/seedData';
 import { fetchPrayerTimings, extractTimings, getIslamicDateInfo } from '../services/prayerApi';
 
 // ─── App Store Interface ───
@@ -84,6 +85,13 @@ export interface AppStore {
   // ── System ──
   hydrate: () => Promise<void>;
   refresh: () => Promise<void>;
+
+  // ── Test Data Seeding (on-demand) ──
+  seeding: boolean;
+  deleting: boolean;
+  seedResult: SeedResult | null;
+  seedDatabase: (opts?: SeedOptions) => Promise<SeedResult>;
+  wipeDatabase: () => Promise<void>;
 }
 
 // ─── Create Store ───
@@ -282,6 +290,37 @@ export const useStore = create<AppStore>()((set, get) => ({
   setCurrentRoute: (route) => set({ currentRoute: route }),
 
   // ── System ──
+  seeding: false,
+  deleting: false,
+  seedResult: null,
+  seedDatabase: async (opts?: SeedOptions) => {
+    set({ seeding: true, error: null });
+    try {
+      const result = await runSeedData(opts ?? { days: 14 });
+      set({ seedResult: result, seeding: false });
+      // Re-hydrate the store so all screens reflect the new data
+      await get().hydrate();
+      return result;
+    } catch (e) {
+      console.error('Seed failed:', e);
+      set({ error: (e as Error).message, seeding: false });
+      throw e;
+    }
+  },
+  wipeDatabase: async () => {
+    set({ deleting: true, error: null });
+    try {
+      await wipeAllData();
+      set({ deleting: false });
+      // Re-hydrate so screens reflect the empty state.
+      await get().hydrate();
+    } catch (e) {
+      console.error('Wipe failed:', e);
+      set({ error: (e as Error).message, deleting: false });
+      throw e;
+    }
+  },
+
   hydrate: async () => {
     set({ hydrating: true, error: null });
     try {
@@ -289,8 +328,8 @@ export const useStore = create<AppStore>()((set, get) => ({
       const today = new Date().toISOString().split('T')[0];
       const month = today.slice(0, 7);
 
-      // Seed the database if it's fresh (idempotent — skips if data exists)
-      await seedAllData();
+      // Seed default widget layouts (one-time, idempotent)
+      await seedWidgetLayouts();
 
       // Fetch all initial data in parallel
       const [dailyLog, prayers, txns, timetable, widgets, stats, todayTimings] = await Promise.allSettled([

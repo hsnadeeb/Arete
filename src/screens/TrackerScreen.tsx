@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -113,7 +113,10 @@ export default function TrackerScreen() {
   } = useApp();
   const { theme, isDark } = useTheme();
   const tc = theme.colors;
+  const [activeIdx, setActiveIdx] = useState(0);
   const [active, setActive] = useState<Tab>("overview");
+  const screenWidth = Dimensions.get('window').width;
+  const pagerRef = useRef<ScrollView>(null);
   const [weight, setWeight] = useState("");
   const [sleepH, setSleepH] = useState("");
 
@@ -129,16 +132,36 @@ export default function TrackerScreen() {
   const [colorFilter, setColorFilter] = useState<string | null>(null);
   const [newHabitColor, setNewHabitColor] = useState('#6366f1');
 
+  const onMomentumScrollEnd = (e: any) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+    if (idx !== activeIdx && idx >= 0 && idx < TABS.length) {
+      setActiveIdx(idx);
+      setActive(TABS[idx].key);
+    }
+  };
+
+  const goToPage = (idx: number) => {
+    setActiveIdx(idx);
+    setActive(TABS[idx].key);
+    pagerRef.current?.scrollTo({ x: idx * screenWidth, animated: true });
+  };
+
   useEffect(() => {
     Promise.all([
-      db.getAllDailyLogs(),
-      db.getAllNutritionLogs(),
-      db.getHabits(),
-      db.getHabitLogs(),
+      db.getAllDailyLogs().catch(() => []),
+      db.getAllNutritionLogs().catch(() => []),
+      db.getHabits().catch(() => []),
+      db.getHabitLogs().catch(() => []),
     ]).then(([l, n, h, hl]) => {
       setLogs(l);
       setHabits(h);
       setHabitLogs(hl);
+      setLoaded(true);
+    }).catch((e) => {
+      console.error('Error loading tracker data:', e);
+      setLogs([]);
+      setHabits([]);
+      setHabitLogs([]);
       setLoaded(true);
     });
   }, []);
@@ -338,7 +361,7 @@ export default function TrackerScreen() {
                   borderColor: t.color,
                 },
               ]}
-              onPress={() => setActive(t.key)}
+              onPress={() => goToPage(TABS.indexOf(t))}
             >
               <Text style={{ fontSize: 13 }}>{t.icon}</Text>
               <Text
@@ -356,12 +379,18 @@ export default function TrackerScreen() {
       </ScrollView>
 
       <ScrollView
+        ref={pagerRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 80, gap: 20 }}
+        contentContainerStyle={{ flexGrow: 1 }}
+        onMomentumScrollEnd={onMomentumScrollEnd}
       >
         {/* ─── OVERVIEW ─── */}
-        {active === "overview" && (
-          <View>
+        <View style={{ width: screenWidth, flex: 1 }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 80, gap: 20 }}>
+            <View>
             <Text style={[styles.tabTitle, { color: T.textMuted }]}>
               Today's stats
             </Text>
@@ -544,13 +573,15 @@ export default function TrackerScreen() {
                   ))}
                 </View>
               </View>
+              </View>
             </View>
-          </View>
-        )}
+          </ScrollView>
+        </View>
 
         {/* ─── WEIGHT ─── */}
-        {active === "weight" && (
-          <View>
+        <View style={{ width: screenWidth, flex: 1 }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 80, gap: 20 }}>
+            <View>
             <Text style={[styles.tabTitle, { color: T.textMuted }]}>
               Weight
             </Text>
@@ -604,12 +635,14 @@ export default function TrackerScreen() {
                 accentColor="#0b6bcf"
               />
             </View>
-          </View>
-        )}
+            </View>
+          </ScrollView>
+        </View>
 
         {/* ─── WATER ─── */}
-        {active === "water" && (
-          <View>
+        <View style={{ width: screenWidth, flex: 1 }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 80, gap: 20 }}>
+            <View>
             <Text style={[styles.tabTitle, { color: T.textMuted }]}>Water</Text>
             <View style={styles.bigValRow}>
               <Text style={[styles.bigVal, { color: "#0ea5e9" }]}>
@@ -667,12 +700,14 @@ export default function TrackerScreen() {
                 accentColor="#0ea5e9"
               />
             </View>
-          </View>
-        )}
+            </View>
+          </ScrollView>
+        </View>
 
         {/* ─── STEPS ─── */}
-        {active === "steps" && (
-          <View>
+        <View style={{ width: screenWidth, flex: 1 }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 80, gap: 20 }}>
+            <View>
             <Text style={[styles.tabTitle, { color: T.textMuted }]}>Steps</Text>
             <View style={styles.bigValRow}>
               <Text style={[styles.bigVal, { color: "#f59e0b" }]}>
@@ -716,12 +751,14 @@ export default function TrackerScreen() {
                 accentColor="#f59e0b"
               />
             </View>
-          </View>
-        )}
+            </View>
+          </ScrollView>
+        </View>
 
         {/* ─── SLEEP ─── */}
-        {active === "sleep" && (
-          <View>
+        <View style={{ width: screenWidth, flex: 1 }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 80, gap: 20 }}>
+            <View>
             <Text style={[styles.tabTitle, { color: T.textMuted }]}>Sleep</Text>
             <View style={{ alignItems: "center", marginBottom: 16 }}>
               <ProgressRing
@@ -779,12 +816,14 @@ export default function TrackerScreen() {
                 accentColor="#8b5cf6"
               />
             </View>
-          </View>
-        )}
+            </View>
+          </ScrollView>
+        </View>
 
         {/* ─── MOOD ─── */}
-        {active === "mood" && (
-          <View>
+        <View style={{ width: screenWidth, flex: 1 }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 80, gap: 20 }}>
+            <View>
             <Text style={[styles.tabTitle, { color: T.textMuted }]}>Mood</Text>
             <View
               style={{
@@ -831,12 +870,14 @@ export default function TrackerScreen() {
                 accentColor="#f97316"
               />
             </View>
-          </View>
-        )}
+            </View>
+          </ScrollView>
+        </View>
 
         {/* ─── HABITS ─── */}
-        {active === "habits" && (
-          <View style={{ paddingBottom: 80 }}>
+        <View style={{ width: screenWidth, flex: 1 }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 80, gap: 20 }}>
+            <View style={{ paddingBottom: 80 }}>
             {habits.length === 0 ? (
               <View style={{ alignItems: 'center', paddingTop: 40, gap: 8 }}>
                 <Text style={{ fontSize: 40 }}>✅</Text>
@@ -917,8 +958,9 @@ export default function TrackerScreen() {
                 })}
               </>
             )}
-          </View>
-        )}
+            </View>
+          </ScrollView>
+        </View>
       </ScrollView>
 
       {active === 'habits' && (

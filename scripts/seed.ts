@@ -1,0 +1,195 @@
+/**
+ * Seed Test Data — On-demand script entry point
+ * ─────────────────────────────────────────────
+ *
+ * This is the public face of the test-data seeding flow for the app.
+ * It is intentionally a thin wrapper around `src/data/seedData.ts` so
+ * there is one obvious import path for both UI triggers and (eventual)
+ * CLI / CI tools.
+ *
+ * ── Why a "script" if expo-sqlite only runs on-device? ─────────────────────
+ * `expo-sqlite` is an on-device API. The SQLite file lives inside the
+ * Expo sandbox on the user's device, so a plain Node process on the host
+ * cannot open it. The "on-demand script" for this app is therefore a
+ * button-driven invocation from inside the running app — see the
+ * "Seed Test Data" section in `src/screens/SettingsScreen.tsx`.
+ *
+ * This file documents the API surface, parses command-line flags when
+ * invoked, and prints instructions for running the seed inside the app.
+ *
+ * ── Usage ─────────────────────────────────────────────────────────────────
+ *
+ *   // From inside the app (preferred):
+ *   import { runSeed, verifySeedData } from '@/data/seedData';
+ *   const result = await runSeed({ days: 14 });
+ *
+ *   // Or via this entry point:
+ *   import { runSeed, verifySeedData } from '../../scripts/seed';
+ *
+ *   // Or from the Settings screen "Seed Test Data" section.
+ *
+ * ── Programmatic API ──────────────────────────────────────────────────────
+ *
+ *   runSeed({ days?: number, force?: boolean })   → SeedResult
+ *   verifySeedData()                              → Record<string, number>
+ *   formatSeedResult(result)                      → string (human-readable)
+ *
+ * ── CLI (host side, informational only) ───────────────────────────────────
+ *
+ *   npm run seed                  # prints on-device instructions
+ *   npm run seed -- --days 30     # default 14, accepts override
+ *   npm run seed -- --force       # wipe and reseed
+ */
+
+import {
+  runSeed,
+  verifySeedData,
+  formatSeedResult,
+  wipeAllData,
+  type SeedOptions,
+  type SeedResult,
+} from '../src/data/seedData';
+
+// Re-export the public API so callers have one stable import path.
+export { runSeed, verifySeedData, formatSeedResult, wipeAllData };
+export type { SeedOptions, SeedResult };
+
+/**
+ * Parse a small subset of CLI flags. Used only by the informational
+ * `npm run seed` entry — actual seeding always happens in the app.
+ */
+export function parseSeedArgs(argv: string[]): SeedOptions {
+  const opts: SeedOptions = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--days' || a === '-d') {
+      const n = parseInt(argv[++i], 10);
+      if (!Number.isNaN(n) && n > 0) opts.days = n;
+    } else if (a === '--force' || a === '-f') {
+      opts.force = true;
+    } else if (a === '--ignore-existing') {
+      opts.ignoreExisting = true;
+    } else if (a === '--help' || a === '-h') {
+      printHelp();
+      process.exit(0);
+    }
+  }
+  return opts;
+}
+
+/** Print CLI help text. */
+export function printHelp(): void {
+  console.log(`
+Seed Test Data — Arete app
+──────────────────────────
+
+Seeds every table in the local SQLite database with realistic dummy data
+for UI testing. Generates \`--days\` days of history (default 14 = 2 weeks).
+
+IMPORTANT
+─────────
+This app uses expo-sqlite, which only runs inside the Expo runtime on a
+device or simulator. The database file is NOT accessible from a plain
+host-side Node process. To actually populate the database, run the seed
+INSIDE the app:
+
+  1. Start the app:  npm start
+  2. Open the app on your device/simulator
+  3. Go to Settings → "Seed Test Data"
+  4. Tap "Seed (2 weeks)" or "Reset & Seed"
+
+This \`npm run seed\` command is informational — it prints what would be
+seeded based on the flags you pass, and reminds you how to run it for real.
+
+FLAGS
+─────
+  -d, --days <n>           Days of history to generate (default: 14)
+  -f, --force              Wipe existing seedable rows first
+      --ignore-existing    Bypass the already-seeded check without wiping
+  -h, --help               Show this help
+
+WHAT GETS SEEDED
+────────────────
+  ✓ daily_logs            (weight, water, steps, mood, sleep, calories)
+  ✓ prayer_logs           (5 prayers × N days, with realistic on-time/qada)
+  ✓ gym_logs              (~3 sessions/week, 12 workout templates)
+  ✓ nutrition_logs        (2 meals/day, 11 meal templates)
+  ✓ transactions          (income, rent, variable expenses)
+  ✓ timetable             (34 weekly recurring items)
+  ✓ habits + habit_logs   (8 habits × N days)
+  ✓ journal_entries       (12 entries with varied types)
+  ✓ goals                 (6 active goals)
+  ✓ budget_categories     (8 categories)
+  ✓ daily_affirmations    (7 affirmations)
+  ✓ dashboard_widgets     (7 default widget keys)
+
+WHAT IS NEVER SEEDED (user state / live API)
+────────────────────────────────────────────
+  ✗ prayer_timings        — fetched from Aladhan API at runtime
+  ✗ ai_providers          — holds user-supplied API keys
+  ✗ ai_programs           — generated by the user via AI features
+  ✗ focus_sessions        — produced by the focus timer
+
+EXAMPLES
+────────
+  npm run seed                       # default: 14 days, no force
+  npm run seed -- --days 30          # 30 days of data
+  npm run seed -- --force            # wipe + reseed 14 days
+  npm run seed -- --days 7 --force   # wipe + reseed 7 days
+`);
+}
+
+/**
+ * Print a summary of what would be seeded for the given options.
+ * This is what `npm run seed` runs from the host (since the actual
+ * database is on-device).
+ */
+export function describeSeed(opts: SeedOptions): string {
+  const days = opts.days ?? 14;
+  const force = opts.force ?? false;
+
+  const summary = [
+    `Seed plan:`,
+    `  days:    ${days}`,
+    `  force:   ${force ? 'yes (wipe & reseed)' : 'no (skip tables that have data)'}`,
+    `  tables:  13 (all seedable tables)`,
+    ``,
+    `Estimated row counts (approximate):`,
+    `  daily_logs:           ${days}`,
+    `  prayer_logs:          ${days * 5}`,
+    `  gym_logs:             ~${Math.max(2, Math.round((days / 7) * 3))}`,
+    `  nutrition_logs:       ${days * 2}`,
+    `  transactions:         ~${3 + 3 + Math.max(8, Math.round((days / 7) * 8))}`,
+    `  timetable:            34`,
+    `  habits:               8`,
+    `  habit_logs:           ${days * 8}`,
+    `  journal_entries:      ~${Math.min(12, Math.max(3, days))}`,
+    `  goals:                6`,
+    `  budget_categories:    8`,
+    `  daily_affirmations:   ${Math.min(7, Math.max(1, days))}`,
+    `  dashboard_widgets:    7`,
+    ``,
+    `To run this for real, open the app → Settings → Seed Test Data.`,
+  ];
+  return summary.join('\n');
+}
+
+/**
+ * Host-side CLI entry point. Prints a description of what would be seeded
+ * based on CLI flags. Does NOT touch the database — see the help text
+ * for why and how to seed inside the app.
+ */
+export async function main(): Promise<void> {
+  const opts = parseSeedArgs(process.argv.slice(2));
+  console.log(describeSeed(opts));
+}
+
+// Run main() when this file is executed directly (e.g. via tsx/node).
+// In the React Native runtime this file is only ever imported, so the
+// `require.main === module` guard keeps main() from firing automatically.
+if (typeof require !== 'undefined' && require.main === module) {
+  main().catch((err) => {
+    console.error('Seed script failed:', err);
+    process.exit(1);
+  });
+}

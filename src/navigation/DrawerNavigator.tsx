@@ -11,6 +11,7 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStore } from "../store";
 import { useTheme } from "../context/ThemeContext";
+import BottomNavBar from "../components/BottomNavBar";
 
 import DashboardScreen from "../screens/DashboardScreen";
 import TrackerScreen from "../screens/TrackerScreen";
@@ -54,11 +55,9 @@ const SCREENS: { name: RouteName; component: React.FC }[] = [
 
 const NAV_ITEMS: { name: RouteName; label: string; icon: string }[] = [
   { name: "Greeting", label: "Home", icon: "home" },
-  { name: "Dashboard", label: "Dashboard", icon: "grid" },
-  { name: "Trackers", label: "Trackers", icon: "bar-chart-2" },
-  { name: "Journal", label: "Journal", icon: "file-text" },
+  { name: "Focus", label: "Focus", icon: "target" },
   { name: "Budget", label: "Budget", icon: "dollar-sign" },
-  { name: "Planner", label: "Schedule", icon: "calendar" },
+  { name: "Profile", label: "Profile", icon: "user" },
   { name: "Settings", label: "Settings", icon: "settings" },
   { name: "AISettings", label: "AI Settings", icon: "cpu" },
   { name: "Widgets", label: "Widgets", icon: "grid" },
@@ -94,10 +93,56 @@ export default function DrawerNavigator() {
   const ActiveScreen =
     SCREENS.find((s) => s.name === currentRoute)?.component || DashboardScreen;
 
+  const mainRoutes = ['Dashboard', 'Planner', 'Trackers', 'Journal'];
+  const showBottomNav = mainRoutes.includes(currentRoute);
+
+  // Screen transition animation
+  const screenOpacity = useRef(new Animated.Value(1)).current;
+  const screenSlide = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (mainRoutes.includes(currentRoute)) {
+      Animated.parallel([
+        Animated.timing(screenOpacity, {
+          toValue: 0,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(screenSlide, {
+          toValue: 30,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        Animated.parallel([
+          Animated.timing(screenOpacity, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(screenSlide, {
+            toValue: 0,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    }
+  }, [currentRoute]);
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
       <View style={{ flex: 1 }}>
-        <ActiveScreen />
+        <Animated.View
+          style={{
+            flex: 1,
+            opacity: screenOpacity,
+            transform: [{ translateX: screenSlide }],
+          }}
+        >
+          <ActiveScreen />
+        </Animated.View>
+        {showBottomNav && <BottomNavBar />}
       </View>
 
       <Animated.View

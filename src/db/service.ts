@@ -19,6 +19,10 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   return db;
 }
 
+export function resetDb() {
+  db = null;
+}
+
 export function getDb(): SQLite.SQLiteDatabase {
   if (!db) throw new Error('Database not initialized');
   return db;
@@ -325,7 +329,7 @@ export async function seedWidgetLayouts() {
 
   const defaults = [
     'at-a-glance', 'quick-stats', 'quick-log', 'mood',
-    'expenses', 'monthly-stats',
+    'expenses', 'prayer-tracker', 'monthly-stats',
   ];
 
   for (let i = 0; i < defaults.length; i++) {
@@ -812,6 +816,9 @@ export async function seedAllData() {
       bc.name, bc.budget, bc.icon
     );
   }
+
+  // ─── Timetable (weekly schedule) ───
+  await seedTimetable();
 
   // ─── Dashboard Widget Layouts ───
   await seedWidgetLayouts();
