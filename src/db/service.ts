@@ -407,6 +407,10 @@ export async function getAllDailyLogs() {
   return await getDb().getAllAsync<any>('SELECT * FROM daily_logs ORDER BY date DESC');
 }
 
+export async function getDailyLogsSince(date: string) {
+  return await getDb().getAllAsync<any>('SELECT * FROM daily_logs WHERE date >= ? ORDER BY date DESC', date);
+}
+
 export async function getAllPrayers() {
   return await getDb().getAllAsync<any>('SELECT * FROM prayer_logs ORDER BY date DESC, prayer_name');
 }

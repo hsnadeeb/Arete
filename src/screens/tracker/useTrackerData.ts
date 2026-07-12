@@ -1,6 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useStore } from "../../store";
 import * as db from "../../db/service";
+
+function getPastDate(daysAgo: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().split('T')[0];
+}
 import type { WeekData, HabitGridData } from "./types";
 
 export function today(): string {
@@ -16,8 +22,9 @@ export function useTrackerData() {
 
   const loadAll = useCallback(async () => {
     try {
+      const since = getPastDate(90);
       const [l, , h, hl] = await Promise.all([
-        db.getAllDailyLogs().catch(() => []),
+        db.getDailyLogsSince(since).catch(() => []),
         db.getAllNutritionLogs().catch(() => []),
         db.getHabits().catch(() => []),
         db.getHabitLogs().catch(() => []),

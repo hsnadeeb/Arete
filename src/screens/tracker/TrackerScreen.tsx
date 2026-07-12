@@ -55,6 +55,7 @@ export default function TrackerScreen() {
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [active, setActive] = useState(TABS[0].key);
+  const [renderedTabs, setRenderedTabs] = useState<Set<number>>(new Set([0]));
   const pagerRef = useRef<ScrollView>(null);
 
   const {
@@ -70,6 +71,7 @@ export default function TrackerScreen() {
   const goToPage = (idx: number) => {
     setActiveIdx(idx);
     setActive(TABS[idx].key);
+    setRenderedTabs((prev) => (prev.has(idx) ? prev : new Set([...prev, idx])));
     pagerRef.current?.scrollTo({ x: idx * screenWidth, animated: true });
   };
 
@@ -78,6 +80,7 @@ export default function TrackerScreen() {
     if (idx !== activeIdx && idx >= 0 && idx < TABS.length) {
       setActiveIdx(idx);
       setActive(TABS[idx].key);
+      setRenderedTabs((prev) => (prev.has(idx) ? prev : new Set([...prev, idx])));
     }
   };
 
@@ -139,35 +142,38 @@ export default function TrackerScreen() {
         style={s.tabContent}
         contentContainerStyle={{ flexGrow: 1 }}
         onMomentumScrollEnd={onMomentumScrollEnd}
+        removeClippedSubviews
       >
         <View style={{ width: screenWidth, flex: 1 }}>
-          <TrackerOverview week={weekData} T={T} />
+          {renderedTabs.has(0) && <TrackerOverview week={weekData} T={T} />}
         </View>
         <View style={{ width: screenWidth, flex: 1 }}>
-          <TrackerWeight week={weekData} T={T} />
+          {renderedTabs.has(1) && <TrackerWeight week={weekData} T={T} />}
         </View>
         <View style={{ width: screenWidth, flex: 1 }}>
-          <TrackerWater week={weekData} T={T} />
+          {renderedTabs.has(2) && <TrackerWater week={weekData} T={T} />}
         </View>
         <View style={{ width: screenWidth, flex: 1 }}>
-          <TrackerSteps week={weekData} T={T} />
+          {renderedTabs.has(3) && <TrackerSteps week={weekData} T={T} />}
         </View>
         <View style={{ width: screenWidth, flex: 1 }}>
-          <TrackerSleep week={weekData} T={T} />
+          {renderedTabs.has(4) && <TrackerSleep week={weekData} T={T} />}
         </View>
         <View style={{ width: screenWidth, flex: 1 }}>
-          <TrackerMood week={weekData} T={T} />
+          {renderedTabs.has(5) && <TrackerMood week={weekData} T={T} />}
         </View>
         <View style={{ width: screenWidth, flex: 1 }}>
-          <TrackerHabits
-            habits={habits}
-            habitLogs={habitLogs}
-            habitGrid={habitGrid}
-            onRefresh={refreshHabits}
-            onRefreshLogs={refreshHabitLogs}
-            T={T}
-            accentColor={tc.accent}
-          />
+          {renderedTabs.has(6) && (
+            <TrackerHabits
+              habits={habits}
+              habitLogs={habitLogs}
+              habitGrid={habitGrid}
+              onRefresh={refreshHabits}
+              onRefreshLogs={refreshHabitLogs}
+              T={T}
+              accentColor={tc.accent}
+            />
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

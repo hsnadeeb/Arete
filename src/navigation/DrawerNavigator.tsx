@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo, useState } from "react";
+import React, { useRef, useEffect, useMemo, useState, memo } from "react";
 import {
   View,
   Text,
@@ -116,6 +116,18 @@ export default function DrawerNavigator() {
     });
   }, [currentRoute, mainRoutes, screenOpacities]);
 
+  // Pre-mount all main tabs in the background after launch so first switches are smooth
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setVisitedRoutes((prev: Set<string>) => {
+        const next = new Set(prev);
+        mainRoutes.forEach((r) => next.add(r));
+        return next.size === prev.size ? prev : next;
+      });
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [mainRoutes]);
+
   const OtherScreen = useMemo(
     () => !mainRoutes.includes(currentRoute)
       ? SCREENS.find((s) => s.name === currentRoute)?.component || DashboardScreen
@@ -141,7 +153,7 @@ export default function DrawerNavigator() {
                 ]}
                 pointerEvents={isActive ? "auto" : "none"}
               >
-                <Screen />
+                <MemoizedScreen component={Screen} />
               </Animated.View>
             );
           })}
@@ -295,6 +307,10 @@ export default function DrawerNavigator() {
     </View>
   );
 }
+
+const MemoizedScreen = memo(function MemoizedScreen({ component: Component }: { component: React.FC }) {
+  return <Component />;
+});
 
 const SIDEBAR_WIDTH = 260;
 
