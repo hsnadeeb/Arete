@@ -162,43 +162,107 @@ const LIGHT_THEME: Theme = {
   typography: SHARED_TYPOGRAPHY,
 };
 
+// const DARK_THEME: Theme = {
+//   name: "dark",
+//   colors: {
+//     bg: "#0f172a",
+//     bgSecondary: "#1e293b",
+//     bgTertiary: "#334155",
+//     surface: "#1e293b",
+//     surfaceElevated: "#1e293b",
+//     card: "#1e293b",
+//     text: "#f1f5f9",
+//     textSecondary: "#cbd5e1",
+//     textTertiary: "#94a3b8",
+//     textInverse: "#0f172a",
+//     heading: "#f8fafc",
+//     accent: "#818cf8",
+//     accentLight: "#312e81",
+//     accentBg: "#312e81",
+//     border: "#334155",
+//     borderLight: "#1e293b",
+//     divider: "#1e293b",
+//     success: "#34d399",
+//     successBg: "#064e3b",
+//     warning: "#fbbf24",
+//     warningBg: "#78350f",
+//     error: "#f87171",
+//     errorBg: "#7f1d1d",
+//     info: "#38bdf8",
+//     infoBg: "#0c4a6e",
+//     muted: "#64748b",
+//     placeholder: "#475569",
+//     disabled: "#475569",
+//     overlay: "rgba(0,0,0,0.6)",
+//     shadow: "#000",
+//     tabBar: "#1e293b",
+//     tabBarInactive: "#64748b",
+//     headerBg: "#1e293b",
+//   },
+//   spacing: SHARED_SPACING,
+//   borderRadius: SHARED_BORDER_RADIUS,
+//   typography: SHARED_TYPOGRAPHY,
+// };
+
 const DARK_THEME: Theme = {
   name: "dark",
   colors: {
-    bg: "#0f172a",
-    bgSecondary: "#1e293b",
-    bgTertiary: "#334155",
-    surface: "#1e293b",
-    surfaceElevated: "#1e293b",
-    card: "#1e293b",
-    text: "#f1f5f9",
-    textSecondary: "#cbd5e1",
-    textTertiary: "#94a3b8",
-    textInverse: "#0f172a",
-    heading: "#f8fafc",
-    accent: "#818cf8",
-    accentLight: "#312e81",
-    accentBg: "#312e81",
-    border: "#334155",
-    borderLight: "#1e293b",
-    divider: "#1e293b",
-    success: "#34d399",
-    successBg: "#064e3b",
-    warning: "#fbbf24",
-    warningBg: "#78350f",
-    error: "#f87171",
-    errorBg: "#7f1d1d",
-    info: "#38bdf8",
-    infoBg: "#0c4a6e",
-    muted: "#64748b",
-    placeholder: "#475569",
-    disabled: "#475569",
-    overlay: "rgba(0,0,0,0.6)",
-    shadow: "#000",
-    tabBar: "#1e293b",
-    tabBarInactive: "#64748b",
-    headerBg: "#1e293b",
+    // AMOLED backgrounds
+    bg: "#050505",
+    bgSecondary: "#0B0B0B",
+    bgTertiary: "#121212",
+
+    // Surfaces
+    surface: "#111111",
+    surfaceElevated: "#181818",
+    card: "#151515",
+
+    // Typography
+    text: "#F5F5F5",
+    textSecondary: "#C9C9C9",
+    textTertiary: "#8C8C8C",
+    textInverse: "#0A0A0A",
+    heading: "#FFFFFF",
+
+    // Brand Accent (slightly softer than default Indigo)
+    // accent: "#7C8CFF",
+    accent: "#7C8CFF",
+    accentLight: "#262B4E",
+    accentBg: "#1D2240",
+
+    // Borders
+    border: "#262626",
+    borderLight: "#1B1B1B",
+    divider: "#1A1A1A",
+
+    // Semantic colors
+    success: "#32D583",
+    successBg: "#0D2B1F",
+
+    warning: "#F5B942",
+    warningBg: "#3A2A0B",
+
+    error: "#F97066",
+    errorBg: "#3A1111",
+
+    info: "#5BB6FF",
+    infoBg: "#0F2B45",
+
+    // Misc
+    muted: "#6B6B6B",
+    placeholder: "#555555",
+    disabled: "#3F3F3F",
+
+    overlay: "rgba(0,0,0,0.72)",
+
+    shadow: "#000000",
+
+    tabBar: "#090909",
+    tabBarInactive: "#707070",
+
+    headerBg: "#090909",
   },
+
   spacing: SHARED_SPACING,
   borderRadius: SHARED_BORDER_RADIUS,
   typography: SHARED_TYPOGRAPHY,
@@ -221,7 +285,7 @@ const ThemeContext = createContext<ThemeContextValue>({
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
   const [themeName, setThemeName] = useState<"light" | "dark">(
-    systemScheme === "dark" ? "dark" : "light"
+    systemScheme === "dark" ? "dark" : "light",
   );
 
   useEffect(() => {
@@ -248,7 +312,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const theme = themeName === "dark" ? DARK_THEME : LIGHT_THEME;
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark: themeName === "dark", toggle, setTheme }}>
+    <ThemeContext.Provider
+      value={{ theme, isDark: themeName === "dark", toggle, setTheme }}
+    >
       {children}
     </ThemeContext.Provider>
   );

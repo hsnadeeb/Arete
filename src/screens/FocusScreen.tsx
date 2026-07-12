@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Animated,
   Easing,
   Vibration,
@@ -142,8 +143,11 @@ export default function FocusScreen() {
   const [done, setDone] = useState(false);
   const [stats, setStats] = useState({ totalTrees: 0, totalSessions: 0, streak: 0, todaySessions: 0 });
   const [milestone, setMilestone] = useState<number | null>(null);
+  const [screensaver, setScreensaver] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const animMilestone = useRef(new Animated.Value(0)).current;
+  const lastActivityRef = useRef(Date.now());
+  const lastTapRef = useRef(0);
 
   const progress = duration > 0 ? (elapsed / duration) * 100 : 0;
   const remaining = duration - elapsed;
@@ -211,14 +215,57 @@ export default function FocusScreen() {
   const handleStart = useCallback(() => {
     if (done) { setElapsed(0); setDone(false); }
     setRunning(true);
+    lastActivityRef.current = Date.now();
   }, [done]);
 
-  const handlePause = useCallback(() => setRunning(false), []);
-  const handleReset = useCallback(() => { setRunning(false); setElapsed(0); setDone(false); }, []);
-  const handleDuration = useCallback((d: number) => { setDuration(d); setElapsed(0); setRunning(false); setDone(false); }, []);
+  const handlePause = useCallback(() => { setRunning(false); lastActivityRef.current = Date.now(); }, []);
+  const handleReset = useCallback(() => { setRunning(false); setElapsed(0); setDone(false); lastActivityRef.current = Date.now(); }, []);
+  const handleDuration = useCallback((d: number) => { setDuration(d); setElapsed(0); setRunning(false); setDone(false); lastActivityRef.current = Date.now(); }, []);
+
+  // Screensaver: activate after 10s of inactivity, exit on double-tap
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!screensaver && Date.now() - lastActivityRef.current > 10000) {
+        setScreensaver(true);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [screensaver]);
+
+  const handleScreenTap = useCallback(() => {
+    const now = Date.now();
+    if (screensaver) {
+      if (now - lastTapRef.current < 350) {
+        setScreensaver(false);
+        lastActivityRef.current = now;
+      }
+      lastTapRef.current = now;
+    } else {
+      lastActivityRef.current = now;
+    }
+  }, [screensaver]);
+
+  if (screensaver) {
+    return (
+      <TouchableWithoutFeedback onPress={handleScreenTap}>
+        <SafeAreaView style={[s.screenSaver, { backgroundColor: "#000000" }]} edges={["top", "bottom"]}>
+          <View style={s.saverBody}>
+            <Text style={[s.saverTimer, { color: done ? tc.success : "#ffffff" }]}>
+              {String(min).padStart(2, "0")}:{String(sec).padStart(2, "0")}
+            </Text>
+            <View style={s.saverTree}>
+              <GrowingTree pct={progress} isDark={true} />
+            </View>
+            <Text style={s.saverHint}>Double-tap to exit</Text>
+          </View>
+        </SafeAreaView>
+      </TouchableWithoutFeedback>
+    );
+  }
 
   return (
-    <SafeAreaView style={[s.screen, { backgroundColor: tc.bg }]} edges={["top", "bottom"]}>
+    <TouchableWithoutFeedback onPress={handleScreenTap}>
+      <SafeAreaView style={[s.screen, { backgroundColor: tc.bg }]} edges={["top", "bottom"]}>
       {/* Header */}
       <View style={[s.header, { borderBottomColor: tc.divider }]}>
         <TouchableOpacity onPress={() => setCurrentRoute("Greeting")} style={s.backBtn}>
@@ -310,6 +357,7 @@ export default function FocusScreen() {
         </View>
       </View>
     </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -361,4 +409,9 @@ const s = StyleSheet.create({
   controls: { flexDirection: "row", alignItems: "center", gap: 24 },
   ctrlBtn: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   mainBtn: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center" },
+  screenSaver: { flex: 1, justifyContent: "center", alignItems: "center" },
+  saverBody: { flex: 1, justifyContent: "center", alignItems: "center", gap: 24 },
+  saverTimer: { ...TYPOGRAPHY.monoLg, fontSize: 56, letterSpacing: 2 },
+  saverTree: { transform: [{ scale: 1.2 }] },
+  saverHint: { ...TYPOGRAPHY.captionSm, color: "rgba(255,255,255,0.35)", marginTop: 24 },
 });
