@@ -19,7 +19,7 @@ import { getTimetableRepo } from '../db/repositories/timetable';
 import { getTransactionRepo } from '../db/repositories/transaction';
 import { getWidgetRepo } from '../db/repositories/widget';
 import { getStatsRepo } from '../db/repositories/stats';
-import { initDatabase, deleteTransactionById, savePrayerTimings, getDb, seedWidgetLayouts, getUserProfile, updateUserProfile } from '../db/service';
+import { initDatabase, deleteTransactionById, savePrayerTimings, getDb, seedWidgetLayouts, getUserProfile, updateUserProfile, getTrackerTargets, setTrackerTargets } from '../db/service';
 import { runSeed as runSeedData, wipeAllData, type SeedOptions, type SeedResult } from '../data/seedData';
 import { fetchPrayerTimings, extractTimings, getIslamicDateInfo } from '../services/prayerApi';
 
@@ -83,6 +83,9 @@ export interface AppStore {
   userProfile: UserProfileRow | null;
   refreshProfile: () => Promise<void>;
   updateProfile: (fields: Partial<Pick<UserProfileRow, 'name' | 'gender' | 'date_of_birth' | 'height_cm' | 'weight_kg' | 'target_weight_kg' | 'activity_level' | 'goals' | 'preferences'>>) => Promise<void>;
+
+  // ── Tracker Targets ──
+  setTrackerTarget: (fields: { steps_target?: number; water_target?: number; sleep_target?: number; weight_target?: number }) => Promise<void>;
 
   // ── Sidebar ──
   sidebarOpen: boolean;
@@ -327,6 +330,19 @@ export const useStore = create<AppStore>()((set, get) => ({
       set({ userProfile: profile });
     } catch (e) {
       console.error('Failed to update profile:', e);
+    }
+  },
+
+  // ── Tracker Targets ──
+  setTrackerTarget: async (fields) => {
+    try {
+      await setTrackerTargets(fields);
+      const repo = getDailyLogRepo();
+      const today = new Date().toISOString().split('T')[0];
+      const updated = await repo.getByDate(today);
+      set({ dailyLog: updated });
+    } catch (e) {
+      console.error('Failed to set tracker targets:', e);
     }
   },
 

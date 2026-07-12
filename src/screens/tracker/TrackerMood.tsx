@@ -87,6 +87,13 @@ export function TrackerMood({ week, T }: Props) {
           </Text>
         </Animated.View>
         <Text style={[TYPOGRAPHY.caption, { color: T.textMuted }]}>7-day average</Text>
+        {/* Mood target */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: selectedMood >= 4 ? "#22c55e" : "#f59e0b" }} />
+          <Text style={[TYPOGRAPHY.captionSm, { color: T.textMuted }]}>
+            Goal: {selectedMood >= 4 ? "Achieved" : "4+/5"}
+          </Text>
+        </View>
       </View>
 
       <View style={s.moodRow}>
@@ -137,11 +144,11 @@ export function TrackerMood({ week, T }: Props) {
           data={week.moods.map((w) => ({
             label: w.label,
             value: Math.round(w.value * 20),
-            color: "#f97316",
+            color: selectedMood >= 4 ? "#22c55e" : "#f97316",
           }))}
           height={120}
           showValues={false}
-          accentColor="#f97316"
+          accentColor={selectedMood >= 4 ? "#22c55e" : "#f97316"}
         />
       </View>
     </ScrollView>

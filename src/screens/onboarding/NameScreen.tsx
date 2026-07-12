@@ -31,7 +31,7 @@ export default function NameScreen({ onNext, onBack }: { onNext: (name: string) 
       >
         <View style={styles.content}>
           <View style={styles.progressContainer}>
-            <View style={[styles.progressBar, { backgroundColor: tc.accent, width: '33%' }]} />
+            <View style={[styles.progressBar, { backgroundColor: tc.accent, width: '20%' }]} />
           </View>
 
           <Text style={[styles.title, { color: tc.text }]}>What's your name?</Text>

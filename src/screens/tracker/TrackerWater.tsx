@@ -1,10 +1,12 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Animated } from "react-native";
 import { useApp } from "../../context/AppContext";
-import { BarChart, ProgressRing } from "../../components/Charts";
+import { BarChart } from "../../components/Charts";
+import { AnimatedCircularProgress } from "../../components/AnimatedProgress";
 import { TYPOGRAPHY } from "../../constants/typography";
 import { trackerStyles as s } from "./styles";
 import type { WeekData, ThemeColors } from "./types";
+import { TRACKER_COLORS, getProgressPercentage, getGoalColor } from "./constants";
 
 interface Props {
   week: WeekData;
@@ -20,7 +22,13 @@ export function TrackerWater({ week, T }: Props) {
     Array.from({ length: CUPS }, () => new Animated.Value(0)),
   ).current;
 
-  const filledCups = Math.floor((dailyLog?.water_ml || 0) / ML_PER_CUP);
+  const colors = TRACKER_COLORS.water;
+
+  const targetMl = useMemo(() => dailyLog?.water_target ?? 3000, [dailyLog?.water_target]);
+  const waterMl = dailyLog?.water_ml || 0;
+  const filledCups = Math.floor(waterMl / ML_PER_CUP);
+  const progress = getProgressPercentage(waterMl, targetMl);
+  const activeColor = getGoalColor(colors.primary, colors.completed, progress);
 
   useEffect(() => {
     Animated.stagger(
@@ -40,10 +48,6 @@ export function TrackerWater({ week, T }: Props) {
     logWater((cupIndex + 1) * ML_PER_CUP);
   };
 
-  const waterMl = dailyLog?.water_ml || 0;
-  const targetMl = 3000;
-  const progress = Math.min((waterMl / targetMl) * 100, 100);
-
   return (
     <ScrollView
       style={s.tabScroll}
@@ -53,18 +57,17 @@ export function TrackerWater({ week, T }: Props) {
       <Text style={[s.sectionTitle, { color: T.textMuted }]}>Water</Text>
 
       <View style={{ alignItems: "center", marginVertical: 4 }}>
-        <ProgressRing
-          value={progress}
-          max={100}
+        <AnimatedCircularProgress
+          value={waterMl}
+          max={targetMl}
           size={130}
           strokeWidth={12}
-          color="#0ea5e9"
+          color={colors.primary}
+          completedColor={colors.completed}
           bgColor={T.borderSoft}
           label={`${(waterMl / 1000).toFixed(1)}L`}
+          sublabel={`/${(targetMl / 1000).toFixed(1)}L`}
         />
-        <Text style={[TYPOGRAPHY.body, { color: T.textMuted, marginTop: 8 }]}>
-          of {(targetMl / 1000).toFixed(1)}L target
-        </Text>
       </View>
 
       <View style={s.waterGrid}>
@@ -92,8 +95,8 @@ export function TrackerWater({ week, T }: Props) {
                 style={[
                   s.waterCup,
                   {
-                    backgroundColor: isFilled ? "#0ea5e9" + "20" : T.surfaceAlt,
-                    borderColor: isFilled ? "#0ea5e9" : T.border,
+                    backgroundColor: isFilled ? activeColor + "20" : T.surfaceAlt,
+                    borderColor: isFilled ? activeColor : T.border,
                   },
                 ]}
                 onPress={() => handleCupPress(i)}
@@ -102,7 +105,7 @@ export function TrackerWater({ week, T }: Props) {
                 <Text
                   style={[
                     s.waterCupLabel,
-                    { color: isFilled ? "#0ea5e9" : T.textTertiary },
+                    { color: isFilled ? activeColor : T.textTertiary },
                   ]}
                 >
                   {i + 1}
@@ -119,11 +122,11 @@ export function TrackerWater({ week, T }: Props) {
           data={week.waters.map((w) => ({
             label: w.label,
             value: Math.round(w.value / 100),
-            color: "#0ea5e9",
+            color: activeColor,
           }))}
           height={120}
           showValues={false}
-          accentColor="#0ea5e9"
+          accentColor={activeColor}
         />
       </View>
     </ScrollView>

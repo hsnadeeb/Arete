@@ -16,6 +16,11 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   } catch (_) {}
   try { await db.execAsync("ALTER TABLE habits ADD COLUMN color TEXT DEFAULT '#6366f1'"); } catch (_) {}
   try { await db.execAsync("CREATE TABLE IF NOT EXISTS focus_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, duration INTEGER NOT NULL, elapsed INTEGER NOT NULL, date TEXT NOT NULL, completed_at TEXT DEFAULT (datetime('now')))"); } catch (_) {}
+  // Migrate: add target columns for goal-based tracking
+  try { await db.execAsync("ALTER TABLE daily_logs ADD COLUMN steps_target INTEGER DEFAULT 10000"); } catch (_) {}
+  try { await db.execAsync("ALTER TABLE daily_logs ADD COLUMN water_target INTEGER DEFAULT 3000"); } catch (_) {}
+  try { await db.execAsync("ALTER TABLE daily_logs ADD COLUMN sleep_target REAL DEFAULT 8.0"); } catch (_) {}
+  try { await db.execAsync("ALTER TABLE daily_logs ADD COLUMN weight_target REAL DEFAULT 75.0"); } catch (_) {}
   return db;
 }
 
@@ -839,6 +844,29 @@ export async function seedAllData() {
       daysAgo(i), affirmations[i]
     );
   }
+}
+
+// ─── Tracker Targets ───
+
+export async function getTrackerTargets() {
+  const todayStr = today();
+  const row = await getDailyLog(todayStr);
+  return {
+    steps_target: row?.steps_target ?? 10000,
+    water_target: row?.water_target ?? 3000,
+    sleep_target: row?.sleep_target ?? 8,
+    weight_target: row?.weight_target ?? 75,
+  };
+}
+
+export async function setTrackerTargets(fields: {
+  steps_target?: number;
+  water_target?: number;
+  sleep_target?: number;
+  weight_target?: number;
+}) {
+  const todayStr = today();
+  await updateDailyLog(todayStr, fields);
 }
 
 // ─── User Profile ───

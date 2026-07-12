@@ -6,8 +6,9 @@ import GoalsScreen from './GoalsScreen';
 import BodyScreen from './BodyScreen';
 import PreferencesScreen from './PreferencesScreen';
 import DataRestoreScreen from './DataRestoreScreen';
+import TrackerGoalsScreen from './TrackerGoalsScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { initDatabase, getDb, resetDb, updateUserProfile } from '../../db/service';
+import { initDatabase, getDb, resetDb, updateUserProfile, setTrackerTargets } from '../../db/service';
 
 interface OnboardingData {
   name: string;
@@ -21,6 +22,12 @@ interface OnboardingData {
     activityLevel: string;
   };
   preferences: string[];
+  trackerTargets: {
+    steps_target: number;
+    water_target: number;
+    sleep_target: number;
+    weight_target: number;
+  };
 }
 
 export default function OnboardingFlow({ onComplete }: { onComplete: (data: OnboardingData) => void }) {
@@ -107,12 +114,24 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
     setStep(4);
   };
 
+  const handleTrackerGoalsNext = (trackerTargets: { steps_target: number; water_target: number; sleep_target: number }) => {
+    setData(prev => ({
+      ...prev,
+      trackerTargets: {
+        ...trackerTargets,
+        weight_target: prev.body?.targetWeightKg ? parseFloat(prev.body.targetWeightKg) : 75,
+      },
+    }));
+    setStep(5);
+  };
+
   const handlePreferencesComplete = async (preferences: string[]) => {
     const finalData: OnboardingData = {
       name: data.name || '',
       goals: data.goals || [],
       body: data.body || { gender: '', dateOfBirth: '', heightCm: '', weightKg: '', targetWeightKg: '', activityLevel: 'moderate' },
       preferences,
+      trackerTargets: data.trackerTargets || { steps_target: 10000, water_target: 3000, sleep_target: 8, weight_target: 75 },
     };
 
     // Save to AsyncStorage
@@ -136,6 +155,8 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
         goals: JSON.stringify(finalData.goals),
         preferences: JSON.stringify(finalData.preferences),
       });
+      // Save tracker targets to DB
+      await setTrackerTargets(finalData.trackerTargets);
     } catch (e) {
       console.error('Failed to save profile to DB:', e);
     }
@@ -172,6 +193,8 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
           case 3:
             return <BodyScreen onNext={handleBodyNext} onBack={handleBack} />;
           case 4:
+            return <TrackerGoalsScreen onNext={handleTrackerGoalsNext} onBack={handleBack} />;
+          case 5:
             return <PreferencesScreen onNext={handlePreferencesComplete} onBack={handleBack} />;
           default:
             return <WelcomeScreen onNext={() => setStep(1)} />;

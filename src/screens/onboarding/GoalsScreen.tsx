@@ -52,7 +52,7 @@ export default function GoalsScreen({
           <View
             style={[
               styles.progressBar,
-              { backgroundColor: tc.accent, width: "50%" },
+              { backgroundColor: tc.accent, width: "40%" },
             ]}
           />
         </View>

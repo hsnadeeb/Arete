@@ -75,4 +75,7 @@ export interface ThemeColors {
   waterBg: string;
   moodBg: string;
   moodBorder: string;
+  completed: string;
+  nearly: string;
+  glow: string;
 }

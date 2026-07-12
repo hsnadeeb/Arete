@@ -45,6 +45,10 @@ CREATE TABLE IF NOT EXISTS daily_logs (
   calories INTEGER,
   protein_g REAL,
   notes TEXT,
+  steps_target INTEGER DEFAULT 10000,
+  water_target INTEGER DEFAULT 3000,
+  sleep_target REAL DEFAULT 8.0,
+  weight_target REAL DEFAULT 75.0,
   created_at TEXT DEFAULT (datetime('now'))
 );
 

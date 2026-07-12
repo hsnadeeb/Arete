@@ -1,17 +1,21 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { View, Text, ScrollView, Animated } from "react-native";
 import { useApp } from "../../context/AppContext";
-import { BarChart, ProgressRing } from "../../components/Charts";
+import { BarChart } from "../../components/Charts";
+import { AnimatedCircularProgress } from "../../components/AnimatedProgress";
 import { TYPOGRAPHY } from "../../constants/typography";
 import { trackerStyles as s } from "./styles";
 import type { WeekData, ThemeColors } from "./types";
+import {
+  TRACKER_COLORS,
+  getProgressPercentage,
+  getGoalColor,
+} from "./constants";
 
 interface Props {
   week: WeekData;
   T: ThemeColors;
 }
-
-const STEP_TARGET = 10000;
 
 export function TrackerSteps({ week, T }: Props) {
   const { dailyLog } = useApp();
@@ -19,9 +23,16 @@ export function TrackerSteps({ week, T }: Props) {
     Array.from({ length: 10 }, () => new Animated.Value(0)),
   ).current;
 
+  const colors = TRACKER_COLORS.steps;
+
+  const stepTarget = useMemo(
+    () => dailyLog?.steps_target ?? 10000,
+    [dailyLog?.steps_target],
+  );
   const steps = dailyLog?.steps || 0;
   const filledDots = Math.floor(steps / 1000);
-  const progress = Math.min((steps / STEP_TARGET) * 100, 100);
+  const progress = getProgressPercentage(steps, stepTarget);
+  const activeColor = getGoalColor(colors.primary, colors.completed, progress);
 
   useEffect(() => {
     Animated.stagger(
@@ -46,18 +57,17 @@ export function TrackerSteps({ week, T }: Props) {
       <Text style={[s.sectionTitle, { color: T.textMuted }]}>Steps</Text>
 
       <View style={{ alignItems: "center", marginVertical: 4 }}>
-        <ProgressRing
-          value={progress}
-          max={100}
+        <AnimatedCircularProgress
+          value={steps}
+          max={stepTarget}
           size={130}
           strokeWidth={12}
-          color="#f59e0b"
+          color={colors.primary}
+          completedColor={colors.completed}
           bgColor={T.borderSoft}
           label={steps.toLocaleString()}
+          sublabel={`/ ${stepTarget.toLocaleString()}`}
         />
-        <Text style={[TYPOGRAPHY.body, { color: T.textMuted, marginTop: 8 }]}>
-          / {STEP_TARGET.toLocaleString()} steps
-        </Text>
       </View>
 
       <View style={s.stepsRow}>
@@ -81,13 +91,20 @@ export function TrackerSteps({ week, T }: Props) {
                   outputRange: [0.3, 1],
                 }),
               },
-              i < filledDots && { backgroundColor: "#f59e0b" },
+              i < filledDots && { backgroundColor: activeColor },
+              i < filledDots &&
+                progress >= 100 && { backgroundColor: colors.completed },
             ]}
           />
         ))}
       </View>
 
-      <Text style={[TYPOGRAPHY.captionSm, { color: T.textMuted, textAlign: "center" }]}>
+      <Text
+        style={[
+          TYPOGRAPHY.captionSm,
+          { color: T.textMuted, textAlign: "center" },
+        ]}
+      >
         Each dot = 1,000 steps
       </Text>
 
@@ -97,11 +114,11 @@ export function TrackerSteps({ week, T }: Props) {
           data={week.steps.map((w) => ({
             label: w.label,
             value: Math.round(w.value / 100),
-            color: "#f59e0b",
+            color: activeColor,
           }))}
           height={120}
           showValues={false}
-          accentColor="#f59e0b"
+          accentColor={activeColor}
         />
       </View>
     </ScrollView>

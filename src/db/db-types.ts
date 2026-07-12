@@ -12,6 +12,10 @@ export interface DailyLogRow {
   calories: number | null;
   protein_g: number | null;
   notes: string | null;
+  steps_target: number | null;
+  water_target: number | null;
+  sleep_target: number | null;
+  weight_target: number | null;
 }
 
 export interface PrayerLogRow {

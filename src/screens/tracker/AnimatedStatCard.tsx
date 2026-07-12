@@ -20,6 +20,7 @@ interface Props {
   surfaceColor: string;
   borderColor: string;
   mutedColor: string;
+  progress?: number;
 }
 
 export function AnimatedStatCard({
@@ -33,6 +34,7 @@ export function AnimatedStatCard({
   surfaceColor,
   borderColor,
   mutedColor,
+  progress,
 }: Props) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -92,6 +94,30 @@ export function AnimatedStatCard({
               ]}
             />
           ))}
+        </View>
+      )}
+      {progress !== undefined && (
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 3,
+            backgroundColor: borderColor,
+            borderBottomLeftRadius: 16,
+            borderBottomRightRadius: 16,
+            overflow: "hidden",
+          }}
+        >
+          <View
+            style={{
+              width: `${Math.min(progress, 100)}%`,
+              height: "100%",
+              backgroundColor: progress >= 100 ? valueColor : iconColor,
+              borderRadius: 2,
+            }}
+          />
         </View>
       )}
     </Animated.View>

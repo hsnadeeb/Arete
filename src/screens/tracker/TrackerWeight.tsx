@@ -1,10 +1,12 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Animated } from "react-native";
 import { useApp } from "../../context/AppContext";
-import { BarChart, ProgressRing } from "../../components/Charts";
+import { BarChart } from "../../components/Charts";
+import { FillingWave } from "../../components/AnimatedProgress";
 import { TYPOGRAPHY } from "../../constants/typography";
 import { trackerStyles as s } from "./styles";
 import type { WeekData, ThemeColors } from "./types";
+import { TRACKER_COLORS, getProgressPercentage, getGoalColor } from "./constants";
 
 interface Props {
   week: WeekData;
@@ -16,6 +18,13 @@ export function TrackerWeight({ week, T }: Props) {
   const [weight, setWeight] = useState("");
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const colors = TRACKER_COLORS.weight;
+
+  const targetWeight = useMemo(() => dailyLog?.weight_target ?? 75, [dailyLog?.weight_target]);
+  const weightVal = dailyLog?.weight ?? 0;
+  const progress = getProgressPercentage(weightVal, targetWeight);
+  const activeColor = getGoalColor(colors.primary, colors.completed, progress);
 
   useEffect(() => {
     Animated.parallel([
@@ -55,10 +64,6 @@ export function TrackerWeight({ week, T }: Props) {
     }
   };
 
-  const weightVal = dailyLog?.weight ?? 0;
-  const targetWeight = 75;
-  const progress = Math.min((weightVal / targetWeight) * 100, 100);
-
   return (
     <ScrollView
       style={s.tabScroll}
@@ -67,20 +72,19 @@ export function TrackerWeight({ week, T }: Props) {
     >
       <Text style={[s.sectionTitle, { color: T.textMuted }]}>Weight</Text>
 
-      <View style={{ alignItems: "center", marginVertical: 8 }}>
+      <View style={{ marginVertical: 8 }}>
         <Animated.View style={{ transform: [{ scale: scaleAnim }], opacity: fadeAnim }}>
-          <ProgressRing
-            value={progress}
-            max={100}
-            size={140}
-            strokeWidth={12}
-            color="#0b6bcf"
-            bgColor={T.borderSoft}
-            label={weightVal ? `${weightVal}` : "—"}
+          <FillingWave
+            value={weightVal}
+            max={targetWeight}
+            height={160}
+            color={colors.primary}
+            completedColor={colors.completed}
+            bgColor={colors.primary + "15"}
           />
         </Animated.View>
-        <Text style={[TYPOGRAPHY.body, { color: T.textMuted, marginTop: 8 }]}>
-          kg · target {targetWeight} kg
+        <Text style={[TYPOGRAPHY.body, { color: T.textMuted, textAlign: "center", marginTop: 8 }]}>
+          {weightVal} kg · target {targetWeight} kg
         </Text>
       </View>
 
@@ -94,7 +98,7 @@ export function TrackerWeight({ week, T }: Props) {
           placeholderTextColor={T.placeholder}
         />
         <TouchableOpacity
-          style={[s.logBtn, { backgroundColor: "#0b6bcf" }]}
+          style={[s.logBtn, { backgroundColor: activeColor }]}
           onPress={handleLog}
           activeOpacity={0.7}
         >
@@ -108,11 +112,11 @@ export function TrackerWeight({ week, T }: Props) {
           data={week.weights.map((w) => ({
             label: w.label,
             value: w.value,
-            color: "#0b6bcf",
+            color: activeColor,
           }))}
           height={120}
           showValues={false}
-          accentColor="#0b6bcf"
+          accentColor={activeColor}
         />
       </View>
     </ScrollView>

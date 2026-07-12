@@ -41,6 +41,9 @@ function buildTheme(isDark: boolean, tc: any): ThemeColors {
     waterBg: isDark ? tc.infoBg : "#e0f2fe",
     moodBg: isDark ? tc.warningBg : "#fef3c7",
     moodBorder: isDark ? tc.warning : "#f97316",
+    completed: isDark ? tc.success : "#10b981",
+    nearly: "#f59e0b",
+    glow: "#fbbf24",
   };
 }
 

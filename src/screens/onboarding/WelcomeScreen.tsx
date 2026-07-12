@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '../../components/Icons';
@@ -17,49 +17,117 @@ const { width } = Dimensions.get('window');
 export default function WelcomeScreen({ onNext }: { onNext: () => void }) {
   const { theme } = useTheme();
   const tc = theme.colors;
+  const logoAnim = useRef(new Animated.Value(0)).current;
+  const contentAnim = useRef(new Animated.Value(0)).current;
+  const btnAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.stagger(200, [
+      Animated.spring(logoAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 60,
+        friction: 8,
+      }),
+      Animated.timing(contentAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(btnAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [logoAnim, contentAnim, btnAnim]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}>
       <View style={styles.content}>
-        <View style={styles.logoContainer}>
+        <Animated.View
+          style={[
+            styles.logoContainer,
+            {
+              opacity: logoAnim,
+              transform: [
+                {
+                  scale: logoAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.5, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <View style={[styles.logo, { backgroundColor: tc.accent }]}>
             <Text style={[styles.logoText, { color: '#fff' }]}>A</Text>
           </View>
-        </View>
+        </Animated.View>
 
-        <Text style={[styles.title, { color: tc.text }]}>Welcome to Arete</Text>
-        <Text style={[styles.subtitle, { color: tc.textSecondary }]}>
-          Your personal companion for building better habits, tracking progress, and achieving your goals.
-        </Text>
+        <Animated.View
+          style={{
+            opacity: contentAnim,
+            transform: [
+              {
+                translateY: contentAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0],
+                }),
+              },
+            ],
+          }}
+        >
+          <Text style={[styles.title, { color: tc.text }]}>Welcome to Arete</Text>
+          <Text style={[styles.subtitle, { color: tc.textSecondary }]}>
+            Your personal companion for building better habits, tracking progress, and achieving your goals.
+          </Text>
 
-        <View style={styles.features}>
-          <View style={styles.feature}>
-            <View style={[styles.featureIcon, { backgroundColor: tc.accentBg }]}>
-              <Icon name={LUCIDE_ICONS.barChart2} size={24} color={tc.accent} />
+          <View style={styles.features}>
+            <View style={styles.feature}>
+              <View style={[styles.featureIcon, { backgroundColor: tc.accentBg }]}>
+                <Icon name={LUCIDE_ICONS.barChart2} size={24} color={tc.accent} />
+              </View>
+              <Text style={[styles.featureText, { color: tc.text }]}>Track Everything</Text>
             </View>
-            <Text style={[styles.featureText, { color: tc.text }]}>Track Everything</Text>
-          </View>
-          <View style={styles.feature}>
-            <View style={[styles.featureIcon, { backgroundColor: tc.accentBg }]}>
-              <Icon name={LUCIDE_ICONS.target} size={24} color={tc.accent} />
+            <View style={styles.feature}>
+              <View style={[styles.featureIcon, { backgroundColor: tc.accentBg }]}>
+                <Icon name={LUCIDE_ICONS.target} size={24} color={tc.accent} />
+              </View>
+              <Text style={[styles.featureText, { color: tc.text }]}>Set Goals</Text>
             </View>
-            <Text style={[styles.featureText, { color: tc.text }]}>Set Goals</Text>
-          </View>
-          <View style={styles.feature}>
-            <View style={[styles.featureIcon, { backgroundColor: tc.accentBg }]}>
-              <Icon name={LUCIDE_ICONS.trendingUp} size={24} color={tc.accent} />
+            <View style={styles.feature}>
+              <View style={[styles.featureIcon, { backgroundColor: tc.accentBg }]}>
+                <Icon name={LUCIDE_ICONS.trendingUp} size={24} color={tc.accent} />
+              </View>
+              <Text style={[styles.featureText, { color: tc.text }]}>See Progress</Text>
             </View>
-            <Text style={[styles.featureText, { color: tc.text }]}>See Progress</Text>
           </View>
-        </View>
+        </Animated.View>
       </View>
 
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: tc.accent }]}
-        onPress={onNext}
+      <Animated.View
+        style={{
+          opacity: btnAnim,
+          transform: [
+            {
+              translateY: btnAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0],
+              }),
+            },
+          ],
+        }}
       >
-        <Text style={[styles.buttonText, { color: '#fff' }]}>Get Started</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: tc.accent }]}
+          onPress={onNext}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.buttonText, { color: '#fff' }]}>Get Started</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </SafeAreaView>
   );
 }
