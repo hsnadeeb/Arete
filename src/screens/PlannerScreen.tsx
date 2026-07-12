@@ -268,8 +268,9 @@ export default function PlannerScreen() {
                     style={[styles.calCell, !cell.isCurrent && styles.calCellDimmed]}
                     onPress={() => { if (cell.isCurrent) toggleDate(cell.year, cell.month, cell.day); }}
                     disabled={!cell.isCurrent}
+                    activeOpacity={cell.isCurrent ? 0.7 : 1}
                   >
-                    {cell.day > 0 && (
+                    {cell.day > 0 ? (
                       <>
                         <View style={[
                           styles.calDayNum,
@@ -289,6 +290,8 @@ export default function PlannerScreen() {
                           <View style={styles.dotRow}><View style={[styles.dot, { backgroundColor: T.accent }]} /></View>
                         )}
                       </>
+                    ) : (
+                      <View style={styles.calDayNum} />
                     )}
                   </TouchableOpacity>
                 );
@@ -566,9 +569,9 @@ const styles = StyleSheet.create({
 
   // ─── Calendar Grid ───
   calGrid: { paddingHorizontal: 12, paddingBottom: 6 },
-  weekRow: { flexDirection: 'row' },
-  calCell: { flex: 1, alignItems: 'center', paddingVertical: 5, minHeight: 42 },
-  calCellDimmed: { opacity: 0.2 },
+  weekRow: { flexDirection: 'row', alignItems: 'stretch' },
+  calCell: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 5, minHeight: 46 },
+  calCellDimmed: { opacity: 0 },
   calDayNum: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   calDayNumText: { fontSize: 13, fontWeight: '500' },
   dotRow: { flexDirection: 'row', gap: 3, marginTop: 1 },
