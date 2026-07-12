@@ -1,5 +1,14 @@
 import 'react-native-gesture-handler';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+
+// Strip console logs in release builds to reduce JS thread noise
+if (!__DEV__) {
+  console.log = () => {};
+  console.info = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+}
+
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -15,32 +24,29 @@ function AppContent() {
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const { forceRehydrate } = useAppContext();
 
-  useEffect(() => {
-    checkOnboardingStatus();
-  }, []);
-
-  const checkOnboardingStatus = async () => {
+  const checkOnboardingStatus = useCallback(async () => {
     try {
       const completed = await AsyncStorage.getItem('onboarding_completed');
       setIsOnboarded(completed === 'true');
     } catch (e) {
-      console.error('Error checking onboarding status:', e);
       setIsOnboarded(false);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleOnboardingComplete = (data: any) => {
-    console.log('Onboarding completed with data:', data);
+  useEffect(() => {
+    checkOnboardingStatus();
+  }, [checkOnboardingStatus]);
+
+  const handleOnboardingComplete = useCallback((data: any) => {
     setOnboardingComplete(true);
     setIsOnboarded(true);
     // Force rehydration after onboarding completes
     setTimeout(() => {
-      console.log('Triggering force rehydrate after onboarding');
       forceRehydrate();
     }, 100);
-  };
+  }, [forceRehydrate]);
 
   if (loading || isOnboarded === null) {
     return null; // Or show a loading spinner

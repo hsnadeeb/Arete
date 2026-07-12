@@ -62,14 +62,12 @@ function t12(time: string): string {
 function AtAGlanceWidget() {
   const { theme } = useTheme();
   const tc = theme.colors;
-  const {
-    prayerTimings,
-    islamicDate,
-    timingsLoading,
-    refreshPrayerTimings,
-    prayers,
-    togglePrayer,
-  } = useApp();
+  const prayerTimings = useApp((s) => s.prayerTimings);
+  const islamicDate = useApp((s) => s.islamicDate);
+  const timingsLoading = useApp((s) => s.timingsLoading);
+  const refreshPrayerTimings = useApp((s) => s.refreshPrayerTimings);
+  const prayers = useApp((s) => s.prayers);
+  const togglePrayer = useApp((s) => s.togglePrayer);
   const nextPrayer = useMemo(() => {
     if (!prayerTimings) return null;
     return getNextPrayer({
@@ -229,7 +227,10 @@ function AtAGlanceWidget() {
 function QuickLogWidget() {
   const { theme } = useTheme();
   const tc = theme.colors;
-  const { dailyLog, logWeight, logWater, logSteps } = useApp();
+  const dailyLog = useApp((s) => s.dailyLog);
+  const logWeight = useApp((s) => s.logWeight);
+  const logWater = useApp((s) => s.logWater);
+  const logSteps = useApp((s) => s.logSteps);
   const [w, setW] = useState("");
   const [wa, setWa] = useState("");
   const [st, setSt] = useState("");
@@ -362,7 +363,8 @@ function QuickLogWidget() {
 function MoodWidget() {
   const { theme } = useTheme();
   const tc = theme.colors;
-  const { dailyLog, logMood } = useApp();
+  const dailyLog = useApp((s) => s.dailyLog);
+  const logMood = useApp((s) => s.logMood);
   const moods = [
     { v: 1, icon: LUCIDE_ICONS.frown, l: "Awful" },
     { v: 2, icon: LUCIDE_ICONS.frown, l: "Bad" },
@@ -415,7 +417,8 @@ function MoodWidget() {
 function ExpensesWidget() {
   const { theme } = useTheme();
   const tc = theme.colors;
-  const { addExpense, todayTransactions } = useApp();
+  const addExpense = useApp((s) => s.addExpense);
+  const todayTransactions = useApp((s) => s.todayTransactions);
   const [show, setShow] = useState(false);
   const [cat, setCat] = useState(EXPENSE_CATEGORIES[0]);
   const [amt, setAmt] = useState("");
@@ -635,7 +638,7 @@ function ExpensesWidget() {
 function MonthlyStatsWidget() {
   const { theme } = useTheme();
   const tc = theme.colors;
-  const { monthlyStats } = useApp();
+  const monthlyStats = useApp((s) => s.monthlyStats);
   if (!monthlyStats)
     return (
       <Card title="Monthly Stats" titleStyle={{ color: tc.textTertiary }}>
@@ -784,16 +787,14 @@ function ReorderableList({
 export default function DashboardScreen() {
   const { theme, isDark } = useTheme();
   const tc = theme.colors;
-  const {
-    loaded,
-    streak,
-    setSidebarOpen,
-    refresh,
-    widgetLayouts,
-    setWidgetLayouts,
-    saveWidgetLayouts,
-    userProfile,
-  } = useApp();
+  const loaded = useApp((s) => s.loaded);
+  const streak = useApp((s) => s.streak);
+  const setSidebarOpen = useApp((s) => s.setSidebarOpen);
+  const refresh = useApp((s) => s.refresh);
+  const widgetLayouts = useApp((s) => s.widgetLayouts);
+  const setWidgetLayouts = useApp((s) => s.setWidgetLayouts);
+  const saveWidgetLayouts = useApp((s) => s.saveWidgetLayouts);
+  const userProfile = useApp((s) => s.userProfile);
 
   const [editing, setEditing] = useState(false);
   // const greeting = useMemo(() => getIslamicGreeting, []);

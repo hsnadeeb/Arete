@@ -264,8 +264,9 @@ export default function FocusScreen() {
   }
 
   return (
-    <TouchableWithoutFeedback onPress={handleScreenTap}>
-      <SafeAreaView style={[s.screen, { backgroundColor: tc.bg }]} edges={["top", "bottom"]}>
+    <SafeAreaView style={[s.screen, { backgroundColor: tc.bg }]} edges={["top", "bottom"]}
+      onTouchStart={() => { lastActivityRef.current = Date.now(); }}
+    >
       {/* Header */}
       <View style={[s.header, { borderBottomColor: tc.divider }]}>
         <TouchableOpacity onPress={() => setCurrentRoute("Greeting")} style={s.backBtn}>
@@ -357,7 +358,6 @@ export default function FocusScreen() {
         </View>
       </View>
     </SafeAreaView>
-    </TouchableWithoutFeedback>
   );
 }
 

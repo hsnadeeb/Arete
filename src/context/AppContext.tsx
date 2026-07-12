@@ -20,23 +20,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const hydrationRef = useRef(false);
 
   const doHydrate = async () => {
-    console.log('Starting hydration...');
     try {
       await initDatabase();
       await hydrate();
-      console.log('Hydration completed');
     } catch (e) {
-      console.error('Hydration failed:', e);
+      // Hydration error already surfaces in store.error
     }
     try {
       initNotifications();
     } catch (e) {
-      console.warn('Notifications init failed:', e);
+      // Ignore notification init errors
     }
   };
 
   const forceRehydrate = () => {
-    console.log('Force rehydrate called');
     hydrationRef.current = false;
     doHydrate();
   };
@@ -55,7 +52,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useApp(): AppStore {
+export function useApp(): AppStore;
+export function useApp<T>(selector: (state: AppStore) => T): T;
+export function useApp<T>(selector?: (state: AppStore) => T): AppStore | T {
+  if (selector) return useStore(selector) as T;
   return useStore();
 }
 

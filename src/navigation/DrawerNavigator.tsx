@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  Easing,
   Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -92,58 +93,64 @@ export default function DrawerNavigator() {
     ]).start();
   }, [sidebarOpen]);
 
-  const ActiveScreen =
-    SCREENS.find((s) => s.name === currentRoute)?.component || DashboardScreen;
-
-  const mainRoutes = ["Dashboard", "Planner", "Trackers", "Journal"];
+  const mainRoutes = useMemo(() => ["Dashboard", "Planner", "Trackers", "Journal"], []);
   const showBottomNav = mainRoutes.includes(currentRoute);
+  const [visitedRoutes, setVisitedRoutes] = useState<Set<string>>(() => new Set([currentRoute]));
 
-  // Screen transition animation
-  const screenOpacity = useRef(new Animated.Value(1)).current;
-  const screenSlide = useRef(new Animated.Value(0)).current;
+  // Keep main tab screens mounted and switch via opacity for smooth, jank-free transitions
+  const screenOpacities = useRef(
+    Object.fromEntries(mainRoutes.map((r) => [r, new Animated.Value(r === currentRoute ? 1 : 0)])),
+  ).current;
 
   useEffect(() => {
     if (mainRoutes.includes(currentRoute)) {
-      Animated.parallel([
-        Animated.timing(screenOpacity, {
-          toValue: 0,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(screenSlide, {
-          toValue: 30,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        Animated.parallel([
-          Animated.timing(screenOpacity, {
-            toValue: 1,
-            duration: 150,
-            useNativeDriver: true,
-          }),
-          Animated.timing(screenSlide, {
-            toValue: 0,
-            duration: 150,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      });
+      setVisitedRoutes((prev: Set<string>) => (prev.has(currentRoute) ? prev : new Set([...prev, currentRoute])));
     }
-  }, [currentRoute]);
+    mainRoutes.forEach((route) => {
+      Animated.timing(screenOpacities[route], {
+        toValue: route === currentRoute ? 1 : 0,
+        duration: 100,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.ease),
+      }).start();
+    });
+  }, [currentRoute, mainRoutes, screenOpacities]);
+
+  const OtherScreen = useMemo(
+    () => !mainRoutes.includes(currentRoute)
+      ? SCREENS.find((s) => s.name === currentRoute)?.component || DashboardScreen
+      : null,
+    [currentRoute, mainRoutes],
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
       <View style={{ flex: 1 }}>
-        <Animated.View
-          style={{
-            flex: 1,
-            opacity: screenOpacity,
-            transform: [{ translateX: screenSlide }],
-          }}
-        >
-          <ActiveScreen />
-        </Animated.View>
+        <View style={{ flex: 1 }}>
+          {mainRoutes.map((route) => {
+            if (!visitedRoutes.has(route)) return null;
+            const Screen = SCREENS.find((s) => s.name === route)?.component;
+            if (!Screen) return null;
+            const isActive = currentRoute === route;
+            return (
+              <Animated.View
+                key={route}
+                style={[
+                  StyleSheet.absoluteFill,
+                  { opacity: screenOpacities[route], zIndex: isActive ? 1 : 0 },
+                ]}
+                pointerEvents={isActive ? "auto" : "none"}
+              >
+                <Screen />
+              </Animated.View>
+            );
+          })}
+          {OtherScreen && (
+            <View style={{ flex: 1 }}>
+              <OtherScreen />
+            </View>
+          )}
+        </View>
         {showBottomNav && <BottomNavBar />}
       </View>
 

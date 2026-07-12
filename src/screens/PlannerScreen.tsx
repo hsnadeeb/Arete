@@ -82,6 +82,12 @@ export default function PlannerScreen() {
     [selectedDates],
   );
 
+  const timetableDays = useMemo(() => {
+    const set = new Set<number>();
+    timetable.forEach((t: any) => set.add(t.day_of_week));
+    return set;
+  }, [timetable]);
+
   const weeks = useMemo(() => {
     const first = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -286,7 +292,7 @@ export default function PlannerScreen() {
                             {cell.day}
                           </Text>
                         </View>
-                        {timetable.filter((t: any) => t.day_of_week === new Date(cell.year, cell.month, cell.day).getDay()).length > 0 && (
+                        {timetableDays.has(new Date(cell.year, cell.month, cell.day).getDay()) && (
                           <View style={styles.dotRow}><View style={[styles.dot, { backgroundColor: T.accent }]} /></View>
                         )}
                       </>

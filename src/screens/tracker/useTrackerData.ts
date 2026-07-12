@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useStore } from "../../store";
 import * as db from "../../db/service";
 import type { WeekData, HabitGridData } from "./types";
 
@@ -7,31 +8,36 @@ export function today(): string {
 }
 
 export function useTrackerData() {
+  const dailyLog = useStore((s) => s.dailyLog);
   const [loaded, setLoaded] = useState(false);
   const [logs, setLogs] = useState<any[]>([]);
   const [habits, setHabits] = useState<any[]>([]);
   const [habitLogs, setHabitLogs] = useState<any[]>([]);
 
-  useEffect(() => {
-    Promise.all([
-      db.getAllDailyLogs().catch(() => []),
-      db.getAllNutritionLogs().catch(() => []),
-      db.getHabits().catch(() => []),
-      db.getHabitLogs().catch(() => []),
-    ])
-      .then(([l, , h, hl]) => {
-        setLogs(l);
-        setHabits(h);
-        setHabitLogs(hl);
-        setLoaded(true);
-      })
-      .catch(() => {
-        setLogs([]);
-        setHabits([]);
-        setHabitLogs([]);
-        setLoaded(true);
-      });
+  const loadAll = useCallback(async () => {
+    try {
+      const [l, , h, hl] = await Promise.all([
+        db.getAllDailyLogs().catch(() => []),
+        db.getAllNutritionLogs().catch(() => []),
+        db.getHabits().catch(() => []),
+        db.getHabitLogs().catch(() => []),
+      ]);
+      setLogs(l);
+      setHabits(h);
+      setHabitLogs(hl);
+    } catch {
+      setLogs([]);
+      setHabits([]);
+      setHabitLogs([]);
+    } finally {
+      setLoaded(true);
+    }
   }, []);
+
+  // Load on mount and whenever the global dailyLog changes (keeps charts in sync)
+  useEffect(() => {
+    loadAll();
+  }, [loadAll, dailyLog]);
 
   const weekData = useMemo<WeekData>(() => {
     if (!loaded || !logs.length)

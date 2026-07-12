@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,6 @@ import { LUCIDE_ICONS, TYPOGRAPHY } from '../constants/typography';
 import { Card, Row } from '../components/Card';
 import { BarChart } from '../components/Charts';
 import { today, BUDGET_CATEGORIES } from '../types';
-import * as db from '../db/service';
 
 function formatCompact(n: number): string {
   const abs = Math.abs(n);
@@ -89,11 +88,9 @@ function SwipeableRow({
 }
 
 export default function BudgetScreen() {
-  const { setSidebarOpen } = useApp();
+  const { setSidebarOpen, transactions, addTransaction, deleteTransaction } = useApp();
   const { theme, isDark } = useTheme();
   const tc = theme.colors;
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [summary, setSummary] = useState<any[]>([]);
   const [txCat, setTxCat] = useState(BUDGET_CATEGORIES[0]);
   const [txType, setTxType] = useState<'income' | 'expense'>('expense');
   const [txAmount, setTxAmount] = useState('');
@@ -102,32 +99,29 @@ export default function BudgetScreen() {
 
   const currentMonth = today().slice(0, 7);
 
-  useEffect(() => { loadBudget(); }, []);
-
-  const loadBudget = async () => {
-    const [txs, summ] = await Promise.all([
-      db.getTransactions(currentMonth),
-      db.getBudgetSummary(currentMonth),
-    ]);
-    setTransactions(txs);
-    setSummary(summ);
-  };
+  // Summary is derived from the global store transactions so it stays in sync with Dashboard
+  const summary = useMemo(() => {
+    const map = new Map<string, any>();
+    transactions.forEach((t: any) => {
+      if (t.date?.slice(0, 7) !== currentMonth) return;
+      const key = `${t.category}|${t.type}`;
+      if (!map.has(key)) map.set(key, { category: t.category, type: t.type, total: 0 });
+      map.get(key).total += Math.abs(t.amount);
+    });
+    return Array.from(map.values());
+  }, [transactions, currentMonth]);
 
   const addTx = async () => {
     const amt = parseFloat(txAmount);
     if (!amt) return;
-    await db.addTransaction({
+    await addTransaction({
       date: today(), category: txCat, amount: Math.abs(amt),
       type: txType, description: txDesc,
     });
     setTxAmount(''); setTxDesc('');
-    loadBudget();
   };
 
-  const deleteTransaction = async (id: number) => {
-    await db.deleteTransactionById(id);
-    loadBudget();
-  };
+
 
   const getTotal = (type: string) => {
     return summary.filter(s => s.type === type).reduce((sum, s) => sum + s.total, 0);
