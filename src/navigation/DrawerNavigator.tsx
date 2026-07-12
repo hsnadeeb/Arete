@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStore } from "../store";
@@ -172,8 +173,57 @@ export default function DrawerNavigator() {
         ]}
         pointerEvents={sidebarOpen ? "auto" : "none"}
       >
+        {/* App header */}
+        <View
+          style={[
+            styles.sidebarHeader,
+            {
+              borderBottomColor: theme.colors.divider,
+              paddingTop: insets.top + 12,
+            },
+          ]}
+        >
+          <View style={styles.brandRow}>
+            <View
+              style={[
+                styles.iconWrap,
+                { backgroundColor: theme.colors.accentBg },
+              ]}
+            >
+              <Image
+                source={require("../../assets/icon.png")}
+                style={styles.appIcon}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.brand, { color: theme.colors.heading }]}>
+                arete
+              </Text>
+              <Text
+                style={[
+                  styles.brandSub,
+                  { color: theme.colors.textTertiary },
+                ]}
+              >
+                Live with intention
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Section label */}
+        <Text
+          style={[
+            styles.sectionLabel,
+            { color: theme.colors.textTertiary },
+          ]}
+        >
+          Menu
+        </Text>
+
         <ScrollView
-          style={{ flex: 1, marginTop: 150 }}
+          style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
         >
           {NAV_ITEMS.map((item) => {
@@ -258,8 +308,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-    marginTop: 40,
+  },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  appIcon: {
+    width: 36,
+    height: 36,
+  },
+  brand: {
+    fontSize: 22,
+    fontWeight: "700",
+    letterSpacing: -0.3,
+  },
+  brandSub: {
+    fontSize: 11,
+    fontWeight: "500",
+    marginTop: 1,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 6,
   },
   avatar: {
     width: 40,

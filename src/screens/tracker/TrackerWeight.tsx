@@ -9,8 +9,9 @@ import {
 } from "react-native";
 import { useApp } from "../../context/AppContext";
 import { BarChart } from "../../components/Charts";
-import { FillingWave } from "../../components/AnimatedProgress";
-import { TYPOGRAPHY } from "../../constants/typography";
+import { AnimatedCircularProgress } from "../../components/AnimatedProgress";
+import { Icon } from "../../components/Icons";
+import { LUCIDE_ICONS, TYPOGRAPHY } from "../../constants/typography";
 import { trackerStyles as s } from "./styles";
 import type { WeekData, ThemeColors } from "./types";
 import {
@@ -26,7 +27,7 @@ interface Props {
 
 export function TrackerWeight({ week, T }: Props) {
   const { dailyLog, logWeight } = useApp();
-  const [weight, setWeight] = useState("");
+  const [weightInput, setWeightInput] = useState("");
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -57,7 +58,7 @@ export function TrackerWeight({ week, T }: Props) {
   }, [scaleAnim, fadeAnim]);
 
   const handleLog = () => {
-    const w = parseFloat(weight);
+    const w = parseFloat(weightInput);
     if (w > 0) {
       Animated.sequence([
         Animated.spring(scaleAnim, {
@@ -74,7 +75,7 @@ export function TrackerWeight({ week, T }: Props) {
         }),
       ]).start();
       logWeight(w);
-      setWeight("");
+      setWeightInput("");
     }
   };
 
@@ -86,41 +87,38 @@ export function TrackerWeight({ week, T }: Props) {
     >
       <Text style={[s.sectionTitle, { color: T.textMuted }]}>Weight</Text>
 
-      <View style={{ marginVertical: 8 }}>
-        <Animated.View
-          style={{ transform: [{ scale: scaleAnim }], opacity: fadeAnim }}
-        >
-          <FillingWave
-            value={weightVal}
-            max={targetWeight}
-            height={160}
-            color={colors.primary}
-            completedColor={colors.completed}
-            bgColor={colors.primary + "15"}
-          />
-        </Animated.View>
-        <Text
-          style={[
-            TYPOGRAPHY.body,
-            { color: T.textMuted, textAlign: "center", marginTop: 8 },
-          ]}
-        >
+      <Animated.View
+        style={{
+          transform: [{ scale: scaleAnim }],
+          opacity: fadeAnim,
+          alignItems: "center",
+          marginVertical: 4,
+        }}
+      >
+        <AnimatedCircularProgress
+          value={weightVal}
+          max={targetWeight}
+          size={130}
+          strokeWidth={12}
+          color={colors.primary}
+          completedColor={colors.completed}
+          bgColor={T.borderSoft}
+          label={`${weightVal} kg`}
+          sublabel={`/ ${targetWeight} kg`}
+        />
+      </Animated.View>
+
+      <View style={{ alignItems: "center", gap: 4 }}>
+        <Text style={[TYPOGRAPHY.body, { color: T.textSecondary }]}>
           {weightVal} kg · target {targetWeight} kg
         </Text>
       </View>
 
-      <View style={s.actionRow}>
+      <View style={[s.actionRow, { backgroundColor: T.surfaceAlt }]}>
         <TextInput
-          style={[
-            s.input,
-            {
-              backgroundColor: T.surfaceAlt,
-              borderColor: T.border,
-              color: T.textPrimary,
-            },
-          ]}
-          value={weight}
-          onChangeText={setWeight}
+          style={[s.input, { color: T.textPrimary }]}
+          value={weightInput}
+          onChangeText={setWeightInput}
           keyboardType="numeric"
           placeholder="Enter weight (kg)"
           placeholderTextColor={T.placeholder}
@@ -130,7 +128,7 @@ export function TrackerWeight({ week, T }: Props) {
           onPress={handleLog}
           activeOpacity={0.7}
         >
-          <Text style={s.logBtnText}>Log</Text>
+          <Icon name={LUCIDE_ICONS.plus} size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 

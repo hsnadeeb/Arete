@@ -1,13 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Animated as RNAnimated,
+  PanResponder,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { Icon } from '../components/Icons';
 import { LUCIDE_ICONS, TYPOGRAPHY } from '../constants/typography';
 import { Card, Row } from '../components/Card';
+import { BarChart } from '../components/Charts';
 import { today, BUDGET_CATEGORIES } from '../types';
 import * as db from '../db/service';
+
+function formatCompact(n: number): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 10000000) return `${sign}${(abs / 10000000).toFixed(2)}Cr`;
+  if (abs >= 100000) return `${sign}${(abs / 100000).toFixed(2)}L`;
+  if (abs >= 1000) return `${sign}${(abs / 1000).toFixed(1)}k`;
+  return `${sign}${abs.toFixed(0)}`;
+}
+
+function SwipeableRow({
+  onDelete,
+  T,
+  children,
+}: {
+  onDelete: () => void;
+  T: any;
+  children: React.ReactNode;
+}) {
+  const translateX = useRef(new RNAnimated.Value(0)).current;
+  const SWIPE_THRESHOLD = -80;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 8 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
+      onPanResponderMove: (_, gs) => {
+        if (gs.dx < 0) translateX.setValue(gs.dx);
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx < SWIPE_THRESHOLD) {
+          RNAnimated.timing(translateX, {
+            toValue: -300,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => onDelete());
+        } else {
+          RNAnimated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 120,
+            friction: 10,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        RNAnimated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      },
+    }),
+  ).current;
+
+  return (
+    <View style={styles.swipeContainer}>
+      <View style={[styles.deleteBg, { backgroundColor: T.error }]}>
+        <Icon name={LUCIDE_ICONS.trash2} size={18} color="#fff" />
+        <Text style={styles.deleteText}>Delete</Text>
+      </View>
+      <RNAnimated.View
+        {...panResponder.panHandlers}
+        style={{ transform: [{ translateX }] }}
+      >
+        {children}
+      </RNAnimated.View>
+    </View>
+  );
+}
 
 export default function BudgetScreen() {
   const { setSidebarOpen } = useApp();
@@ -16,6 +95,7 @@ export default function BudgetScreen() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [summary, setSummary] = useState<any[]>([]);
   const [txCat, setTxCat] = useState(BUDGET_CATEGORIES[0]);
+  const [txType, setTxType] = useState<'income' | 'expense'>('expense');
   const [txAmount, setTxAmount] = useState('');
   const [txDesc, setTxDesc] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
@@ -38,9 +118,14 @@ export default function BudgetScreen() {
     if (!amt) return;
     await db.addTransaction({
       date: today(), category: txCat, amount: Math.abs(amt),
-      type: amt >= 0 ? 'income' : 'expense', description: txDesc,
+      type: txType, description: txDesc,
     });
     setTxAmount(''); setTxDesc('');
+    loadBudget();
+  };
+
+  const deleteTransaction = async (id: number) => {
+    await db.deleteTransactionById(id);
     loadBudget();
   };
 
@@ -50,6 +135,52 @@ export default function BudgetScreen() {
 
   const income = getTotal('income');
   const expense = getTotal('expense');
+
+  const analytics = useMemo(() => {
+    const todayDate = new Date();
+    const last7Days: { label: string; date: string; income: number; expense: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(todayDate);
+      d.setDate(todayDate.getDate() - i);
+      const iso = d.toISOString().split('T')[0];
+      last7Days.push({
+        label: d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+        date: iso,
+        income: 0,
+        expense: 0,
+      });
+    }
+    transactions.forEach((tx: any) => {
+      const day = last7Days.find((d) => d.date === tx.date);
+      if (day) {
+        if (tx.type === 'income') day.income += Math.abs(tx.amount);
+        else day.expense += Math.abs(tx.amount);
+      }
+    });
+
+    const expenseByCategory = summary
+      .filter((s: any) => s.type === 'expense')
+      .sort((a: any, b: any) => b.total - a.total);
+    const totalExpense = expenseByCategory.reduce((sum: number, s: any) => sum + s.total, 0) || 1;
+
+    const daysPassed = todayDate.getDate();
+    const avgDaily = daysPassed > 0 ? expense / daysPassed : 0;
+    const savingsRate = income > 0 ? Math.max(0, ((income - expense) / income) * 100) : 0;
+    const topCategory = expenseByCategory[0];
+    const topCategoryPct = topCategory ? (topCategory.total / totalExpense) * 100 : 0;
+    const daysWithSpending = last7Days.filter((d) => d.expense > 0).length;
+
+    return {
+      last7Days,
+      expenseByCategory,
+      totalExpense,
+      avgDaily,
+      savingsRate,
+      topCategory,
+      topCategoryPct,
+      daysWithSpending,
+    };
+  }, [transactions, summary, income, expense]);
 
   // Theme-mapped color tokens (preserve original hex in light mode)
   const T = {
@@ -83,19 +214,17 @@ export default function BudgetScreen() {
           <View style={styles.summary}>
             <View style={styles.summaryItem}>
               <Text style={[styles.summaryLabel, { color: T.textSecondary }]}>Income</Text>
-              <Text style={[styles.summaryValue, { color: T.success }]}>+${income.toFixed(0)}</Text>
+              <Text style={[styles.summaryValue, { color: T.success }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>+₹ {formatCompact(income)}</Text>
             </View>
             <View style={[styles.divider, { backgroundColor: T.border }]} />
             <View style={styles.summaryItem}>
               <Text style={[styles.summaryLabel, { color: T.textSecondary }]}>Expenses</Text>
-              <Text style={[styles.summaryValue, { color: T.error }]}>-${expense.toFixed(0)}</Text>
+              <Text style={[styles.summaryValue, { color: T.error }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>-₹ {formatCompact(expense)}</Text>
             </View>
             <View style={[styles.divider, { backgroundColor: T.border }]} />
             <View style={styles.summaryItem}>
               <Text style={[styles.summaryLabel, { color: T.textSecondary }]}>Net</Text>
-              <Text style={[styles.summaryValue, { color: income - expense >= 0 ? T.success : T.error }]}>
-                ${(income - expense).toFixed(0)}
-              </Text>
+              <Text style={[styles.summaryValue, { color: income - expense >= 0 ? T.success : T.error }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>₹ {formatCompact(income - expense)}</Text>
             </View>
           </View>
         </Card>
@@ -104,7 +233,7 @@ export default function BudgetScreen() {
           <Card title="Spending by Category">
             {summary.filter(s => s.type === 'expense').map((s, i) => (
               <Row key={i} label={s.category}>
-                <Text style={[styles.expenseAmount, { color: T.error }]}>-${s.total.toFixed(0)}</Text>
+                <Text style={[styles.expenseAmount, { color: T.error }]}>-₹ {s.total.toFixed(0)}</Text>
               </Row>
             ))}
           </Card>
@@ -129,22 +258,122 @@ export default function BudgetScreen() {
             <TextInput style={[styles.input, { flex: 1, borderColor: T.border, color: T.textPrimary, backgroundColor: T.surfaceAlt }]} value={txAmount} onChangeText={setTxAmount} keyboardType="numeric" placeholder="Amount" placeholderTextColor={T.placeholder} />
             <TextInput style={[styles.input, { flex: 2, borderColor: T.border, color: T.textPrimary, backgroundColor: T.surfaceAlt }]} value={txDesc} onChangeText={setTxDesc} placeholder="Description" placeholderTextColor={T.placeholder} />
           </View>
-          <View style={styles.txHint}>
-            <Text style={[styles.txHintText, { color: T.textMuted }]}>Positive = income · Negative = expense</Text>
+
+          <View style={[styles.typeToggle, { backgroundColor: T.borderSoft }]}>
+            <TouchableOpacity
+              style={[styles.typeBtn, txType === 'income' && { backgroundColor: T.success + '22' }]}
+              onPress={() => setTxType('income')}
+              activeOpacity={0.7}
+            >
+              <Icon name={LUCIDE_ICONS.arrowDown} size={14} color={txType === 'income' ? T.success : T.textSecondary} />
+              <Text style={[styles.typeBtnText, { color: txType === 'income' ? T.success : T.textSecondary }, txType === 'income' && { fontWeight: '600' }]}>Income</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.typeBtn, txType === 'expense' && { backgroundColor: T.error + '22' }]}
+              onPress={() => setTxType('expense')}
+              activeOpacity={0.7}
+            >
+              <Icon name={LUCIDE_ICONS.arrowUp} size={14} color={txType === 'expense' ? T.error : T.textSecondary} />
+              <Text style={[styles.typeBtnText, { color: txType === 'expense' ? T.error : T.textSecondary }, txType === 'expense' && { fontWeight: '600' }]}>Expense</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={[styles.addBtn, { backgroundColor: T.accent }]} onPress={addTx}><Text style={[styles.addBtnText, { color: T.textInverse }]}>Add Transaction</Text></TouchableOpacity>
+
+          <TouchableOpacity style={[styles.addBtn, { backgroundColor: T.accent }]} onPress={addTx}>
+            <Text style={[styles.addBtnText, { color: T.textInverse }]}>Add Transaction</Text>
+          </TouchableOpacity>
         </Card>
 
         {transactions.length > 0 && (
-          <Card title="Recent">
-            {transactions.slice(0, 10).map((tx: any, i) => (
-              <Row key={tx.id || i} label={tx.category}>
-                <Text style={[styles.txAmount, { color: tx.type === 'income' ? T.success : T.error }]}>
-                  {tx.type === 'income' ? '+' : '-'}${Math.abs(tx.amount).toFixed(0)}
-                </Text>
-              </Row>
-            ))}
-          </Card>
+          <>
+            <Card title="Analytics">
+              <View style={styles.metricsGrid}>
+                <View style={styles.metricItem}>
+                  <Text style={[styles.metricValue, { color: T.accent }]}>₹ {analytics.avgDaily.toFixed(0)}</Text>
+                  <Text style={[styles.metricLabel, { color: T.textSecondary }]}>Avg daily spend</Text>
+                </View>
+                <View style={[styles.metricDivider, { backgroundColor: T.border }]} />
+                <View style={styles.metricItem}>
+                  <Text style={[styles.metricValue, { color: analytics.savingsRate >= 20 ? T.success : analytics.savingsRate > 0 ? T.textPrimary : T.error }]}>{analytics.savingsRate.toFixed(0)}%</Text>
+                  <Text style={[styles.metricLabel, { color: T.textSecondary }]}>Savings rate</Text>
+                </View>
+                <View style={[styles.metricDivider, { backgroundColor: T.border }]} />
+                <View style={styles.metricItem}>
+                  <Text style={[styles.metricValue, { color: T.error }]}>{analytics.daysWithSpending}/7</Text>
+                  <Text style={[styles.metricLabel, { color: T.textSecondary }]}>Active days</Text>
+                </View>
+              </View>
+              {analytics.topCategory && (
+                <View style={[styles.topCatBanner, { backgroundColor: T.borderSoft }]}>
+                  <Icon name={LUCIDE_ICONS.target} size={14} color={T.textSecondary} />
+                  <Text style={[styles.topCatText, { color: T.textSecondary }]}>Top category: </Text>
+                  <Text style={[styles.topCatName, { color: T.textPrimary }]}>{analytics.topCategory.category}</Text>
+                  <Text style={[styles.topCatPct, { color: T.error }]}>{analytics.topCategoryPct.toFixed(0)}%</Text>
+                </View>
+              )}
+            </Card>
+
+            <Card title="Last 7 Days">
+              <BarChart
+                data={analytics.last7Days.map((d) => ({ label: d.label, value: d.expense, color: T.error }))}
+                height={120}
+                showValues={true}
+                accentColor={T.error}
+                emptyText="No expenses in the last 7 days"
+              />
+              <View style={[styles.incomeRow, { borderTopColor: T.borderSoft }]}>
+                <Text style={[styles.incomeLabel, { color: T.textSecondary }]}>7-day income</Text>
+                <Text style={[styles.incomeValue, { color: T.success }]}>+₹ {analytics.last7Days.reduce((s, d) => s + d.income, 0).toFixed(0)}</Text>
+              </View>
+            </Card>
+
+            {analytics.expenseByCategory.length > 0 && (
+              <Card title="Category Breakdown">
+                {analytics.expenseByCategory.map((c: any, i: number) => {
+                  const pct = (c.total / analytics.totalExpense) * 100;
+                  return (
+                    <View key={i} style={styles.catBreakRow}>
+                      <View style={styles.catBreakTop}>
+                        <Text style={[styles.catBreakName, { color: T.textPrimary }]}>{c.category}</Text>
+                        <Text style={[styles.catBreakAmount, { color: T.textPrimary }]}>-₹ {c.total.toFixed(0)}</Text>
+                      </View>
+                      <View style={[styles.catBreakBarBg, { backgroundColor: T.borderSoft }]}>
+                        <View style={[styles.catBreakBarFill, { width: `${Math.max(pct, 2)}%`, backgroundColor: T.error }]} />
+                      </View>
+                      <Text style={[styles.catBreakPct, { color: T.textMuted }]}>{pct.toFixed(1)}% of total spending</Text>
+                    </View>
+                  );
+                })}
+              </Card>
+            )}
+
+            <Card title="Recent">
+              <View style={styles.txList}>
+                {transactions.slice(0, 10).map((tx: any, i: number, arr: any[]) => (
+                  <React.Fragment key={tx.id}>
+                    <SwipeableRow onDelete={() => deleteTransaction(tx.id)} T={T}>
+                      <View style={[styles.txItem, { backgroundColor: T.surface }]}>
+                        <View style={[styles.txIconWrap, { backgroundColor: tx.type === 'income' ? T.success + '18' : T.error + '18' }]}>
+                          <Icon name={tx.type === 'income' ? LUCIDE_ICONS.arrowDown : LUCIDE_ICONS.arrowUp} size={14} color={tx.type === 'income' ? T.success : T.error} />
+                        </View>
+                        <View style={styles.txBody}>
+                          <Text style={[styles.txTitle, { color: T.textPrimary }]} numberOfLines={1}>{tx.category}</Text>
+                          {tx.description ? (
+                            <Text style={[styles.txDesc, { color: T.textMuted }]} numberOfLines={1}>{tx.description}</Text>
+                          ) : null}
+                        </View>
+                        <Text style={[styles.txAmountVal, { color: tx.type === 'income' ? T.success : T.error }]}>
+                          {tx.type === 'income' ? '+' : '-'}₹ {Math.abs(tx.amount).toFixed(0)}
+                        </Text>
+                      </View>
+                    </SwipeableRow>
+                    {i < arr.length - 1 && (
+                      <View style={[styles.txSeparator, { backgroundColor: T.borderSoft }]} />
+                    )}
+                  </React.Fragment>
+                ))}
+              </View>
+            </Card>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -167,10 +396,10 @@ const styles = StyleSheet.create({
   },
   addBtn: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 4 },
   addBtnText: { ...TYPOGRAPHY.btn },
-  summary: { flexDirection: 'row', justifyContent: 'space-between' },
-  summaryItem: { flex: 1, alignItems: 'center' },
-  summaryLabel: { ...TYPOGRAPHY.statLabel },
-  summaryValue: { ...TYPOGRAPHY.monoLg, marginTop: 4 },
+  summary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'stretch' },
+  summaryItem: { flex: 1, alignItems: 'center', paddingHorizontal: 2 },
+  summaryLabel: { ...TYPOGRAPHY.statLabel, marginBottom: 4 },
+  summaryValue: { ...TYPOGRAPHY.monoLg, marginTop: 4, textAlign: 'center', fontSize: 16, lineHeight: 22 },
   divider: { width: 1 },
   expenseAmount: { ...TYPOGRAPHY.body, fontWeight: '600' },
   catRow: { marginBottom: 8 },
@@ -184,5 +413,89 @@ const styles = StyleSheet.create({
   txRow: { flexDirection: 'row', gap: 8 },
   txHint: { marginBottom: 4 },
   txHintText: { ...TYPOGRAPHY.captionSm },
-  txAmount: { ...TYPOGRAPHY.body, fontWeight: '600' },
+  typeToggle: {
+    flexDirection: 'row',
+    borderRadius: 14,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    gap: 4,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  typeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  typeBtnText: { ...TYPOGRAPHY.btnSm },
+
+  metricsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  metricItem: { flex: 1, alignItems: 'center' },
+  metricDivider: { width: 1, alignSelf: 'stretch' },
+  metricValue: { ...TYPOGRAPHY.monoLg, marginBottom: 2 },
+  metricLabel: { ...TYPOGRAPHY.statLabel, textAlign: 'center' },
+  topCatBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 6,
+  },
+  topCatText: { ...TYPOGRAPHY.bodySm },
+  topCatName: { ...TYPOGRAPHY.bodySm, fontWeight: '600', flex: 1 },
+  topCatPct: { ...TYPOGRAPHY.bodySm, fontWeight: '700' },
+  incomeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+  },
+  incomeLabel: { ...TYPOGRAPHY.bodySm },
+  incomeValue: { ...TYPOGRAPHY.body, fontWeight: '700' },
+
+  catBreakRow: { marginBottom: 14 },
+  catBreakTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  catBreakName: { ...TYPOGRAPHY.body, fontWeight: '500' },
+  catBreakAmount: { ...TYPOGRAPHY.body, fontWeight: '600' },
+  catBreakBarBg: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  catBreakBarFill: { height: 6, borderRadius: 3 },
+  catBreakPct: { ...TYPOGRAPHY.captionSm, marginTop: 4 },
+
+  swipeContainer: { position: 'relative', overflow: 'hidden', borderRadius: 10 },
+  deleteBg: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 20,
+    gap: 6,
+    width: '100%',
+  },
+  deleteText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  txList: { gap: 0 },
+  txItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    backgroundColor: 'transparent',
+    borderRadius: 10,
+  },
+  txIconWrap: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  txBody: { flex: 1, gap: 2 },
+  txTitle: { ...TYPOGRAPHY.body, fontWeight: '600' },
+  txDesc: { ...TYPOGRAPHY.captionSm },
+  txAmountVal: { ...TYPOGRAPHY.body, fontWeight: '700', fontVariant: ['tabular-nums'] as any },
+  txSeparator: { height: 1, marginLeft: 48 },
 });

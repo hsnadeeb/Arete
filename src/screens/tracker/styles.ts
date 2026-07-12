@@ -112,26 +112,25 @@ export const trackerStyles = StyleSheet.create({
   // ── Action row (input + button) ──
   actionRow: {
     flexDirection: "row",
-    gap: 8,
     alignItems: "center",
+    borderRadius: 18,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    gap: 6,
   },
   input: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
     paddingVertical: 12,
-    ...TYPOGRAPHY.input,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    fontWeight: "500",
   },
   logBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
-  },
-  logBtnText: {
-    color: "#fff",
-    ...TYPOGRAPHY.btn,
+    justifyContent: "center",
   },
 
   // ── Water cups ──
@@ -224,7 +223,7 @@ export const trackerStyles = StyleSheet.create({
   fab: {
     position: "absolute",
     bottom: 24,
-    right: 20,
+    left: 20,
     width: 56,
     height: 56,
     borderRadius: 28,

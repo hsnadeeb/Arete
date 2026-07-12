@@ -23,10 +23,8 @@ interface CircularProgressProps {
 }
 
 /**
- * A single continuous SVG arc that draws smoothly from 0° to 360° using
- * react-native-reanimated for native-thread animation.
- *
- * No more clipped half-circles or border hacks — this is a real SVG path.
+ * Single smooth SVG arc with Reanimated — used by Steps, Sleep, Water trackers.
+ * Starts from top (12 o'clock), draws a clean continuous arc to 100%.
  */
 export function AnimatedCircularProgress({
   value,
@@ -48,7 +46,6 @@ export function AnimatedCircularProgress({
   const circumference = 2 * Math.PI * r;
   const halfSize = size / 2;
 
-  // Sync shared value when data changes
   React.useEffect(() => {
     progress.value = withTiming(pct, {
       duration: 600,
@@ -56,13 +53,11 @@ export function AnimatedCircularProgress({
     });
   }, [pct, progress]);
 
-  // Animated props for the arc — runs on the UI thread via Reanimated
   const animatedProps = useAnimatedProps(() => {
     const p = progress.value;
     const strokeDashoffset = circumference * (1 - p);
     return {
       strokeDashoffset,
-      // Only show the arc once progress > 0
     };
   });
 
@@ -75,7 +70,6 @@ export function AnimatedCircularProgress({
         justifyContent: "center",
       }}
     >
-      {/* Background ring */}
       <Svg width={size} height={size} style={{ position: "absolute" }}>
         <Circle
           cx={halfSize}
@@ -85,7 +79,6 @@ export function AnimatedCircularProgress({
           strokeWidth={strokeWidth}
           fill="none"
         />
-        {/* Progress arc */}
         <AnimatedCircle
           cx={halfSize}
           cy={halfSize}
@@ -100,7 +93,6 @@ export function AnimatedCircularProgress({
         />
       </Svg>
 
-      {/* Center content */}
       <View
         style={{
           width: size - strokeWidth * 2,
@@ -115,9 +107,7 @@ export function AnimatedCircularProgress({
           {Math.round(pct * 100)}%
         </Text>
         {label ? (
-          <Text style={[styles.ringLabel, { color: currentColor }]}>
-            {label}
-          </Text>
+          <Text style={[styles.ringLabel, { color: currentColor }]}>{label}</Text>
         ) : null}
         {sublabel ? (
           <Text style={[styles.ringSublabel]}>{sublabel}</Text>
@@ -188,110 +178,6 @@ export function FillingWave({
             { color: isComplete ? "#fff" : currentColor },
           ]}
         >
-          {Math.round(pct * 100)}%
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-interface ExpandingRingProps {
-  value: number;
-  max: number;
-  size?: number;
-  color?: string;
-  completedColor?: string;
-  bgColor?: string;
-}
-
-export function ExpandingRing({
-  value,
-  max,
-  size = 120,
-  color = "#8b5cf6",
-  completedColor = "#a855f7",
-  bgColor = "#e8d9ff",
-}: ExpandingRingProps) {
-  const pct = max > 0 ? Math.min(value / max, 1) : 0;
-  const isComplete = pct >= 1;
-  const currentColor = isComplete ? completedColor : color;
-  const progress = useSharedValue(pct);
-  const r = (size - 4) / 2;
-  const circumference = 2 * Math.PI * r;
-  const halfSize = size / 2;
-
-  React.useEffect(() => {
-    progress.value = withTiming(pct, {
-      duration: 600,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [pct, progress]);
-
-  const animatedProps = useAnimatedProps(() => {
-    const p = progress.value;
-    const strokeDashoffset = circumference * (1 - p);
-    return {
-      strokeDashoffset,
-    };
-  });
-
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      {/* Background ring */}
-      <View
-        style={{
-          width: size,
-          height: size,
-          borderRadius: halfSize,
-          backgroundColor: bgColor,
-          justifyContent: "center",
-          alignItems: "center",
-          borderWidth: 4,
-          borderColor: bgColor,
-        }}
-      />
-
-      {/* Progress arc */}
-      <Svg width={size} height={size} style={{ position: "absolute" }}>
-        <Circle
-          cx={halfSize}
-          cy={halfSize}
-          r={r}
-          stroke={currentColor}
-          strokeWidth={4}
-          fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - pct)}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${halfSize} ${halfSize})`}
-        />
-      </Svg>
-
-      {/* Pulsing ring on completion */}
-      {isComplete && (
-        <View
-          style={{
-            position: "absolute",
-            width: size + 16,
-            height: size + 16,
-            borderRadius: halfSize + 8,
-            borderWidth: 3,
-            borderColor: currentColor,
-            opacity: 0.3,
-          }}
-        />
-      )}
-
-      {/* Inner label */}
-      <View style={{ alignItems: "center", justifyContent: "center" }}>
-        <Text style={[styles.ringValue, { color: currentColor, fontSize: 28 }]}>
           {Math.round(pct * 100)}%
         </Text>
       </View>

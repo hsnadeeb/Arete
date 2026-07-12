@@ -23,7 +23,9 @@ echo "⚙️ Regenerating native Android folder and bundling JS..."
 # This ensures the android folder exists, native plugins are synced,
 # and your latest JS/TS code is compiled.
 cd "$PROJECT_ROOT"
-npx expo prebuild --platform android --clean
+# npx expo prebuild --platform android --clean
+npx expo prebuild --clean
+
 
 echo ""
 echo "🧹 Cleaning old Gradle build artifacts..."

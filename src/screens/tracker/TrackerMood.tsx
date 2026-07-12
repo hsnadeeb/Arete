@@ -1,9 +1,15 @@
 import React, { useRef, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Animated } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+} from "react-native";
 import { useApp } from "../../context/AppContext";
 import { BarChart } from "../../components/Charts";
 import { Icon } from "../../components/Icons";
-import { LUCIDE_ICONS, TYPOGRAPHY } from "../../constants/typography";
+import { TYPOGRAPHY } from "../../constants/typography";
 import type { LucideIconName } from "../../constants/typography";
 import { trackerStyles as s } from "./styles";
 import type { WeekData, ThemeColors } from "./types";
@@ -81,22 +87,54 @@ export function TrackerMood({ week, T }: Props) {
 
       {/* Average mood display */}
       <View style={{ alignItems: "center", marginBottom: 8 }}>
-        <Animated.View style={{ transform: [{ scale: selectedMood > 0 ? activeScale : 1 }] }}>
-          <Text style={[TYPOGRAPHY.monoLg, { color: T.textPrimary, fontSize: 40 }]}>
+        <Animated.View
+          style={{ transform: [{ scale: selectedMood > 0 ? activeScale : 1 }] }}
+        >
+          <Text
+            style={[
+              TYPOGRAPHY.monoLg,
+              { color: T.textPrimary, fontSize: 40 },
+            ]}
+          >
             {avgMood > 0 ? avgMood.toFixed(1) : "—"}
           </Text>
         </Animated.View>
-        <Text style={[TYPOGRAPHY.caption, { color: T.textMuted }]}>7-day average</Text>
-        {/* Mood target */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: selectedMood >= 4 ? "#22c55e" : "#f59e0b" }} />
+        <Text style={[TYPOGRAPHY.caption, { color: T.textMuted }]}>
+          7-day average
+        </Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            marginTop: 4,
+          }}
+        >
+          <View
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: selectedMood >= 4 ? "#22c55e" : "#f59e0b",
+            }}
+          />
           <Text style={[TYPOGRAPHY.captionSm, { color: T.textMuted }]}>
             Goal: {selectedMood >= 4 ? "Achieved" : "4+/5"}
           </Text>
         </View>
       </View>
 
-      <View style={s.moodRow}>
+      {/* Mood selector — same modern card pattern as the input bars */}
+      <View
+        style={{
+          flexDirection: "row",
+          backgroundColor: T.surfaceAlt,
+          borderRadius: 18,
+          paddingHorizontal: 6,
+          paddingVertical: 6,
+          gap: 6,
+        }}
+      >
         {MOODS.map((m) => {
           const isActive = selectedMood === m.val;
           return (
@@ -108,26 +146,28 @@ export function TrackerMood({ week, T }: Props) {
               }}
             >
               <TouchableOpacity
-                style={[
-                  s.moodBtn,
-                  {
-                    backgroundColor: isActive ? m.color + "18" : T.surfaceAlt,
-                    borderColor: isActive ? m.color : T.border,
-                    borderWidth: isActive ? 2 : 1,
-                  },
-                ]}
+                style={{
+                  alignItems: "center",
+                  paddingVertical: 14,
+                  borderRadius: 14,
+                  backgroundColor: isActive ? m.color + "18" : "transparent",
+                }}
                 onPress={() => handleMoodPress(m.val)}
-                activeOpacity={0.6}
+                activeOpacity={0.7}
               >
                 <Icon
                   name={m.icon}
-                  size={28}
+                  size={26}
                   color={isActive ? m.color : T.textTertiary}
                 />
                 <Text
                   style={[
                     s.moodLabel,
-                    { color: isActive ? m.color : T.textTertiary },
+                    {
+                      color: isActive ? m.color : T.textTertiary,
+                      marginTop: 4,
+                      fontWeight: isActive ? "600" : "500",
+                    },
                   ]}
                 >
                   {m.label}

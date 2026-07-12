@@ -10,6 +10,8 @@ import {
 import { useApp } from "../../context/AppContext";
 import { BarChart } from "../../components/Charts";
 import { AnimatedCircularProgress } from "../../components/AnimatedProgress";
+import { Icon } from "../../components/Icons";
+import { LUCIDE_ICONS } from "../../constants/typography";
 import { TYPOGRAPHY } from "../../constants/typography";
 import { trackerStyles as s } from "./styles";
 import type { WeekData, ThemeColors } from "./types";
@@ -74,7 +76,6 @@ export function TrackerSleep({ week, T }: Props) {
     >
       <Text style={[s.sectionTitle, { color: T.textMuted }]}>Sleep</Text>
 
-      {/* Circular progress — same style as Steps / Water */}
       <Animated.View style={{ opacity: fadeAnim }}>
         <View style={{ alignItems: "center", marginVertical: 4 }}>
           <AnimatedCircularProgress
@@ -91,112 +92,21 @@ export function TrackerSleep({ week, T }: Props) {
         </View>
       </Animated.View>
 
-      {/* Sleep quality indicator */}
       <View style={{ alignItems: "center", gap: 4 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <View
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: qualityColor,
-            }}
-          />
-          <Text
-            style={[TYPOGRAPHY.body, { color: qualityColor, fontWeight: "600" }]}
-          >
-            {hours ? `${hours}h · ${quality}` : "—"}
-          </Text>
-        </View>
-      </View>
-
-      {/* Sleep stages bar */}
-      <View
-        style={{
-          borderRadius: 12,
-          overflow: "hidden",
-          height: 32,
-          marginVertical: 8,
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            height: "100%",
-          }}
+        <Text
+          style={[TYPOGRAPHY.body, { color: qualityColor, fontWeight: "600" }]}
         >
-          <View
-            style={{
-              flex: hours > 0 ? 0.3 : 0,
-              backgroundColor: "#6366f1",
-              borderRadius: 0,
-            }}
-          />
-          <View
-            style={{
-              flex: hours > 0 ? 0.45 : 0,
-              backgroundColor: "#8b5cf6",
-            }}
-          />
-          <View
-            style={{
-              flex: hours > 0 ? 0.2 : 0,
-              backgroundColor: "#a78bfa",
-            }}
-          />
-          <View
-            style={{
-              flex: hours > 0 ? 0.05 : 1,
-              backgroundColor: T.border,
-            }}
-          />
-        </View>
-      </View>
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          marginBottom: 8,
-        }}
-      >
-        {["Deep", "Light", "REM", "Awake"].map((label, i) => (
-          <View
-            key={label}
-            style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-          >
-            <View
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: [
-                  "#6366f1",
-                  "#8b5cf6",
-                  "#a78bfa",
-                  T.border,
-                ][i],
-              }}
-            />
-            <Text
-              style={[TYPOGRAPHY.captionSm, { color: T.textMuted }]}
-            >
-              {label}
-            </Text>
-          </View>
-        ))}
+          {hours ? `${hours}h · ${quality}` : "—"}
+        </Text>
+        <Text style={[TYPOGRAPHY.captionSm, { color: T.textMuted }]}>
+          Target: {sleepTarget}h per night
+        </Text>
       </View>
 
-      {/* Log sleep */}
-      <View style={s.actionRow}>
+      {/* Quick add sleep hours */}
+      <View style={[s.actionRow, { backgroundColor: T.surfaceAlt }]}>
         <TextInput
-          style={[
-            s.input,
-            {
-              backgroundColor: T.surfaceAlt,
-              borderColor: T.border,
-              color: T.textPrimary,
-            },
-          ]}
+          style={[s.input, { color: T.textPrimary }]}
           value={sleepH}
           onChangeText={setSleepH}
           keyboardType="numeric"
@@ -208,15 +118,12 @@ export function TrackerSleep({ week, T }: Props) {
           onPress={handleLog}
           activeOpacity={0.7}
         >
-          <Text style={s.logBtnText}>Log</Text>
+          <Icon name={LUCIDE_ICONS.plus} size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* 7-day trend */}
       <View>
-        <Text style={[s.trendLabel, { color: T.textMuted }]}>
-          7-day trend
-        </Text>
+        <Text style={[s.trendLabel, { color: T.textMuted }]}>7-day trend</Text>
         <BarChart
           data={week.sleep.map((w) => ({
             label: w.label,

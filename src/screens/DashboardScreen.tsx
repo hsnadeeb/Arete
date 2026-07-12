@@ -239,7 +239,7 @@ function QuickLogWidget() {
       icon: LUCIDE_ICONS.weight,
       v: w,
       s: setW,
-      ph: "kg",
+      ph: "Please log your weight in kg",
       a: () => {
         const n = parseFloat(w);
         if (n > 0 && n < 300) {
@@ -254,7 +254,7 @@ function QuickLogWidget() {
       icon: LUCIDE_ICONS.droplet,
       v: wa,
       s: setWa,
-      ph: "ml",
+      ph: "Please log water intake in ml",
       a: () => {
         const n = parseInt(wa);
         if (n > 0) {
@@ -269,7 +269,7 @@ function QuickLogWidget() {
       icon: LUCIDE_ICONS.activity,
       v: st,
       s: setSt,
-      ph: "0",
+      ph: "Please log you todays steps",
       a: () => {
         const n = parseInt(st);
         if (n > 0) {
@@ -336,16 +336,9 @@ function QuickLogWidget() {
             />
             <Text style={[s.qlLabel, { color: tc.textSecondary }]}>{r.l}</Text>
           </View>
-          <View style={s.qlInputRow}>
+          <View style={[s.qlInputRow, { backgroundColor: tc.bgSecondary }]}>
             <TextInput
-              style={[
-                s.qlInput,
-                {
-                  backgroundColor: tc.bgSecondary,
-                  borderColor: tc.borderLight,
-                  color: tc.text,
-                },
-              ]}
+              style={[s.qlInput, { color: tc.text }]}
               value={r.v}
               onChangeText={r.s}
               keyboardType="numeric"
@@ -355,8 +348,9 @@ function QuickLogWidget() {
             <TouchableOpacity
               style={[s.qlBtn, { backgroundColor: tc.accent }]}
               onPress={r.a}
+              activeOpacity={0.7}
             >
-              <Text style={s.qlBtnText}>{r.b}</Text>
+              <Icon name={LUCIDE_ICONS.plus} size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -452,7 +446,7 @@ function ExpensesWidget() {
           }}
         >
           <Text style={[s.cardTitle, { color: tc.textTertiary }]}>
-            Expenses · ${total.toFixed(2)}
+            Expenses · ₹ {total.toFixed(2)}
           </Text>
 
           <TouchableOpacity
@@ -507,7 +501,7 @@ function ExpensesWidget() {
                 {t.description}
               </Text>
               <Text style={[s.expAmt, { color: tc.error }]}>
-                -${t.amount.toFixed(2)}
+                ₹ {t.amount.toFixed(2)}
               </Text>
             </View>
           ))}
@@ -530,7 +524,6 @@ function ExpensesWidget() {
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 8,
-                marginBottom: 16,
               }}
             >
               <Icon
@@ -912,7 +905,9 @@ export default function DashboardScreen() {
             />
           </TouchableOpacity>
           <View style={s.topCenter}>
-            <Text style={[s.greeting, { color: tc.heading }]}>{getGreeting(userProfile?.name)}</Text>
+            <Text style={[s.greeting, { color: tc.heading }]}>
+              {getGreeting(userProfile?.name)}
+            </Text>
             <Text style={[s.dateSmall, { color: tc.textTertiary }]}>
               {todayStr}
             </Text>
@@ -935,7 +930,9 @@ export default function DashboardScreen() {
             label="dashboard"
           />
           <Text style={[s.emptyTitle, { color: tc.heading }]}>
-            {userProfile?.name ? `Welcome, ${userProfile.name}` : 'Welcome to your Dashboard'}
+            {userProfile?.name
+              ? `Welcome, ${userProfile.name}`
+              : "Welcome to your Dashboard"}
           </Text>
           <Text style={[s.emptySubtitle, { color: tc.textTertiary }]}>
             Tap refresh to load your data and start tracking.
@@ -983,7 +980,9 @@ export default function DashboardScreen() {
         <View style={s.topCenter}>
           {!editing ? (
             <>
-              <Text style={[s.greeting, { color: tc.heading }]}>{getGreeting(userProfile?.name)}</Text>
+              <Text style={[s.greeting, { color: tc.heading }]}>
+                {getGreeting(userProfile?.name)}
+              </Text>
               <Text style={[s.dateSmall, { color: tc.textTertiary }]}>
                 {todayStr}
               </Text>
@@ -1254,19 +1253,26 @@ const s = StyleSheet.create({
     gap: 8,
   },
   qlLabel: { ...TYPOGRAPHY.bodySm, fontWeight: "600" },
-  qlInputRow: { flex: 1, flexDirection: "row", gap: 8, alignItems: "center" },
+  qlInputRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    gap: 6,
+  },
   qlInput: {
     flex: 1,
-    height: 36,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     fontSize: 14,
+    fontWeight: "500",
   },
   qlBtn: {
-    paddingHorizontal: 16,
+    width: 36,
     height: 36,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -22,6 +22,43 @@ function today(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+// Curated habit icons — all from the LUCIDE_ICONS registry
+const HABIT_ICONS: LucideIconName[] = [
+  LUCIDE_ICONS.book as LucideIconName,
+  LUCIDE_ICONS.activity as LucideIconName,
+  LUCIDE_ICONS.droplet as LucideIconName,
+  LUCIDE_ICONS.moon as LucideIconName,
+  LUCIDE_ICONS.sun as LucideIconName,
+  LUCIDE_ICONS.coffee as LucideIconName,
+  LUCIDE_ICONS.apple as LucideIconName,
+  LUCIDE_ICONS.run as LucideIconName,
+  LUCIDE_ICONS.briefcase as LucideIconName,
+  LUCIDE_ICONS.school as LucideIconName,
+  LUCIDE_ICONS.target as LucideIconName,
+  LUCIDE_ICONS.star as LucideIconName,
+  LUCIDE_ICONS.award as LucideIconName,
+  LUCIDE_ICONS.zap as LucideIconName,
+  LUCIDE_ICONS.calendar as LucideIconName,
+  LUCIDE_ICONS.clock as LucideIconName,
+  LUCIDE_ICONS.home as LucideIconName,
+  LUCIDE_ICONS.gift as LucideIconName,
+  LUCIDE_ICONS.compass as LucideIconName,
+  LUCIDE_ICONS.rocket as LucideIconName,
+];
+
+/**
+ * Resolve a stored habit emoji value to a lucide icon name.
+ * New habits store Lucide icon names directly (e.g. "Book").
+ * Legacy data stores Unicode emoji (e.g. "✅") — converted via getIconName.
+ */
+function resolveHabitIcon(emoji: string | undefined | null): LucideIconName {
+  if (!emoji) return "Circle";
+  if (HABIT_ICONS.includes(emoji as LucideIconName)) {
+    return emoji as LucideIconName;
+  }
+  return getIconName(emoji);
+}
+
 interface Props {
   habits: any[];
   habitLogs: any[];
@@ -56,10 +93,25 @@ function HabitGrid({
 
   return (
     <View>
-      <View style={{ flexDirection: "row", marginLeft: dayLabelW, marginBottom: 10, height: 14 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          marginLeft: dayLabelW,
+          marginBottom: 10,
+          height: 14,
+        }}
+      >
         {grid.monthLabels.map((m, i) => (
-          <View key={i} style={{ position: "absolute", left: m.col * (cellSize + gap) }}>
-            <Text style={[TYPOGRAPHY.captionSm, { color: T.textMuted, fontWeight: "500" }]}>
+          <View
+            key={i}
+            style={{ position: "absolute", left: m.col * (cellSize + gap) }}
+          >
+            <Text
+              style={[
+                TYPOGRAPHY.captionSm,
+                { color: T.textMuted, fontWeight: "500" },
+              ]}
+            >
               {m.label}
             </Text>
           </View>
@@ -70,7 +122,14 @@ function HabitGrid({
           {dayLabels.map((l, i) => (
             <Text
               key={i}
-              style={[TYPOGRAPHY.captionSm, { color: T.textMuted, height: cellSize, lineHeight: cellSize }]}
+              style={[
+                TYPOGRAPHY.captionSm,
+                {
+                  color: T.textMuted,
+                  height: cellSize,
+                  lineHeight: cellSize,
+                },
+              ]}
             >
               {l}
             </Text>
@@ -80,7 +139,9 @@ function HabitGrid({
           {grid.weeks.map((week, wi) => (
             <View key={wi} style={{ gap }}>
               {week.map((d) => {
-                const done = habitLogs.some((l) => l.habit_id === habitId && l.date === d.date);
+                const done = habitLogs.some(
+                  (l) => l.habit_id === habitId && l.date === d.date,
+                );
                 return (
                   <TouchableOpacity
                     key={d.date}
@@ -116,7 +177,7 @@ export function TrackerHabits({
   const [colorFilter, setColorFilter] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newEmoji, setNewEmoji] = useState("✅");
+  const [newIcon, setNewIcon] = useState<LucideIconName>(HABIT_ICONS[0]);
   const [newColor, setNewColor] = useState("#6366f1");
 
   const cardAnims = useRef(
@@ -140,19 +201,21 @@ export function TrackerHabits({
     if (!newName.trim()) return;
     await db.addHabit({
       name: newName.trim(),
-      emoji: newEmoji,
+      emoji: newIcon,
       color: newColor,
       target_per_day: 1,
     });
     setNewName("");
     setShowAddModal(false);
     setNewColor("#6366f1");
-    setNewEmoji("✅");
+    setNewIcon(HABIT_ICONS[0]);
     onRefresh();
   };
 
   const handleToggleDay = async (habitId: number, date: string) => {
-    const existing = habitLogs.find((l) => l.habit_id === habitId && l.date === date);
+    const existing = habitLogs.find(
+      (l) => l.habit_id === habitId && l.date === date,
+    );
     if (existing) {
       await db.deleteHabitLogById(existing.id);
     } else {
@@ -180,12 +243,7 @@ export function TrackerHabits({
     ? habits.filter((h) => (h.color || "#6366f1") === colorFilter)
     : habits;
 
-  const emojis = [
-    "✅", "💪", "🏃", "📖", "🧘", "🥗", "💧", "😴",
-    "🎯", "✍️", "🎨", "🧠", "🚴", "🏋️", "🧹", "🌱",
-    "📝", "🎵", "☕", "🙏",
-  ];
-
+  // Detail view
   if (selectedHabit) {
     return (
       <ScrollView
@@ -200,7 +258,14 @@ export function TrackerHabits({
           <Text style={{ color: T.textSecondary }}>← Back</Text>
         </TouchableOpacity>
 
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 12,
+          }}
+        >
           <View
             style={{
               width: 40,
@@ -212,15 +277,19 @@ export function TrackerHabits({
             }}
           >
             <Icon
-              name={getIconName(selectedHabit.emoji)}
+              name={resolveHabitIcon(selectedHabit.emoji)}
               size={22}
               color={selectedHabit.color || accentColor}
             />
           </View>
-          <Text style={[TYPOGRAPHY.h3, { color: T.textPrimary, flex: 1 }]}>
+          <Text
+            style={[TYPOGRAPHY.h3, { color: T.textPrimary, flex: 1 }]}
+          >
             {selectedHabit.name}
           </Text>
-          <TouchableOpacity onPress={() => handleDelete(selectedHabit.id, selectedHabit.name)}>
+          <TouchableOpacity
+            onPress={() => handleDelete(selectedHabit.id, selectedHabit.name)}
+          >
             <Icon name={LUCIDE_ICONS.trash2} size={18} color="#ef4444" />
           </TouchableOpacity>
         </View>
@@ -238,143 +307,191 @@ export function TrackerHabits({
   }
 
   return (
-    <ScrollView
-      style={s.tabScroll}
-      contentContainerStyle={[s.tabScrollContent, { paddingBottom: 120 }]}
-      showsVerticalScrollIndicator={false}
-    >
-      {habits.length === 0 ? (
-        <View style={s.emptyState}>
-          <Icon name={LUCIDE_ICONS.checkCircle} size={48} color={T.textTertiary} />
-          <Text style={[TYPOGRAPHY.body, { color: T.textTertiary }]}>No habits yet</Text>
-          <Text style={[TYPOGRAPHY.caption, { color: T.textMuted }]}>
-            Tap + to add your first habit
-          </Text>
-        </View>
-      ) : (
-        <>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ marginBottom: 12 }}
-          >
-            <View style={s.filterRow}>
-              <TouchableOpacity
-                onPress={() => setColorFilter(null)}
-                style={[
-                  s.filterChip,
-                  {
-                    backgroundColor: colorFilter === null ? accentColor + "18" : T.surface,
-                    borderColor: colorFilter === null ? accentColor : T.border,
-                  },
-                ]}
-              >
-                <Text
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        style={s.tabScroll}
+        contentContainerStyle={s.tabScrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {habits.length === 0 ? (
+          <View style={s.emptyState}>
+            <Icon
+              name={LUCIDE_ICONS.checkCircle}
+              size={48}
+              color={T.textTertiary}
+            />
+            <Text style={[TYPOGRAPHY.body, { color: T.textTertiary }]}>
+              No habits yet
+            </Text>
+            <Text style={[TYPOGRAPHY.caption, { color: T.textMuted }]}>
+              Tap + to add your first habit
+            </Text>
+          </View>
+        ) : (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginBottom: 12 }}
+            >
+              <View style={s.filterRow}>
+                <TouchableOpacity
+                  onPress={() => setColorFilter(null)}
                   style={[
-                    TYPOGRAPHY.btnSm,
-                    { color: colorFilter === null ? accentColor : T.textSecondary },
+                    s.filterChip,
+                    {
+                      backgroundColor:
+                        colorFilter === null ? accentColor + "18" : T.surface,
+                      borderColor:
+                        colorFilter === null ? accentColor : T.border,
+                    },
                   ]}
                 >
-                  All
-                </Text>
-              </TouchableOpacity>
-              {HABIT_COLORS.map((c) => {
-                const count = habits.filter((h) => (h.color || "#6366f1") === c).length;
-                if (count === 0) return null;
-                return (
-                  <TouchableOpacity
-                    key={c}
-                    onPress={() => setColorFilter(c === colorFilter ? null : c)}
+                  <Text
                     style={[
-                      s.filterChip,
+                      TYPOGRAPHY.btnSm,
                       {
-                        backgroundColor: colorFilter === c ? c + "20" : T.surface,
-                        borderColor: colorFilter === c ? c : T.border,
+                        color:
+                          colorFilter === null ? accentColor : T.textSecondary,
                       },
                     ]}
                   >
-                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c }} />
-                    <Text style={[TYPOGRAPHY.btnSm, { color: T.textSecondary }]}>{count}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
-
-          {filtered.map((h, idx) => {
-            const c = h.color || "#6366f1";
-            const todayLog = habitLogs.find(
-              (l) => l.habit_id === h.id && l.date === today(),
-            );
-            const checked = !!todayLog;
-            const streak = habitLogs.filter((l) => l.habit_id === h.id).length;
-
-            return (
-              <Animated.View
-                key={h.id}
-                style={{
-                  opacity: cardAnims[idx] || new Animated.Value(1),
-                  transform: [
-                    {
-                      translateY: (cardAnims[idx] || new Animated.Value(1)).interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [16, 0],
-                      }),
-                    },
-                  ],
-                }}
-              >
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedHabit(h);
-                    setColorFilter(null);
-                  }}
-                  style={[s.habitCard, { backgroundColor: T.surface, borderColor: T.borderSoft }]}
-                  activeOpacity={0.7}
-                >
-                  <View
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 12,
-                      backgroundColor: c + "18",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Icon name={getIconName(h.emoji)} size={20} color={c} />
-                  </View>
-
-                  <View style={s.habitInfo}>
-                    <Text style={[s.habitName, { color: T.textPrimary }]}>{h.name}</Text>
-                    <Text style={[s.habitStreak, { color: T.textTertiary }]}>
-                      {streak} / 90 days
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={() => handleToggleDay(h.id, today())}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    style={[
-                      s.checkCircle,
-                      {
-                        borderColor: checked ? c : T.border,
-                        backgroundColor: checked ? c : "transparent",
-                      },
-                    ]}
-                  >
-                    {checked && <Icon name={LUCIDE_ICONS.check} size={13} color="#fff" />}
-                  </TouchableOpacity>
-
-                  <Icon name={LUCIDE_ICONS.chevronRight} size={18} color={T.textMuted} />
+                    All
+                  </Text>
                 </TouchableOpacity>
-              </Animated.View>
-            );
-          })}
-        </>
-      )}
+                {HABIT_COLORS.map((c) => {
+                  const count = habits.filter(
+                    (h) => (h.color || "#6366f1") === c,
+                  ).length;
+                  if (count === 0) return null;
+                  return (
+                    <TouchableOpacity
+                      key={c}
+                      onPress={() => setColorFilter(c === colorFilter ? null : c)}
+                      style={[
+                        s.filterChip,
+                        {
+                          backgroundColor:
+                            colorFilter === c ? c + "20" : T.surface,
+                          borderColor: colorFilter === c ? c : T.border,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: 5,
+                          backgroundColor: c,
+                        }}
+                      />
+                      <Text
+                        style={[TYPOGRAPHY.btnSm, { color: T.textSecondary }]}
+                      >
+                        {count}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
 
-      {/* FAB */}
+            {filtered.map((h, idx) => {
+              const c = h.color || "#6366f1";
+              const todayLog = habitLogs.find(
+                (l) => l.habit_id === h.id && l.date === today(),
+              );
+              const checked = !!todayLog;
+              const streak = habitLogs.filter(
+                (l) => l.habit_id === h.id,
+              ).length;
+
+              return (
+                <Animated.View
+                  key={h.id}
+                  style={{
+                    opacity: cardAnims[idx] || new Animated.Value(1),
+                    transform: [
+                      {
+                        translateY: (
+                          cardAnims[idx] || new Animated.Value(1)
+                        ).interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [16, 0],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedHabit(h);
+                      setColorFilter(null);
+                    }}
+                    style={[
+                      s.habitCard,
+                      { backgroundColor: T.surface, borderColor: T.borderSoft },
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 12,
+                        backgroundColor: c + "18",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Icon
+                        name={resolveHabitIcon(h.emoji)}
+                        size={20}
+                        color={c}
+                      />
+                    </View>
+
+                    <View style={s.habitInfo}>
+                      <Text style={[s.habitName, { color: T.textPrimary }]}>
+                        {h.name}
+                      </Text>
+                      <Text
+                        style={[s.habitStreak, { color: T.textTertiary }]}
+                      >
+                        {streak} / 90 days
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={() => handleToggleDay(h.id, today())}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      style={[
+                        s.checkCircle,
+                        {
+                          borderColor: checked ? c : T.border,
+                          backgroundColor: checked ? c : "transparent",
+                        },
+                      ]}
+                    >
+                      {checked && (
+                        <Icon name={LUCIDE_ICONS.check} size={13} color="#fff" />
+                      )}
+                    </TouchableOpacity>
+
+                    <Icon
+                      name={LUCIDE_ICONS.chevronRight}
+                      size={18}
+                      color={T.textMuted}
+                    />
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })}
+          </>
+        )}
+      </ScrollView>
+
+      {/* Fixed FAB — bottom left */}
       <TouchableOpacity
         onPress={() => setShowAddModal(true)}
         style={[s.fab, { backgroundColor: accentColor }]}
@@ -392,34 +509,52 @@ export function TrackerHabits({
             onPress={() => setShowAddModal(false)}
           />
           <View style={[s.modalSheet, { backgroundColor: T.surface }]}>
-            <Text style={[TYPOGRAPHY.h3, { color: T.textPrimary, marginBottom: 16 }]}>
+            <Text
+              style={[
+                TYPOGRAPHY.h3,
+                { color: T.textPrimary, marginBottom: 16 },
+              ]}
+            >
               New Habit
             </Text>
 
-            <Text style={s.label}>Emoji</Text>
+            <Text style={s.label}>Icon</Text>
             <View style={s.emojiGrid}>
-              {emojis.map((e) => (
-                <TouchableOpacity
-                  key={e}
-                  onPress={() => setNewEmoji(e)}
-                  style={[
-                    s.emojiBtn,
-                    {
-                      backgroundColor: newEmoji === e ? T.border : "transparent",
-                      borderColor: newEmoji === e ? accentColor : T.border,
-                    },
-                  ]}
-                >
-                  <Text style={{ fontSize: 20 }}>{e}</Text>
-                </TouchableOpacity>
-              ))}
+              {HABIT_ICONS.map((iconName) => {
+                const isSelected = newIcon === iconName;
+                return (
+                  <TouchableOpacity
+                    key={iconName}
+                    onPress={() => setNewIcon(iconName)}
+                    style={[
+                      s.emojiBtn,
+                      {
+                        backgroundColor: isSelected
+                          ? accentColor + "18"
+                          : "transparent",
+                        borderColor: isSelected ? accentColor : T.border,
+                      },
+                    ]}
+                  >
+                    <Icon
+                      name={iconName}
+                      size={20}
+                      color={isSelected ? accentColor : T.textSecondary}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             <Text style={s.label}>Name</Text>
             <TextInput
               style={[
                 s.modalInput,
-                { backgroundColor: T.surfaceAlt, borderColor: T.border, color: T.textPrimary },
+                {
+                  backgroundColor: T.surfaceAlt,
+                  borderColor: T.border,
+                  color: T.textPrimary,
+                },
               ]}
               value={newName}
               onChangeText={setNewName}
@@ -454,7 +589,9 @@ export function TrackerHabits({
                   setNewName("");
                 }}
               >
-                <Text style={{ color: T.textSecondary, fontWeight: "600" }}>Cancel</Text>
+                <Text style={{ color: T.textSecondary, fontWeight: "600" }}>
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.modalSaveBtn, { backgroundColor: accentColor }]}
@@ -466,6 +603,6 @@ export function TrackerHabits({
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }

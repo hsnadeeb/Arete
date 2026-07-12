@@ -1,12 +1,24 @@
-import React, { useRef, useEffect, useMemo } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Animated } from "react-native";
+import React, { useRef, useEffect, useState, useMemo } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+} from "react-native";
 import { useApp } from "../../context/AppContext";
 import { BarChart } from "../../components/Charts";
 import { AnimatedCircularProgress } from "../../components/AnimatedProgress";
-import { TYPOGRAPHY } from "../../constants/typography";
+import { Icon } from "../../components/Icons";
+import { LUCIDE_ICONS } from "../../constants/typography";
 import { trackerStyles as s } from "./styles";
 import type { WeekData, ThemeColors } from "./types";
-import { TRACKER_COLORS, getProgressPercentage, getGoalColor } from "./constants";
+import {
+  TRACKER_COLORS,
+  getProgressPercentage,
+  getGoalColor,
+} from "./constants";
 
 interface Props {
   week: WeekData;
@@ -18,13 +30,17 @@ const ML_PER_CUP = 250;
 
 export function TrackerWater({ week, T }: Props) {
   const { dailyLog, logWater } = useApp();
+  const [waterInput, setWaterInput] = useState("");
   const cupAnims = useRef(
     Array.from({ length: CUPS }, () => new Animated.Value(0)),
   ).current;
 
   const colors = TRACKER_COLORS.water;
 
-  const targetMl = useMemo(() => dailyLog?.water_target ?? 3000, [dailyLog?.water_target]);
+  const targetMl = useMemo(
+    () => dailyLog?.water_target ?? 3000,
+    [dailyLog?.water_target],
+  );
   const waterMl = dailyLog?.water_ml || 0;
   const filledCups = Math.floor(waterMl / ML_PER_CUP);
   const progress = getProgressPercentage(waterMl, targetMl);
@@ -46,6 +62,14 @@ export function TrackerWater({ week, T }: Props) {
 
   const handleCupPress = (cupIndex: number) => {
     logWater((cupIndex + 1) * ML_PER_CUP);
+  };
+
+  const handleLogWater = () => {
+    const n = parseInt(waterInput);
+    if (n > 0) {
+      logWater(n);
+      setWaterInput("");
+    }
   };
 
   return (
@@ -95,7 +119,9 @@ export function TrackerWater({ week, T }: Props) {
                 style={[
                   s.waterCup,
                   {
-                    backgroundColor: isFilled ? activeColor + "20" : T.surfaceAlt,
+                    backgroundColor: isFilled
+                      ? activeColor + "20"
+                      : T.surfaceAlt,
                     borderColor: isFilled ? activeColor : T.border,
                   },
                 ]}
@@ -115,6 +141,24 @@ export function TrackerWater({ week, T }: Props) {
           );
         })}
       </View>
+
+      {/*<View style={[s.actionRow, { backgroundColor: T.surfaceAlt }]}>
+        <TextInput
+          style={[s.input, { color: T.textPrimary }]}
+          value={waterInput}
+          onChangeText={setWaterInput}
+          keyboardType="numeric"
+          placeholder="Add ml"
+          placeholderTextColor={T.placeholder}
+        />
+        <TouchableOpacity
+          style={[s.logBtn, { backgroundColor: activeColor }]}
+          onPress={handleLogWater}
+          activeOpacity={0.7}
+        >
+          <Icon name={LUCIDE_ICONS.plus} size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>*/}
 
       <View>
         <Text style={[s.trendLabel, { color: T.textMuted }]}>7-day trend</Text>

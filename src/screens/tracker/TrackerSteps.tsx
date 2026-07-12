@@ -10,6 +10,8 @@ import {
 import { useApp } from "../../context/AppContext";
 import { BarChart } from "../../components/Charts";
 import { AnimatedCircularProgress } from "../../components/AnimatedProgress";
+import { Icon } from "../../components/Icons";
+import { LUCIDE_ICONS } from "../../constants/typography";
 import { TYPOGRAPHY } from "../../constants/typography";
 import { trackerStyles as s } from "./styles";
 import type { WeekData, ThemeColors } from "./types";
@@ -72,7 +74,6 @@ export function TrackerSteps({ week, T }: Props) {
     >
       <Text style={[s.sectionTitle, { color: T.textMuted }]}>Steps</Text>
 
-      {/* Circular progress — same as Sleep / Water */}
       <View style={{ alignItems: "center", marginVertical: 4 }}>
         <AnimatedCircularProgress
           value={steps}
@@ -87,7 +88,6 @@ export function TrackerSteps({ week, T }: Props) {
         />
       </View>
 
-      {/* Step dots */}
       <View style={s.stepsRow}>
         {Array.from({ length: 10 }, (_, i) => (
           <Animated.View
@@ -126,17 +126,10 @@ export function TrackerSteps({ week, T }: Props) {
         Each dot = 1,000 steps
       </Text>
 
-      {/* Log steps — same pattern as Sleep / Weight */}
-      <View style={s.actionRow}>
+      {/* Quick add steps */}
+      <View style={[s.actionRow, { backgroundColor: T.surfaceAlt }]}>
         <TextInput
-          style={[
-            s.input,
-            {
-              backgroundColor: T.surfaceAlt,
-              borderColor: T.border,
-              color: T.textPrimary,
-            },
-          ]}
+          style={[s.input, { color: T.textPrimary }]}
           value={stepsInput}
           onChangeText={setStepsInput}
           keyboardType="numeric"
@@ -148,11 +141,10 @@ export function TrackerSteps({ week, T }: Props) {
           onPress={handleLogSteps}
           activeOpacity={0.7}
         >
-          <Text style={s.logBtnText}>Log</Text>
+          <Icon name={LUCIDE_ICONS.plus} size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* 7-day trend */}
       <View>
         <Text style={[s.trendLabel, { color: T.textMuted }]}>7-day trend</Text>
         <BarChart
