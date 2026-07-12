@@ -611,7 +611,6 @@ export default function GreetingScreen() {
             onPress={() => setCurrentRoute("Dashboard")}
             style={[s.enterBtn, { backgroundColor: tc.accent }]}
           >
-            <Text style={s.enterBtnText}>Enter Brain</Text>
             <Icon
               name={LUCIDE_ICONS.arrowRight}
               size={18}
