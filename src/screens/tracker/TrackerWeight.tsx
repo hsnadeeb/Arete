@@ -1,12 +1,23 @@
 import React, { useRef, useEffect, useState, useMemo } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Animated } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+} from "react-native";
 import { useApp } from "../../context/AppContext";
 import { BarChart } from "../../components/Charts";
 import { FillingWave } from "../../components/AnimatedProgress";
 import { TYPOGRAPHY } from "../../constants/typography";
 import { trackerStyles as s } from "./styles";
 import type { WeekData, ThemeColors } from "./types";
-import { TRACKER_COLORS, getProgressPercentage, getGoalColor } from "./constants";
+import {
+  TRACKER_COLORS,
+  getProgressPercentage,
+  getGoalColor,
+} from "./constants";
 
 interface Props {
   week: WeekData;
@@ -21,7 +32,10 @@ export function TrackerWeight({ week, T }: Props) {
 
   const colors = TRACKER_COLORS.weight;
 
-  const targetWeight = useMemo(() => dailyLog?.weight_target ?? 75, [dailyLog?.weight_target]);
+  const targetWeight = useMemo(
+    () => dailyLog?.weight_target ?? 75,
+    [dailyLog?.weight_target],
+  );
   const weightVal = dailyLog?.weight ?? 0;
   const progress = getProgressPercentage(weightVal, targetWeight);
   const activeColor = getGoalColor(colors.primary, colors.completed, progress);
@@ -73,7 +87,9 @@ export function TrackerWeight({ week, T }: Props) {
       <Text style={[s.sectionTitle, { color: T.textMuted }]}>Weight</Text>
 
       <View style={{ marginVertical: 8 }}>
-        <Animated.View style={{ transform: [{ scale: scaleAnim }], opacity: fadeAnim }}>
+        <Animated.View
+          style={{ transform: [{ scale: scaleAnim }], opacity: fadeAnim }}
+        >
           <FillingWave
             value={weightVal}
             max={targetWeight}
@@ -83,14 +99,26 @@ export function TrackerWeight({ week, T }: Props) {
             bgColor={colors.primary + "15"}
           />
         </Animated.View>
-        <Text style={[TYPOGRAPHY.body, { color: T.textMuted, textAlign: "center", marginTop: 8 }]}>
+        <Text
+          style={[
+            TYPOGRAPHY.body,
+            { color: T.textMuted, textAlign: "center", marginTop: 8 },
+          ]}
+        >
           {weightVal} kg · target {targetWeight} kg
         </Text>
       </View>
 
       <View style={s.actionRow}>
         <TextInput
-          style={[s.input, { backgroundColor: T.surfaceAlt, borderColor: T.border, color: T.textPrimary }]}
+          style={[
+            s.input,
+            {
+              backgroundColor: T.surfaceAlt,
+              borderColor: T.border,
+              color: T.textPrimary,
+            },
+          ]}
           value={weight}
           onChangeText={setWeight}
           keyboardType="numeric"

@@ -1,5 +1,12 @@
-import React, { useRef, useEffect, useMemo } from "react";
-import { View, Text, ScrollView, Animated } from "react-native";
+import React, { useRef, useEffect, useState, useMemo } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+} from "react-native";
 import { useApp } from "../../context/AppContext";
 import { BarChart } from "../../components/Charts";
 import { AnimatedCircularProgress } from "../../components/AnimatedProgress";
@@ -18,7 +25,8 @@ interface Props {
 }
 
 export function TrackerSteps({ week, T }: Props) {
-  const { dailyLog } = useApp();
+  const { dailyLog, logSteps } = useApp();
+  const [stepsInput, setStepsInput] = useState("");
   const dotAnims = useRef(
     Array.from({ length: 10 }, () => new Animated.Value(0)),
   ).current;
@@ -48,6 +56,14 @@ export function TrackerSteps({ week, T }: Props) {
     ).start();
   }, [filledDots, dotAnims]);
 
+  const handleLogSteps = () => {
+    const n = parseInt(stepsInput);
+    if (n > 0) {
+      logSteps(n);
+      setStepsInput("");
+    }
+  };
+
   return (
     <ScrollView
       style={s.tabScroll}
@@ -56,6 +72,7 @@ export function TrackerSteps({ week, T }: Props) {
     >
       <Text style={[s.sectionTitle, { color: T.textMuted }]}>Steps</Text>
 
+      {/* Circular progress — same as Sleep / Water */}
       <View style={{ alignItems: "center", marginVertical: 4 }}>
         <AnimatedCircularProgress
           value={steps}
@@ -70,6 +87,7 @@ export function TrackerSteps({ week, T }: Props) {
         />
       </View>
 
+      {/* Step dots */}
       <View style={s.stepsRow}>
         {Array.from({ length: 10 }, (_, i) => (
           <Animated.View
@@ -108,6 +126,33 @@ export function TrackerSteps({ week, T }: Props) {
         Each dot = 1,000 steps
       </Text>
 
+      {/* Log steps — same pattern as Sleep / Weight */}
+      <View style={s.actionRow}>
+        <TextInput
+          style={[
+            s.input,
+            {
+              backgroundColor: T.surfaceAlt,
+              borderColor: T.border,
+              color: T.textPrimary,
+            },
+          ]}
+          value={stepsInput}
+          onChangeText={setStepsInput}
+          keyboardType="numeric"
+          placeholder="Add steps"
+          placeholderTextColor={T.placeholder}
+        />
+        <TouchableOpacity
+          style={[s.logBtn, { backgroundColor: activeColor }]}
+          onPress={handleLogSteps}
+          activeOpacity={0.7}
+        >
+          <Text style={s.logBtnText}>Log</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 7-day trend */}
       <View>
         <Text style={[s.trendLabel, { color: T.textMuted }]}>7-day trend</Text>
         <BarChart
