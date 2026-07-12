@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
@@ -20,7 +20,7 @@ function parseHour(s: string): number {
 }
 
 function dateKey(d: Date) {
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+  return `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`;
 }
 function dayName(d: Date) {
   return DAY_NAMES[d.getDay()];
@@ -29,7 +29,7 @@ function isSameDay(a: Date, b: Date) {
   return a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
 }
 function toDateStr(y: number, m: number, d: number) {
-  return `${y}-${m}-${d}`;
+  return `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
 }
 function fromDateStr(s: string): Date {
   const [y, m, d] = s.split('-').map(Number);
@@ -68,6 +68,11 @@ export default function PlannerScreen() {
   const [repeatType, setRepeatType] = useState('weekly');
   const [specificDate, setSpecificDate] = useState('');
 
+  const headerScrollRef = useRef<ScrollView>(null);
+  const gridScrollRef = useRef<ScrollView>(null);
+  const syncScrollRef = useRef<'header' | 'grid' | null>(null);
+  const scrollXRef = useRef(0);
+
   useEffect(() => { db.getAllTimetable().then(setTimetable); }, []);
 
   const todayStr = toDateStr(now.getFullYear(), now.getMonth(), now.getDate());
@@ -89,6 +94,9 @@ export default function PlannerScreen() {
         isToday: d === n.getDate() && month === n.getMonth() && year === n.getFullYear(),
       });
     }
+    // pad trailing cells so the last row has 7 columns
+    const trailing = (7 - (cells.length % 7)) % 7;
+    for (let i = 0; i < trailing; i++) cells.push({ day: 0, month, year, isCurrent: false, isToday: false });
     const w: any[][] = [];
     for (let i = 0; i < cells.length; i += 7) w.push(cells.slice(i, i + 7));
     return w;
@@ -120,10 +128,11 @@ export default function PlannerScreen() {
 
   const getSchedule = (date: Date) => {
     const ds = toDateStr(date.getFullYear(), date.getMonth(), date.getDate());
+    const dayOfWeek = date.getDay();
     return timetable.filter((t: any) => {
       if (t.repeat_type === 'once') return t.specific_date === ds;
       if (t.repeat_type === 'daily') return true;
-      return t.day_of_week === date.getDay();
+      return t.day_of_week === dayOfWeek;
     }).sort((a: any, b: any) => a.start_time.localeCompare(b.start_time));
   };
 
@@ -294,7 +303,23 @@ export default function PlannerScreen() {
             {/* Day headers */}
             <View style={styles.calDayHeaders}>
               <View style={styles.calGutter} />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled>
+              <ScrollView
+                horizontal
+                ref={headerScrollRef}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled
+                scrollEventThrottle={16}
+                onScroll={(e) => {
+                  const x = e.nativeEvent.contentOffset.x;
+                  if (syncScrollRef.current !== 'header') {
+                    syncScrollRef.current = 'grid';
+                    scrollXRef.current = x;
+                    gridScrollRef.current?.scrollTo({ x, animated: false });
+                  }
+                }}
+                onMomentumScrollEnd={() => { syncScrollRef.current = null; }}
+                onScrollEndDrag={() => { syncScrollRef.current = null; }}
+              >
                 <View style={styles.calDayHeadersRow}>
                   {sortedDates.map(ds => {
                     const date = fromDateStr(ds);
@@ -330,7 +355,23 @@ export default function PlannerScreen() {
               </View>
 
               {/* Day columns */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled>
+              <ScrollView
+                horizontal
+                ref={gridScrollRef}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled
+                scrollEventThrottle={16}
+                onScroll={(e) => {
+                  const x = e.nativeEvent.contentOffset.x;
+                  if (syncScrollRef.current !== 'grid') {
+                    syncScrollRef.current = 'header';
+                    scrollXRef.current = x;
+                    headerScrollRef.current?.scrollTo({ x, animated: false });
+                  }
+                }}
+                onMomentumScrollEnd={() => { syncScrollRef.current = null; }}
+                onScrollEndDrag={() => { syncScrollRef.current = null; }}
+              >
                 <View style={styles.calDaysRow}>
                   {sortedDates.map((ds, di) => {
                     const date = fromDateStr(ds);
