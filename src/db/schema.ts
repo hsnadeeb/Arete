@@ -198,6 +198,15 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
   completed_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS todos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  completed INTEGER DEFAULT 0,
+  priority INTEGER DEFAULT 0,
+  due_date TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS user_profile (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL DEFAULT '',

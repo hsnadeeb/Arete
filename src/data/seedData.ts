@@ -203,6 +203,7 @@ const AFFIRMATIONS = [
 const DASHBOARD_WIDGET_KEYS = [
   'at-a-glance',
   'quick-stats',
+  'todos',
   'quick-log',
   'mood',
   'expenses',

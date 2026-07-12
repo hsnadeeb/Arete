@@ -20,6 +20,7 @@ import { getTransactionRepo } from '../db/repositories/transaction';
 import { getWidgetRepo } from '../db/repositories/widget';
 import { getStatsRepo } from '../db/repositories/stats';
 import { initDatabase, deleteTransactionById, savePrayerTimings, getDb, seedWidgetLayouts, getUserProfile, updateUserProfile, getTrackerTargets, setTrackerTargets } from '../db/service';
+import * as todosDb from '../db/service';
 import { runSeed as runSeedData, wipeAllData, type SeedOptions, type SeedResult } from '../data/seedData';
 import { fetchPrayerTimings, extractTimings, getIslamicDateInfo } from '../services/prayerApi';
 
@@ -86,6 +87,13 @@ export interface AppStore {
 
   // ── Tracker Targets ──
   setTrackerTarget: (fields: { steps_target?: number; water_target?: number; sleep_target?: number; weight_target?: number }) => Promise<void>;
+
+  // ── Todos ──
+  todos: any[];
+  setTodos: (t: any[]) => void;
+  addTodo: (title: string, priority?: number, dueDate?: string) => Promise<void>;
+  toggleTodo: (id: number, completed: boolean) => Promise<void>;
+  deleteTodo: (id: number) => Promise<void>;
 
   // ── Sidebar ──
   sidebarOpen: boolean;
@@ -346,6 +354,37 @@ export const useStore = create<AppStore>()((set, get) => ({
     }
   },
 
+  // ── Todos ──
+  todos: [],
+  setTodos: (t) => set({ todos: t }),
+  addTodo: async (title, priority = 0, dueDate) => {
+    try {
+      await todosDb.addTodo(title, priority, dueDate);
+      const todos = await todosDb.getTodos();
+      set({ todos });
+    } catch (e) {
+      console.error('Add todo failed:', e);
+    }
+  },
+  toggleTodo: async (id, completed) => {
+    try {
+      await todosDb.toggleTodo(id, completed);
+      const todos = await todosDb.getTodos();
+      set({ todos });
+    } catch (e) {
+      console.error('Toggle todo failed:', e);
+    }
+  },
+  deleteTodo: async (id) => {
+    try {
+      await todosDb.deleteTodoById(id);
+      const todos = await todosDb.getTodos();
+      set({ todos });
+    } catch (e) {
+      console.error('Delete todo failed:', e);
+    }
+  },
+
   // ── System ──
   seeding: false,
   deleting: false,
@@ -389,7 +428,7 @@ export const useStore = create<AppStore>()((set, get) => ({
       await seedWidgetLayouts();
 
       // Fetch all initial data in parallel
-      const [dailyLog, prayers, txns, timetable, widgets, stats, todayTimings, profile] = await Promise.allSettled([
+      const [dailyLog, prayers, txns, timetable, widgets, stats, todayTimings, profile, todos] = await Promise.allSettled([
         getDailyLogRepo().getByDate(today),
         getPrayerRepo().getByDate(today),
         getTransactionRepo().getByMonth(month),
@@ -400,6 +439,8 @@ export const useStore = create<AppStore>()((set, get) => ({
         getDb().getFirstAsync<any>('SELECT * FROM prayer_timings WHERE date = ?', today),
         // User profile
         getUserProfile(),
+        // Todos
+        todosDb.getTodos(),
       ]);
 
       // Filter today's transactions
@@ -418,6 +459,7 @@ export const useStore = create<AppStore>()((set, get) => ({
         prayerTimings: todayTimings.status === 'fulfilled' ? todayTimings.value : null,
         timingsLoading: false,
         userProfile: profile.status === 'fulfilled' ? profile.value : null,
+        todos: todos.status === 'fulfilled' ? todos.value : [],
         loaded: true,
         hydrating: false,
       });

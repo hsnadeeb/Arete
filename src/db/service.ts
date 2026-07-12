@@ -329,18 +329,20 @@ export async function saveWidgetOrder(widgets: { widget_key: string; sort_order:
 }
 
 export async function seedWidgetLayouts() {
-  const existing = await getDb().getFirstAsync<any>('SELECT id FROM dashboard_widgets LIMIT 1');
-  if (existing) return;
+  const existing = await getDb().getAllAsync<any>('SELECT widget_key FROM dashboard_widgets');
+  const existingKeys = new Set(existing.map((r: any) => r.widget_key));
 
   const defaults = [
-    'at-a-glance', 'quick-stats', 'quick-log', 'mood',
+    'at-a-glance', 'quick-stats', 'todos', 'quick-log', 'mood',
     'expenses', 'prayer-tracker', 'monthly-stats',
   ];
 
-  for (let i = 0; i < defaults.length; i++) {
+  let nextOrder = existing.length;
+  for (const key of defaults) {
+    if (existingKeys.has(key)) continue;
     await getDb().runAsync(
       'INSERT INTO dashboard_widgets (widget_key, sort_order) VALUES (?, ?)',
-      defaults[i], i
+      key, nextOrder++
     );
   }
 }
@@ -502,6 +504,40 @@ export async function deleteGoalById(id: number) {
 export async function deleteHabitById(id: number) {
   await getDb().runAsync('DELETE FROM habit_logs WHERE habit_id = ?', id);
   await getDb().runAsync('DELETE FROM habits WHERE id = ?', id);
+}
+
+export async function getTodos(): Promise<any[]> {
+  return await getDb().getAllAsync<any>('SELECT * FROM todos ORDER BY completed ASC, priority DESC, created_at DESC');
+}
+
+export async function getAllTodos(): Promise<any[]> {
+  return await getDb().getAllAsync<any>('SELECT * FROM todos ORDER BY completed ASC, priority DESC, created_at DESC');
+}
+
+export async function addTodo(title: string, priority: number = 0, dueDate?: string): Promise<number> {
+  const result = await getDb().runAsync(
+    'INSERT INTO todos (title, priority, due_date) VALUES (?, ?, ?)',
+    title, priority, dueDate || null
+  );
+  return result.lastInsertRowId;
+}
+
+export async function toggleTodo(id: number, completed: boolean): Promise<void> {
+  await getDb().runAsync('UPDATE todos SET completed = ? WHERE id = ?', completed ? 1 : 0, id);
+}
+
+export async function updateTodo(id: number, fields: { title?: string; priority?: number; due_date?: string }): Promise<void> {
+  const sets: string[] = [];
+  const vals: any[] = [];
+  if (fields.title !== undefined) { sets.push('title = ?'); vals.push(fields.title); }
+  if (fields.priority !== undefined) { sets.push('priority = ?'); vals.push(fields.priority); }
+  if (fields.due_date !== undefined) { sets.push('due_date = ?'); vals.push(fields.due_date); }
+  if (sets.length === 0) return;
+  await getDb().runAsync(`UPDATE todos SET ${sets.join(', ')} WHERE id = ?`, ...vals, id);
+}
+
+export async function deleteTodoById(id: number): Promise<void> {
+  await getDb().runAsync('DELETE FROM todos WHERE id = ?', id);
 }
 
 export async function deleteAllHabitData() {

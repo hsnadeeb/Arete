@@ -79,6 +79,11 @@ function AtAGlanceWidget() {
     });
   }, [prayerTimings]);
 
+  const allDone = useMemo(
+    () => prayers.length >= 5 && prayers.every((p: any) => p.on_time === 1),
+    [prayers],
+  );
+
   return (
     <Card title="At a Glance" titleStyle={{ color: tc.textTertiary }}>
       {islamicDate && (
@@ -94,7 +99,16 @@ function AtAGlanceWidget() {
         </View>
       )}
 
-      {nextPrayer ? (
+      {allDone ? (
+        <View style={[s.nextPrayerBox, { backgroundColor: tc.successBg }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Icon name={LUCIDE_ICONS.checkCircle} size={18} color={tc.success} />
+            <Text style={[s.npLabel, { color: tc.success }]}>
+              All prayers completed
+            </Text>
+          </View>
+        </View>
+      ) : nextPrayer ? (
         <View style={[s.nextPrayerBox, { backgroundColor: tc.accentBg }]}>
           <Text style={[s.npLabel, { color: tc.accent }]}>Next Prayer</Text>
           <Text style={[s.npName, { color: tc.heading }]}>
@@ -107,34 +121,16 @@ function AtAGlanceWidget() {
             </Text>
           </Text>
         </View>
-      ) : (
-        <View style={[s.nextPrayerBox, { backgroundColor: tc.bgSecondary }]}>
-          <Text style={[s.npLabel, { color: tc.textTertiary }]}>
-            All prayers completed today
-          </Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              marginTop: 4,
-            }}
-          >
-            <Text style={[s.npAlhamd, { color: tc.success }]}>الحمد لله</Text>
-            <Icon
-              name={LUCIDE_ICONS.hand}
-              size={16}
-              color={tc.success}
-              label="praying hands"
-            />
-          </View>
-        </View>
-      )}
+      ) : null}
 
       {prayerTimings && (
         <View style={[s.prayerStrip, { marginBottom: 12 }]}>
           {PRAYER_TIMES_ORDER.filter((p) => p !== "sunrise").map((prayer) => {
             const time = prayerTimings[prayer] as string;
+            const [h, m] = (time || '').split(':').map(Number);
+            const prayerMinutes = h * 60 + m;
+            const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+            const canToggle = nowMinutes >= prayerMinutes;
             const isNext = nextPrayer?.name?.toLowerCase() === prayer;
             const pData = prayers.find(
               (p) => p.prayer_name.toLowerCase() === prayer,
@@ -145,7 +141,9 @@ function AtAGlanceWidget() {
               <TouchableOpacity
                 key={prayer}
                 onPress={() =>
-                  togglePrayer(prayer.charAt(0).toUpperCase() + prayer.slice(1))
+                  canToggle
+                    ? togglePrayer(prayer.charAt(0).toUpperCase() + prayer.slice(1))
+                    : undefined
                 }
                 style={[
                   s.pStripItem,
@@ -154,7 +152,10 @@ function AtAGlanceWidget() {
                     borderColor: done ? tc.accent : tc.borderLight,
                   },
                   isNext && { borderColor: tc.accent, borderWidth: 2 },
+                  !canToggle && { opacity: 0.5 },
+                  allDone && { opacity: 0.4 },
                 ]}
+                disabled={!canToggle}
               >
                 <Icon
                   name={PRAYER_ICONS[prayer]?.name ?? LUCIDE_ICONS.sun}
@@ -414,6 +415,117 @@ function MoodWidget() {
   );
 }
 
+function TodoWidget() {
+  const { theme } = useTheme();
+  const tc = theme.colors;
+  const todos = useApp((s) => s.todos);
+  const addTodo = useApp((s) => s.addTodo);
+  const toggleTodo = useApp((s) => s.toggleTodo);
+  const deleteTodo = useApp((s) => s.deleteTodo);
+  const [input, setInput] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleAdd = () => {
+    const t = input.trim();
+    if (!t || submitting) return;
+    setSubmitting(true);
+    addTodo(t).finally(() => {
+      setInput("");
+      setSubmitting(false);
+    });
+  };
+
+  const visible = todos.slice(0, 5);
+
+  return (
+    <Card title="To-Do">
+      <View
+        style={[
+          s.todoRow,
+          { backgroundColor: tc.bgSecondary, borderColor: tc.border },
+        ]}
+      >
+        <TextInput
+          style={[s.todoInput, { color: tc.text }]}
+          value={input}
+          onChangeText={setInput}
+          placeholder="Add a task..."
+          placeholderTextColor={tc.placeholder}
+          onSubmitEditing={handleAdd}
+          returnKeyType="done"
+          editable={!submitting}
+        />
+        <TouchableOpacity
+          style={[
+            s.todoAddBtn,
+            { backgroundColor: tc.accent },
+            !input.trim() && { opacity: 0.4 },
+          ]}
+          onPress={handleAdd}
+          disabled={!input.trim() || submitting}
+          activeOpacity={0.7}
+        >
+          <Icon name={LUCIDE_ICONS.plus} size={16} color="#fff" />
+        </TouchableOpacity>
+      </View>
+      {visible.length === 0 ? (
+        <Text style={[s.todoEmpty, { color: tc.textTertiary }]}>
+          No tasks yet — add one above
+        </Text>
+      ) : (
+        visible.map((t: any) => {
+          const done = t.completed === 1;
+          return (
+            <View
+              key={t.id}
+              style={[s.todoItem, { borderBottomColor: tc.divider }]}
+            >
+              <TouchableOpacity
+                style={[
+                  s.todoCheckbox,
+                  { borderColor: tc.border },
+                  done && { backgroundColor: tc.accent, borderColor: tc.accent },
+                ]}
+                onPress={() => toggleTodo(t.id, !done)}
+                activeOpacity={0.6}
+              >
+                {done && (
+                  <Icon name={LUCIDE_ICONS.check} size={12} color="#fff" />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1 }}
+                onPress={() => toggleTodo(t.id, !done)}
+                activeOpacity={0.6}
+              >
+                <Text
+                  style={[
+                    s.todoText,
+                    { color: tc.text },
+                    done && {
+                      textDecorationLine: 'line-through',
+                      color: tc.textTertiary,
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {t.title}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+              onPress={() => deleteTodo(t.id)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name={LUCIDE_ICONS.x} size={14} color={tc.textTertiary} />
+            </TouchableOpacity>
+          </View>
+        );
+        })
+      )}
+    </Card>
+  );
+}
+
 function ExpensesWidget() {
   const { theme } = useTheme();
   const tc = theme.colors;
@@ -577,7 +689,7 @@ function ExpensesWidget() {
               ))}
             </View>
             <Text style={[s.label, { color: tc.textSecondary }]}>
-              Amount ($)
+              Amount (₹)
             </Text>
             <TextInput
               style={[
@@ -692,6 +804,7 @@ function MonthlyStatsWidget() {
 const WIDGET_MAP: Record<string, React.FC> = {
   "at-a-glance": AtAGlanceWidget,
   // "quick-stats": QuickStatsWidget,
+  todos: TodoWidget,
   "quick-log": QuickLogWidget,
   mood: MoodWidget,
   expenses: ExpensesWidget,
@@ -1356,4 +1469,40 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   saveBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+
+  todoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 10,
+  },
+  todoInput: { flex: 1, paddingVertical: 8, fontSize: 14 },
+  todoAddBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  todoEmpty: { fontSize: 13, paddingVertical: 8 },
+  todoItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    gap: 10,
+    borderBottomWidth: 1,
+  },
+  todoCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  todoText: { flex: 1, fontSize: 14 },
 });
