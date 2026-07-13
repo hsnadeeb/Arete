@@ -41,7 +41,7 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
   // Attach canopy directly to trunk.
   // Increase this number to move the canopy DOWN.
   // Decrease it to move the canopy UP.
-  const canopyCenterY = trunkTop - 300;
+  const canopyCenterY = trunkTop;
 
   const maturity = Math.min(4, Math.floor(t * 5));
 
@@ -89,16 +89,56 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
     }).start();
   }, []);
 
-  const breath = useRef(new Animated.Value(1)).current;
+  // ── Trunk entrance: slide up from below ──
+  const trunkEntry = useRef(new Animated.Value(24)).current;
+  useEffect(() => {
+    Animated.spring(trunkEntry, {
+      toValue: 0,
+      friction: 6,
+      tension: 60,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  // ── Continuous gentle breathing ──
+  const breath = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breath, {
+          toValue: 1,
+          duration: 2800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(breath, {
+          toValue: -1,
+          duration: 2800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  const breathScale = breath.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [0.975, 1, 1.025],
+  });
+
+  // ── Growth spurt pulse (on progress change) ──
+  const growPulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     Animated.sequence([
-      Animated.spring(breath, {
-        toValue: 1.045,
+      Animated.spring(growPulse, {
+        toValue: 1.04,
         friction: 4,
         tension: 140,
         useNativeDriver: true,
       }),
-      Animated.spring(breath, {
+      Animated.spring(growPulse, {
         toValue: 1,
         friction: 5,
         tension: 90,
@@ -107,6 +147,7 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
     ]).start();
   }, [Math.floor(t * 25)]);
 
+  // ── Wind sway ──
   const sway = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(
@@ -129,11 +170,17 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
     return () => loop.stop();
   }, []);
 
-  const swayRotate = sway.interpolate({
+  const canopySway = sway.interpolate({
     inputRange: [-1, 1],
     outputRange: ["-2deg", "2deg"],
   });
 
+  const trunkSway = sway.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ["-0.4deg", "0.4deg"],
+  });
+
+  // ── Warm glow pulse ──
   const glow = useRef(new Animated.Value(0.35)).current;
   useEffect(() => {
     if (running) {
@@ -141,13 +188,13 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
         Animated.sequence([
           Animated.timing(glow, {
             toValue: 1,
-            duration: 1500,
+            duration: 1800,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(glow, {
             toValue: 0.35,
-            duration: 1500,
+            duration: 1800,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
@@ -166,7 +213,7 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
   const glowColor = skyColorAt(pct, "glow");
   const canopyOpacity = glow.interpolate({
     inputRange: [0.35, 1],
-    outputRange: [0.92, 1],
+    outputRange: [0.9, 1],
   });
 
   const trunkColor = isDark ? BRN_L : BRN;
@@ -185,12 +232,8 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
           />
         ))}
       </View>
-      {/* to resize the whole animation */}
       <Animated.View
-        style={[
-          s.treeWrap,
-          { transform: [{ scale: animScale }, { scale: 1.0 }] },
-        ]}
+        style={[s.treeWrap, { transform: [{ scale: animScale }] }]}
       >
         <View
           style={[
@@ -216,7 +259,7 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
           <Text style={s.potText}>{Math.floor(pct)}%</Text>
         </View>
 
-        <View
+        <Animated.View
           style={[
             s.trunk,
             {
@@ -227,6 +270,7 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
               left: cx - trunkW / 2,
               borderTopLeftRadius: trunkW * 0.35,
               borderTopRightRadius: trunkW * 0.35,
+              transform: [{ translateY: trunkEntry }, { rotate: trunkSway }],
             },
           ]}
         >
@@ -236,7 +280,7 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
               { backgroundColor: isDark ? "#00000030" : "#00000022" },
             ]}
           />
-        </View>
+        </Animated.View>
         <View
           style={[
             s.rootFlare,
@@ -251,8 +295,16 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
 
         <Animated.View
           style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             zIndex: 5,
-            transform: [{ scale: breath }, { rotate: swayRotate }],
+            transform: [
+              { scale: Animated.multiply(breathScale, growPulse) },
+              { rotate: canopySway },
+            ],
             opacity: canopyOpacity,
             shadowColor: glowColor,
             shadowOpacity: running ? 0.55 : 0.2,
