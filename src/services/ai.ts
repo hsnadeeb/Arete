@@ -150,6 +150,51 @@ function buildContextString(ctx: AiContext): string {
   return sections.join("\n\n");
 }
 
+// Wraps fetch with a timeout so a stalled request doesn't hang forever and
+// look identical to "the app is broken."
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs = 30000,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (e: any) {
+    if (e.name === "AbortError") {
+      throw new Error(
+        `Request timed out after ${timeoutMs / 1000}s. The provider may be down, rate-limiting you, or your network is slow.`,
+      );
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Friendlier error messages for the most common failure modes, especially
+// the ones free-tier users hit (rate limits, missing/invalid key, model gone).
+function explainHttpError(
+  status: number,
+  providerLabel: string,
+  raw?: string,
+): string {
+  if (status === 401 || status === 403) {
+    return `${providerLabel} rejected the API key (${status}). Double-check you copied it correctly and that it's active.`;
+  }
+  if (status === 404) {
+    return `${providerLabel} couldn't find that model (404). It may have been renamed or retired — pick a different model in AI Settings.`;
+  }
+  if (status === 429) {
+    return `${providerLabel} rate-limited this request (429). This is common on free tiers — wait a bit and try again, or switch to a paid key/model.`;
+  }
+  if (status >= 500) {
+    return `${providerLabel} is having server issues (${status}). Try again shortly.`;
+  }
+  return raw || `${providerLabel} returned an error (${status}).`;
+}
+
 async function makeRequest(
   provider: string,
   model: string,
@@ -159,49 +204,66 @@ async function makeRequest(
 ): Promise<string> {
   switch (provider) {
     case "openai": {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+      const res = await fetchWithTimeout(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userMessage },
+            ],
+            temperature: 0.7,
+          }),
         },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage },
-          ],
-          temperature: 0.7,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || "OpenAI API error");
-      return data.choices[0].message.content;
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          explainHttpError(res.status, "OpenAI", data?.error?.message),
+        );
+      }
+      const content = data?.choices?.[0]?.message?.content;
+      if (!content) throw new Error("OpenAI returned an empty response.");
+      return content;
     }
 
     case "anthropic": {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
+      const res = await fetchWithTimeout(
+        "https://api.anthropic.com/v1/messages",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: 4096,
+            system: systemPrompt,
+            messages: [{ role: "user", content: userMessage }],
+          }),
         },
-        body: JSON.stringify({
-          model,
-          max_tokens: 4096,
-          system: systemPrompt,
-          messages: [{ role: "user", content: userMessage }],
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error?.message || "Anthropic API error");
-      return data.content[0].text;
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          explainHttpError(res.status, "Anthropic", data?.error?.message),
+        );
+      }
+      const text = data?.content?.[0]?.text;
+      if (!text) throw new Error("Anthropic returned an empty response.");
+      return text;
     }
 
     case "google": {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
           method: "POST",
@@ -216,32 +278,56 @@ async function makeRequest(
           }),
         },
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || "Google API error");
-      return data.candidates[0].content.parts[0].text;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          explainHttpError(res.status, "Gemini", data?.error?.message),
+        );
+      }
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        // Gemini's free tier commonly returns 200 with no candidates when a
+        // safety filter blocks the response instead of an HTTP error.
+        const blockReason = data?.promptFeedback?.blockReason;
+        throw new Error(
+          blockReason
+            ? `Gemini blocked this response (${blockReason}).`
+            : "Gemini returned an empty response.",
+        );
+      }
+      return text;
     }
 
     case "openrouter": {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": "https://arete.app",
+      const res = await fetchWithTimeout(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+            "HTTP-Referer": "https://arete.app",
+            "X-Title": "Arete",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userMessage },
+            ],
+            temperature: 0.7,
+          }),
         },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage },
-          ],
-          temperature: 0.7,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error?.message || "OpenRouter API error");
-      return data.choices[0].message.content;
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          explainHttpError(res.status, "OpenRouter", data?.error?.message),
+        );
+      }
+      const content = data?.choices?.[0]?.message?.content;
+      if (!content) throw new Error("OpenRouter returned an empty response.");
+      return content;
     }
 
     default:
@@ -377,39 +463,97 @@ export async function askAi(question: string): Promise<string> {
   );
 }
 
-export const PROVIDERS = [
+export interface ProviderModel {
+  id: string;
+  label: string;
+  /** True if this specific model can be used at zero cost on this provider. */
+  free: boolean;
+}
+
+export interface ProviderConfigMeta {
+  id: string;
+  label: string;
+  /** Where a user can sign up and grab an API key for this provider. */
+  getKeyUrl: string;
+  /** True if this provider has a genuine, ongoing free tier (not just trial credits). */
+  freeTier: boolean;
+  /** One-line explanation shown in Settings so users know what they're signing up for. */
+  freeTierNote: string;
+  models: ProviderModel[];
+}
+
+export const PROVIDERS: ProviderConfigMeta[] = [
+  {
+    id: "google",
+    label: "Google (Gemini)",
+    getKeyUrl: "https://aistudio.google.com/apikey",
+    freeTier: true,
+    freeTierNote:
+      "Genuinely free — generous daily limits, no credit card required.",
+    models: [
+      { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash", free: true },
+      {
+        id: "gemini-3.1-pro-preview",
+        label: "Gemini 3.1 Pro Preview",
+        free: true,
+      },
+      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", free: true },
+    ],
+  },
+  {
+    id: "openrouter",
+    label: "OpenRouter",
+    getKeyUrl: "https://openrouter.ai/keys",
+    freeTier: true,
+    freeTierNote:
+      "Free auto-router picks whatever free model is live right now, no credit card required. Individual free models rotate weekly — pin one only if you're checking openrouter.ai/models regularly.",
+    models: [
+      { id: "openrouter/free", label: "Auto (Free Router)", free: true },
+      {
+        id: "anthropic/claude-opus-4-8",
+        label: "Claude Opus 4.8",
+        free: false,
+      },
+      {
+        id: "anthropic/claude-sonnet-5",
+        label: "Claude Sonnet 5",
+        free: false,
+      },
+      { id: "google/gemini-3.5-flash", label: "Gemini 3.5 Flash", free: false },
+      { id: "openai/gpt-5.6-sol", label: "GPT-5.6 Sol", free: false },
+      { id: "openai/gpt-5.6-terra", label: "GPT-5.6 Terra", free: false },
+    ],
+  },
   {
     id: "openai",
     label: "OpenAI",
+    getKeyUrl: "https://platform.openai.com/api-keys",
+    freeTier: false,
+    freeTierNote:
+      "No ongoing free tier — requires adding a payment method to your OpenAI account.",
     models: [
-      "gpt-5.6-sol",
-      "gpt-5.6-terra",
-      "gpt-5.6-luna",
-      "gpt-4o",
-      "gpt-4o-mini",
+      { id: "gpt-5.6-sol", label: "GPT-5.6 Sol", free: false },
+      { id: "gpt-5.6-terra", label: "GPT-5.6 Terra", free: false },
+      { id: "gpt-5.6-luna", label: "GPT-5.6 Luna", free: false },
+      { id: "gpt-4o", label: "GPT-4o", free: false },
+      { id: "gpt-4o-mini", label: "GPT-4o mini", free: false },
     ],
   },
   {
     id: "anthropic",
     label: "Anthropic (Claude)",
-    models: ["claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5"],
-  },
-  {
-    id: "google",
-    label: "Google (Gemini)",
-    models: ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-2.5-flash"],
-  },
-  {
-    id: "openrouter",
-    label: "OpenRouter",
+    getKeyUrl: "https://console.anthropic.com/settings/keys",
+    freeTier: false,
+    freeTierNote:
+      "Small starter credit only — requires billing once that runs out.",
     models: [
-      "anthropic/claude-opus-4-8",
-      "anthropic/claude-sonnet-5",
-      "google/gemini-3.5-flash",
-      "openai/gpt-5.6-sol",
-      "openai/gpt-5.6-terra",
-      "deepseek/deepseek-r1",
-      "meta-llama/llama-4-maverick",
+      { id: "claude-opus-4-8", label: "Claude Opus 4.8", free: false },
+      { id: "claude-sonnet-5", label: "Claude Sonnet 5", free: false },
+      {
+        id: "claude-haiku-4-5-20251001",
+        label: "Claude Haiku 4.5",
+        free: false,
+      },
     ],
   },
-] as const;
+];
