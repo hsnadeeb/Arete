@@ -518,90 +518,132 @@ export default function PlannerScreen() {
 
         {sortedDates.length > 0 && (
           <View style={styles.calGridRow}>
-              {/* Time gutter */}
-              <View style={styles.calGutter}>
-                {HOURS.map(h => (
-                  <View key={h} style={styles.calGutterSlot}>
-                    <Text style={[styles.calGutterSlotText, { color: T.textMuted }]}>
-                      {h.toString().padStart(2, '0')}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Day columns */}
-              <ScrollView
-                horizontal
-                ref={gridScrollRef}
-                showsHorizontalScrollIndicator={false}
-                nestedScrollEnabled
-                scrollEventThrottle={16}
-                onScroll={(e) => {
-                  const x = e.nativeEvent.contentOffset.x;
-                  if (syncScrollRef.current !== 'grid') {
-                    syncScrollRef.current = 'header';
-                    scrollXRef.current = x;
-                    headerScrollRef.current?.scrollTo({ x, animated: false });
-                  }
-                }}
-                onMomentumScrollEnd={() => { syncScrollRef.current = null; }}
-                onScrollEndDrag={() => { syncScrollRef.current = null; }}
-              >
-                <View style={styles.calDaysRow}>
-                  {sortedDates.map((ds, di) => {
-                    const date = fromDateStr(ds);
-                    const schedule = getSchedule(date);
-                    return (
-                        <View key={ds} style={[styles.calDayCol, { backgroundColor: T.surface }, di < sortedDates.length - 1 && { borderRightColor: T.borderCalendar }]}>
-                          {/* Hour grid lines — tap to add at that hour */}
-                          {HOURS.map(h => (
-                            <TouchableOpacity
-                              key={h}
-                              style={[styles.calHourSlot, { borderTopColor: T.borderCalendar }]}
-                              onPress={() => openAdd(date.getDay(), h, ds)}
-                              activeOpacity={0.4}
-                            />
-                          ))}
-
-                        {/* Events */}
-                        {schedule.map((item: any) => {
-                          const startF = parseHour(item.start_time);
-                          const endF = item.end_time ? parseHour(item.end_time) : startF + 1;
-                          return (
-                            <TouchableOpacity
-                              key={item.id}
-                              style={[styles.calEvent, {
-                                top: startF * HOUR_HEIGHT,
-                                height: Math.max((endF - startF) * HOUR_HEIGHT, 24),
-                                backgroundColor: item.color || '#6366f1',
-                              }]}
-                              onPress={() => openEdit(item)}
-                              activeOpacity={0.8}
-                            >
-                              <Text style={styles.calEventTime}>{item.start_time}</Text>
-                              <Text style={styles.calEventTitle} numberOfLines={2}>{item.activity}</Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-
-                        {/* Empty state */}
-                        {schedule.length === 0 && (
-                          <TouchableOpacity
-                            style={[styles.calEmptyBtn, { top: 4 * HOUR_HEIGHT, borderColor: T.borderEmpty }]}
-                            onPress={() => openAdd(date.getDay())}
-                          >
-                            <Text style={[styles.calEmptyBtnText, { color: T.empty }]}>+</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    );
-                  })}
+            {/* Time gutter */}
+            <View style={styles.calGutter}>
+              {HOURS.map((h) => (
+                <View key={h} style={styles.calGutterSlot}>
+                  <Text
+                    style={[styles.calGutterSlotText, { color: T.textMuted }]}
+                  >
+                    {h.toString().padStart(2, "0")}
+                  </Text>
                 </View>
-              </ScrollView>
+              ))}
             </View>
-          )}
-      </ScrollView>
 
+            {/* Day columns */}
+            <ScrollView
+              horizontal
+              ref={gridScrollRef}
+              showsHorizontalScrollIndicator={false}
+              nestedScrollEnabled
+              scrollEventThrottle={16}
+              onScroll={(e) => {
+                const x = e.nativeEvent.contentOffset.x;
+                if (syncScrollRef.current !== "grid") {
+                  syncScrollRef.current = "header";
+                  scrollXRef.current = x;
+                  headerScrollRef.current?.scrollTo({ x, animated: false });
+                }
+              }}
+              onMomentumScrollEnd={() => {
+                syncScrollRef.current = null;
+              }}
+              onScrollEndDrag={() => {
+                syncScrollRef.current = null;
+              }}
+            >
+              <View style={styles.calDaysRow}>
+                {sortedDates.map((ds, di) => {
+                  const date = fromDateStr(ds);
+                  const schedule = getSchedule(date);
+                  return (
+                    <View
+                      key={ds}
+                      style={[
+                        styles.calDayCol,
+                        { backgroundColor: T.surface },
+                        di < sortedDates.length - 1 && {
+                          borderRightColor: T.borderCalendar,
+                        },
+                      ]}
+                    >
+                      {/* Hour grid lines — tap to add at that hour */}
+                      {HOURS.map((h) => (
+                        <TouchableOpacity
+                          key={h}
+                          style={[
+                            styles.calHourSlot,
+                            { borderTopColor: T.borderCalendar },
+                          ]}
+                          onPress={() => openAdd(date.getDay(), h, ds)}
+                          activeOpacity={0.4}
+                        />
+                      ))}
+
+                      {/* Events */}
+                      {schedule.map((item: any) => {
+                        const startF = parseHour(item.start_time);
+                        const endF = item.end_time
+                          ? parseHour(item.end_time)
+                          : startF + 1;
+                        return (
+                          <TouchableOpacity
+                            key={item.id}
+                            style={[
+                              styles.calEvent,
+                              {
+                                top: startF * HOUR_HEIGHT,
+                                height: Math.max(
+                                  (endF - startF) * HOUR_HEIGHT,
+                                  24,
+                                ),
+                                backgroundColor: item.color || "#6366f1",
+                              },
+                            ]}
+                            onPress={() => openEdit(item)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={styles.calEventTime}>
+                              {item.start_time}
+                            </Text>
+                            <Text
+                              style={styles.calEventTitle}
+                              numberOfLines={2}
+                            >
+                              {item.activity}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+
+                      {/* Empty state */}
+                      {schedule.length === 0 && (
+                        <TouchableOpacity
+                          style={[
+                            styles.calEmptyBtn,
+                            {
+                              top: 4 * HOUR_HEIGHT,
+                              borderColor: T.borderEmpty,
+                            },
+                          ]}
+                          onPress={() => openAdd(date.getDay())}
+                        >
+                          <Text
+                            style={[styles.calEmptyBtnText, { color: T.empty }]}
+                          >
+                            +
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        )}
+      </ScrollView>
 
       {/* ─── FAB: Add Event ─── */}
       <TouchableOpacity
@@ -921,7 +963,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 3,
     overflow: "hidden",
-    elevation: 2,
+    // elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
@@ -968,7 +1010,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#0b6bcf",
     alignItems: "center",
     justifyContent: "center",
-    elevation: 6,
+    // elevation: 6,
     shadowColor: "#0b6bcf",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

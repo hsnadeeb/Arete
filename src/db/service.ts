@@ -1,28 +1,92 @@
-import * as SQLite from 'expo-sqlite';
-import { SCHEMA } from './schema';
+import * as SQLite from "expo-sqlite";
+import { SCHEMA } from "./schema";
 
 let db: SQLite.SQLiteDatabase | null = null;
 
 export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (db) return db;
-  db = await SQLite.openDatabaseAsync('hasan-os.db');
+  db = await SQLite.openDatabaseAsync("arete.db");
   await db.execAsync(SCHEMA);
   // Migrate: add columns for existing databases
-  try { await db.execAsync("ALTER TABLE timetable ADD COLUMN repeat_type TEXT DEFAULT 'weekly'"); } catch (_) {}
-  try { await db.execAsync("ALTER TABLE timetable ADD COLUMN specific_date TEXT DEFAULT ''"); } catch (_) {}
+  try {
+    await db.execAsync(
+      "ALTER TABLE timetable ADD COLUMN repeat_type TEXT DEFAULT 'weekly'",
+    );
+  } catch (_) {}
+  try {
+    await db.execAsync(
+      "ALTER TABLE timetable ADD COLUMN specific_date TEXT DEFAULT ''",
+    );
+  } catch (_) {}
   // Migrate: dashboard_widgets - add sort_order if not exists
   try {
-    await db.execAsync("ALTER TABLE dashboard_widgets ADD COLUMN sort_order INTEGER DEFAULT 0");
+    await db.execAsync(
+      "ALTER TABLE dashboard_widgets ADD COLUMN sort_order INTEGER DEFAULT 0",
+    );
   } catch (_) {}
-  try { await db.execAsync("ALTER TABLE habits ADD COLUMN color TEXT DEFAULT '#6366f1'"); } catch (_) {}
-  try { await db.execAsync("CREATE TABLE IF NOT EXISTS focus_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, duration INTEGER NOT NULL, elapsed INTEGER NOT NULL, date TEXT NOT NULL, started_at TEXT, status TEXT DEFAULT 'completed', completed_at TEXT DEFAULT (datetime('now')))"); } catch (_) {}
-  try { await db.execAsync("ALTER TABLE focus_sessions ADD COLUMN started_at TEXT"); } catch (_) {}
-  try { await db.execAsync("ALTER TABLE focus_sessions ADD COLUMN status TEXT DEFAULT 'completed'"); } catch (_) {}
+  try {
+    await db.execAsync(
+      "ALTER TABLE habits ADD COLUMN color TEXT DEFAULT '#6366f1'",
+    );
+  } catch (_) {}
+  try {
+    await db.execAsync(
+      "CREATE TABLE IF NOT EXISTS focus_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, duration INTEGER NOT NULL, elapsed INTEGER NOT NULL, date TEXT NOT NULL, started_at TEXT, status TEXT DEFAULT 'completed', completed_at TEXT DEFAULT (datetime('now')))",
+    );
+  } catch (_) {}
+  // Migrate: ai_program_items - add details_json column
+  try {
+    await db.execAsync(
+      "ALTER TABLE ai_program_items ADD COLUMN details_json TEXT DEFAULT '[]'",
+    );
+  } catch (_) {}
+  // Migrate: add ai_program_item_details table
+  try {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS ai_program_item_details (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        program_id INTEGER NOT NULL,
+        item_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        name TEXT NOT NULL,
+        metadata_json TEXT DEFAULT '{}',
+        is_completed INTEGER DEFAULT 0,
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (program_id) REFERENCES ai_programs(id) ON DELETE CASCADE,
+        FOREIGN KEY (item_id) REFERENCES ai_program_items(id) ON DELETE CASCADE
+      )
+    `);
+  } catch (_) {}
+  try {
+    await db.execAsync("ALTER TABLE focus_sessions ADD COLUMN started_at TEXT");
+  } catch (_) {}
+  try {
+    await db.execAsync(
+      "ALTER TABLE focus_sessions ADD COLUMN status TEXT DEFAULT 'completed'",
+    );
+  } catch (_) {}
   // Migrate: add target columns for goal-based tracking
-  try { await db.execAsync("ALTER TABLE daily_logs ADD COLUMN steps_target INTEGER DEFAULT 10000"); } catch (_) {}
-  try { await db.execAsync("ALTER TABLE daily_logs ADD COLUMN water_target INTEGER DEFAULT 3000"); } catch (_) {}
-  try { await db.execAsync("ALTER TABLE daily_logs ADD COLUMN sleep_target REAL DEFAULT 8.0"); } catch (_) {}
-  try { await db.execAsync("ALTER TABLE daily_logs ADD COLUMN weight_target REAL DEFAULT 75.0"); } catch (_) {}
+  try {
+    await db.execAsync(
+      "ALTER TABLE daily_logs ADD COLUMN steps_target INTEGER DEFAULT 10000",
+    );
+  } catch (_) {}
+  try {
+    await db.execAsync(
+      "ALTER TABLE daily_logs ADD COLUMN water_target INTEGER DEFAULT 3000",
+    );
+  } catch (_) {}
+  try {
+    await db.execAsync(
+      "ALTER TABLE daily_logs ADD COLUMN sleep_target REAL DEFAULT 8.0",
+    );
+  } catch (_) {}
+  try {
+    await db.execAsync(
+      "ALTER TABLE daily_logs ADD COLUMN weight_target REAL DEFAULT 75.0",
+    );
+  } catch (_) {}
   return db;
 }
 
@@ -31,12 +95,12 @@ export function resetDb() {
 }
 
 export function getDb(): SQLite.SQLiteDatabase {
-  if (!db) throw new Error('Database not initialized');
+  if (!db) throw new Error("Database not initialized");
   return db;
 }
 
 function today(): string {
-  return new Date().toISOString().split('T')[0];
+  return new Date().toISOString().split("T")[0];
 }
 
 // ─── Daily Logs ───
@@ -44,23 +108,28 @@ function today(): string {
 export async function getDailyLog(date?: string) {
   const d = date || today();
   const row = await getDb().getFirstAsync<any>(
-    'SELECT * FROM daily_logs WHERE date = ?', d
+    "SELECT * FROM daily_logs WHERE date = ?",
+    d,
   );
   if (row) return row;
-  await getDb().runAsync(
-    'INSERT INTO daily_logs (date) VALUES (?)', d
-  );
+  await getDb().runAsync("INSERT INTO daily_logs (date) VALUES (?)", d);
   return await getDb().getFirstAsync<any>(
-    'SELECT * FROM daily_logs WHERE date = ?', d
+    "SELECT * FROM daily_logs WHERE date = ?",
+    d,
   );
 }
 
-export async function updateDailyLog(date: string, fields: Record<string, any>) {
+export async function updateDailyLog(
+  date: string,
+  fields: Record<string, any>,
+) {
   const keys = Object.keys(fields);
-  const sets = keys.map(k => `${k} = ?`).join(', ');
-  const vals = keys.map(k => fields[k]);
+  const sets = keys.map((k) => `${k} = ?`).join(", ");
+  const vals = keys.map((k) => fields[k]);
   await getDb().runAsync(
-    `UPDATE daily_logs SET ${sets} WHERE date = ?`, ...vals, date
+    `UPDATE daily_logs SET ${sets} WHERE date = ?`,
+    ...vals,
+    date,
   );
 }
 
@@ -69,43 +138,66 @@ export async function updateDailyLog(date: string, fields: Record<string, any>) 
 export async function getPrayers(date?: string) {
   const d = date || today();
   return await getDb().getAllAsync<any>(
-    'SELECT * FROM prayer_logs WHERE date = ? ORDER BY prayer_name', d
+    "SELECT * FROM prayer_logs WHERE date = ? ORDER BY prayer_name",
+    d,
   );
 }
 
-export async function togglePrayer(date: string, prayerName: string, onTime: boolean) {
+export async function togglePrayer(
+  date: string,
+  prayerName: string,
+  onTime: boolean,
+) {
   const existing = await getDb().getFirstAsync<any>(
-    'SELECT * FROM prayer_logs WHERE date = ? AND prayer_name = ?', date, prayerName
+    "SELECT * FROM prayer_logs WHERE date = ? AND prayer_name = ?",
+    date,
+    prayerName,
   );
   if (existing) {
     await getDb().runAsync(
-      'UPDATE prayer_logs SET on_time = ?, qada = ? WHERE id = ?',
-      onTime ? 1 : 0, onTime ? 0 : 1, existing.id
+      "UPDATE prayer_logs SET on_time = ?, qada = ? WHERE id = ?",
+      onTime ? 1 : 0,
+      onTime ? 0 : 1,
+      existing.id,
     );
   } else {
     await getDb().runAsync(
-      'INSERT INTO prayer_logs (date, prayer_name, on_time, qada) VALUES (?, ?, ?, ?)',
-      date, prayerName, onTime ? 1 : 0, onTime ? 0 : 1
+      "INSERT INTO prayer_logs (date, prayer_name, on_time, qada) VALUES (?, ?, ?, ?)",
+      date,
+      prayerName,
+      onTime ? 1 : 0,
+      onTime ? 0 : 1,
     );
   }
 }
 
-export const PRAYER_NAMES = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+export const PRAYER_NAMES = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
 // ─── Gym Logs ───
 
 export async function getGymLogs(date?: string) {
   const d = date || today();
   return await getDb().getAllAsync<any>(
-    'SELECT * FROM gym_logs WHERE date = ? ORDER BY created_at', d
+    "SELECT * FROM gym_logs WHERE date = ? ORDER BY created_at",
+    d,
   );
 }
 
-export async function addGymLog(log: { date: string; workout_name: string; exercises: string; duration_minutes: number; notes?: string }) {
+export async function addGymLog(log: {
+  date: string;
+  workout_name: string;
+  exercises: string;
+  duration_minutes: number;
+  notes?: string;
+}) {
   const { date, workout_name, exercises, duration_minutes, notes } = log;
   return await getDb().runAsync(
-    'INSERT INTO gym_logs (date, workout_name, exercises, duration_minutes, notes) VALUES (?, ?, ?, ?, ?)',
-    date, workout_name, exercises, duration_minutes, notes || ''
+    "INSERT INTO gym_logs (date, workout_name, exercises, duration_minutes, notes) VALUES (?, ?, ?, ?, ?)",
+    date,
+    workout_name,
+    exercises,
+    duration_minutes,
+    notes || "",
   );
 }
 
@@ -114,15 +206,33 @@ export async function addGymLog(log: { date: string; workout_name: string; exerc
 export async function getNutritionLogs(date?: string) {
   const d = date || today();
   return await getDb().getAllAsync<any>(
-    'SELECT * FROM nutrition_logs WHERE date = ? ORDER BY meal_type', d
+    "SELECT * FROM nutrition_logs WHERE date = ? ORDER BY meal_type",
+    d,
   );
 }
 
-export async function addNutritionLog(log: { date: string; meal_type: string; foods: string; calories: number; protein_g: number; carbs_g: number; fat_g: number; notes?: string }) {
-  const { date, meal_type, foods, calories, protein_g, carbs_g, fat_g, notes } = log;
+export async function addNutritionLog(log: {
+  date: string;
+  meal_type: string;
+  foods: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  notes?: string;
+}) {
+  const { date, meal_type, foods, calories, protein_g, carbs_g, fat_g, notes } =
+    log;
   return await getDb().runAsync(
-    'INSERT INTO nutrition_logs (date, meal_type, foods, calories, protein_g, carbs_g, fat_g, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    date, meal_type, foods, calories, protein_g, carbs_g, fat_g, notes || ''
+    "INSERT INTO nutrition_logs (date, meal_type, foods, calories, protein_g, carbs_g, fat_g, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    date,
+    meal_type,
+    foods,
+    calories,
+    protein_g,
+    carbs_g,
+    fat_g,
+    notes || "",
   );
 }
 
@@ -131,15 +241,25 @@ export async function addNutritionLog(log: { date: string; meal_type: string; fo
 export async function getTransactions(month?: string) {
   const prefix = month || today().slice(0, 7);
   return await getDb().getAllAsync<any>(
-    'SELECT * FROM transactions WHERE date LIKE ? ORDER BY date DESC',
-    `${prefix}%`
+    "SELECT * FROM transactions WHERE date LIKE ? ORDER BY date DESC",
+    `${prefix}%`,
   );
 }
 
-export async function addTransaction(t: { date: string; category: string; amount: number; type: string; description?: string }) {
+export async function addTransaction(t: {
+  date: string;
+  category: string;
+  amount: number;
+  type: string;
+  description?: string;
+}) {
   return await getDb().runAsync(
-    'INSERT INTO transactions (date, category, amount, type, description) VALUES (?, ?, ?, ?, ?)',
-    t.date, t.category, t.amount, t.type, t.description || ''
+    "INSERT INTO transactions (date, category, amount, type, description) VALUES (?, ?, ?, ?, ?)",
+    t.date,
+    t.category,
+    t.amount,
+    t.type,
+    t.description || "",
   );
 }
 
@@ -148,7 +268,7 @@ export async function getBudgetSummary(month?: string) {
   return await getDb().getAllAsync<any>(
     `SELECT category, type, SUM(amount) as total FROM transactions
      WHERE date LIKE ? GROUP BY category, type`,
-    `${prefix}%`
+    `${prefix}%`,
   );
 }
 
@@ -156,40 +276,90 @@ export async function getBudgetSummary(month?: string) {
 
 export async function getTimetable(dayOfWeek: number) {
   return await getDb().getAllAsync<any>(
-    'SELECT * FROM timetable WHERE day_of_week = ? ORDER BY start_time', dayOfWeek
+    "SELECT * FROM timetable WHERE day_of_week = ? ORDER BY start_time",
+    dayOfWeek,
   );
 }
 
 export async function getAllTimetable() {
   return await getDb().getAllAsync<any>(
-    'SELECT * FROM timetable ORDER BY day_of_week, start_time'
+    "SELECT * FROM timetable ORDER BY day_of_week, start_time",
   );
 }
 
-export async function addTimetableItem(item: { day_of_week: number; start_time: string; end_time?: string; activity: string; color?: string; repeat_type?: string; specific_date?: string }) {
+export async function addTimetableItem(item: {
+  day_of_week: number;
+  start_time: string;
+  end_time?: string;
+  activity: string;
+  color?: string;
+  repeat_type?: string;
+  specific_date?: string;
+}) {
   return await getDb().runAsync(
-    'INSERT INTO timetable (day_of_week, start_time, end_time, activity, color, repeat_type, specific_date) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    item.day_of_week, item.start_time, item.end_time || '', item.activity, item.color || '#0b6bcf',
-    item.repeat_type || 'weekly', item.specific_date || ''
+    "INSERT INTO timetable (day_of_week, start_time, end_time, activity, color, repeat_type, specific_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    item.day_of_week,
+    item.start_time,
+    item.end_time || "",
+    item.activity,
+    item.color || "#0b6bcf",
+    item.repeat_type || "weekly",
+    item.specific_date || "",
   );
 }
 
-export async function updateTimetableItem(id: number, fields: { day_of_week?: number; start_time?: string; end_time?: string; activity?: string; color?: string; repeat_type?: string; specific_date?: string }) {
+export async function updateTimetableItem(
+  id: number,
+  fields: {
+    day_of_week?: number;
+    start_time?: string;
+    end_time?: string;
+    activity?: string;
+    color?: string;
+    repeat_type?: string;
+    specific_date?: string;
+  },
+) {
   const sets: string[] = [];
   const vals: any[] = [];
-  if (fields.day_of_week !== undefined) { sets.push('day_of_week = ?'); vals.push(fields.day_of_week); }
-  if (fields.start_time !== undefined) { sets.push('start_time = ?'); vals.push(fields.start_time); }
-  if (fields.end_time !== undefined) { sets.push('end_time = ?'); vals.push(fields.end_time); }
-  if (fields.activity !== undefined) { sets.push('activity = ?'); vals.push(fields.activity); }
-  if (fields.color !== undefined) { sets.push('color = ?'); vals.push(fields.color); }
-  if (fields.repeat_type !== undefined) { sets.push('repeat_type = ?'); vals.push(fields.repeat_type); }
-  if (fields.specific_date !== undefined) { sets.push('specific_date = ?'); vals.push(fields.specific_date); }
+  if (fields.day_of_week !== undefined) {
+    sets.push("day_of_week = ?");
+    vals.push(fields.day_of_week);
+  }
+  if (fields.start_time !== undefined) {
+    sets.push("start_time = ?");
+    vals.push(fields.start_time);
+  }
+  if (fields.end_time !== undefined) {
+    sets.push("end_time = ?");
+    vals.push(fields.end_time);
+  }
+  if (fields.activity !== undefined) {
+    sets.push("activity = ?");
+    vals.push(fields.activity);
+  }
+  if (fields.color !== undefined) {
+    sets.push("color = ?");
+    vals.push(fields.color);
+  }
+  if (fields.repeat_type !== undefined) {
+    sets.push("repeat_type = ?");
+    vals.push(fields.repeat_type);
+  }
+  if (fields.specific_date !== undefined) {
+    sets.push("specific_date = ?");
+    vals.push(fields.specific_date);
+  }
   if (sets.length === 0) return;
-  await getDb().runAsync(`UPDATE timetable SET ${sets.join(', ')} WHERE id = ?`, ...vals, id);
+  await getDb().runAsync(
+    `UPDATE timetable SET ${sets.join(", ")} WHERE id = ?`,
+    ...vals,
+    id,
+  );
 }
 
 export async function deleteTimetableItem(id: number) {
-  await getDb().runAsync('DELETE FROM timetable WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM timetable WHERE id = ?", id);
 }
 
 // ─── Journal ───
@@ -197,14 +367,23 @@ export async function deleteTimetableItem(id: number) {
 export async function getJournalEntries(date?: string) {
   const d = date || today();
   return await getDb().getAllAsync<any>(
-    'SELECT * FROM journal_entries WHERE date = ? ORDER BY created_at DESC', d
+    "SELECT * FROM journal_entries WHERE date = ? ORDER BY created_at DESC",
+    d,
   );
 }
 
-export async function addJournalEntry(e: { date: string; title?: string; content: string; type?: string }) {
+export async function addJournalEntry(e: {
+  date: string;
+  title?: string;
+  content: string;
+  type?: string;
+}) {
   return await getDb().runAsync(
-    'INSERT INTO journal_entries (date, title, content, type) VALUES (?, ?, ?, ?)',
-    e.date, e.title || '', e.content, e.type || 'general'
+    "INSERT INTO journal_entries (date, title, content, type) VALUES (?, ?, ?, ?)",
+    e.date,
+    e.title || "",
+    e.content,
+    e.type || "general",
   );
 }
 
@@ -212,29 +391,49 @@ export async function addJournalEntry(e: { date: string; title?: string; content
 
 export async function getHabits() {
   return await getDb().getAllAsync<any>(
-    'SELECT * FROM habits ORDER BY created_at'
+    "SELECT * FROM habits ORDER BY created_at",
   );
 }
 
-export async function addHabit(h: { name: string; emoji?: string; color?: string; target_per_day?: number; unit?: string }) {
+export async function addHabit(h: {
+  name: string;
+  emoji?: string;
+  color?: string;
+  target_per_day?: number;
+  unit?: string;
+}) {
   return await getDb().runAsync(
-    'INSERT INTO habits (name, emoji, color, target_per_day, unit) VALUES (?, ?, ?, ?, ?)',
-    h.name, h.emoji || '✅', h.color || '#6366f1', h.target_per_day || 1, h.unit || ''
+    "INSERT INTO habits (name, emoji, color, target_per_day, unit) VALUES (?, ?, ?, ?, ?)",
+    h.name,
+    h.emoji || "✅",
+    h.color || "#6366f1",
+    h.target_per_day || 1,
+    h.unit || "",
   );
 }
 
-export async function logHabit(habitId: number, date: string, count: number = 1) {
+export async function logHabit(
+  habitId: number,
+  date: string,
+  count: number = 1,
+) {
   const existing = await getDb().getFirstAsync<any>(
-    'SELECT * FROM habit_logs WHERE habit_id = ? AND date = ?', habitId, date
+    "SELECT * FROM habit_logs WHERE habit_id = ? AND date = ?",
+    habitId,
+    date,
   );
   if (existing) {
     await getDb().runAsync(
-      'UPDATE habit_logs SET count = ? WHERE id = ?', count, existing.id
+      "UPDATE habit_logs SET count = ? WHERE id = ?",
+      count,
+      existing.id,
     );
   } else {
     await getDb().runAsync(
-      'INSERT INTO habit_logs (habit_id, date, count) VALUES (?, ?, ?)',
-      habitId, date, count
+      "INSERT INTO habit_logs (habit_id, date, count) VALUES (?, ?, ?)",
+      habitId,
+      date,
+      count,
     );
   }
 }
@@ -251,13 +450,13 @@ export async function getMonthlyStats(yearMonth: string) {
        AVG(sleep_hours) as avg_sleep,
        COUNT(*) as days_tracked
      FROM daily_logs WHERE date LIKE ?`,
-    `${yearMonth}%`
+    `${yearMonth}%`,
   );
 }
 
 export async function getStreak(): Promise<number> {
   const rows = await getDb().getAllAsync<any>(
-    'SELECT DISTINCT date FROM daily_logs WHERE weight IS NOT NULL OR water_ml > 0 OR steps > 0 ORDER BY date DESC'
+    "SELECT DISTINCT date FROM daily_logs WHERE weight IS NOT NULL OR water_ml > 0 OR steps > 0 ORDER BY date DESC",
   );
   if (rows.length === 0) return 0;
   let streak = 0;
@@ -265,7 +464,7 @@ export async function getStreak(): Promise<number> {
   for (let i = 0; i < rows.length; i++) {
     const expected = new Date(todayDate);
     expected.setDate(expected.getDate() - i);
-    const expectedStr = expected.toISOString().split('T')[0];
+    const expectedStr = expected.toISOString().split("T")[0];
     if (rows[i].date === expectedStr) streak++;
     else break;
   }
@@ -273,42 +472,77 @@ export async function getStreak(): Promise<number> {
 }
 
 export async function seedTimetable() {
-  const existing = await getDb().getFirstAsync<any>('SELECT id FROM timetable LIMIT 1');
+  const existing = await getDb().getFirstAsync<any>(
+    "SELECT id FROM timetable LIMIT 1",
+  );
   if (existing) return;
 
   const items = [
-    { day: 0, time: '08:00', activity: 'Morning reflection', color: '#6366f1' },
-    { day: 0, time: '10:00', activity: 'Gym - Push A', color: '#e03e3e' },
-    { day: 0, time: '14:00', activity: 'LeetCode study', color: '#0b6bcf' },
-    { day: 1, time: '06:30', activity: 'Fajr + morning adhkar', color: '#8b5cf6' },
-    { day: 1, time: '09:00', activity: 'Deep work: system design', color: '#0b6bcf' },
-    { day: 1, time: '12:00', activity: 'Lunch + walk', color: '#0ea5e9' },
-    { day: 1, time: '18:00', activity: 'Evening study - Spring Boot', color: '#d9730d' },
-    { day: 2, time: '07:00', activity: 'Cardio + stretching', color: '#e03e3e' },
-    { day: 2, time: '10:00', activity: 'Job applications', color: '#0b6bcf' },
-    { day: 2, time: '15:00', activity: 'Quran reading', color: '#8b5cf6' },
-    { day: 2, time: '20:00', activity: 'Wind down + journal', color: '#6366f1' },
-    { day: 3, time: '06:30', activity: 'Fajr + gym - Pull', color: '#e03e3e' },
-    { day: 3, time: '09:00', activity: 'DSA practice', color: '#0b6bcf' },
-    { day: 3, time: '14:00', activity: 'Budget review', color: '#0a8c2e' },
-    { day: 3, time: '19:00', activity: 'Tahajjud prep', color: '#8b5cf6' },
-    { day: 4, time: '08:00', activity: 'Morning routine', color: '#6366f1' },
-    { day: 4, time: '10:00', activity: 'Interview prep', color: '#0b6bcf' },
-    { day: 4, time: '12:30', activity: 'Gym - Legs', color: '#e03e3e' },
-    { day: 4, time: '16:00', activity: 'Read 10 pages', color: '#d9730d' },
-    { day: 5, time: '07:00', activity: 'Fajr + meal prep', color: '#0ea5e9' },
-    { day: 5, time: '10:00', activity: 'Deep work block', color: '#0b6bcf' },
-    { day: 5, time: '15:00', activity: 'Weekly review', color: '#6366f1' },
-    { day: 5, time: '18:00', activity: 'Family time', color: '#0a8c2e' },
-    { day: 6, time: '08:00', activity: 'Sleep in + recovery', color: '#0ea5e9' },
-    { day: 6, time: '11:00', activity: 'Light reading', color: '#d9730d' },
-    { day: 6, time: '15:00', activity: 'Plan next week', color: '#6366f1' },
+    { day: 0, time: "08:00", activity: "Morning reflection", color: "#6366f1" },
+    { day: 0, time: "10:00", activity: "Gym - Push A", color: "#e03e3e" },
+    { day: 0, time: "14:00", activity: "LeetCode study", color: "#0b6bcf" },
+    {
+      day: 1,
+      time: "06:30",
+      activity: "Fajr + morning adhkar",
+      color: "#8b5cf6",
+    },
+    {
+      day: 1,
+      time: "09:00",
+      activity: "Deep work: system design",
+      color: "#0b6bcf",
+    },
+    { day: 1, time: "12:00", activity: "Lunch + walk", color: "#0ea5e9" },
+    {
+      day: 1,
+      time: "18:00",
+      activity: "Evening study - Spring Boot",
+      color: "#d9730d",
+    },
+    {
+      day: 2,
+      time: "07:00",
+      activity: "Cardio + stretching",
+      color: "#e03e3e",
+    },
+    { day: 2, time: "10:00", activity: "Job applications", color: "#0b6bcf" },
+    { day: 2, time: "15:00", activity: "Quran reading", color: "#8b5cf6" },
+    {
+      day: 2,
+      time: "20:00",
+      activity: "Wind down + journal",
+      color: "#6366f1",
+    },
+    { day: 3, time: "06:30", activity: "Fajr + gym - Pull", color: "#e03e3e" },
+    { day: 3, time: "09:00", activity: "DSA practice", color: "#0b6bcf" },
+    { day: 3, time: "14:00", activity: "Budget review", color: "#0a8c2e" },
+    { day: 3, time: "19:00", activity: "Tahajjud prep", color: "#8b5cf6" },
+    { day: 4, time: "08:00", activity: "Morning routine", color: "#6366f1" },
+    { day: 4, time: "10:00", activity: "Interview prep", color: "#0b6bcf" },
+    { day: 4, time: "12:30", activity: "Gym - Legs", color: "#e03e3e" },
+    { day: 4, time: "16:00", activity: "Read 10 pages", color: "#d9730d" },
+    { day: 5, time: "07:00", activity: "Fajr + meal prep", color: "#0ea5e9" },
+    { day: 5, time: "10:00", activity: "Deep work block", color: "#0b6bcf" },
+    { day: 5, time: "15:00", activity: "Weekly review", color: "#6366f1" },
+    { day: 5, time: "18:00", activity: "Family time", color: "#0a8c2e" },
+    {
+      day: 6,
+      time: "08:00",
+      activity: "Sleep in + recovery",
+      color: "#0ea5e9",
+    },
+    { day: 6, time: "11:00", activity: "Light reading", color: "#d9730d" },
+    { day: 6, time: "15:00", activity: "Plan next week", color: "#6366f1" },
   ];
 
   for (const item of items) {
     await getDb().runAsync(
-      'INSERT INTO timetable (day_of_week, start_time, activity, color) VALUES (?, ?, ?, ?)',
-      item.day, item.time, item.activity, item.color
+      "INSERT INTO timetable (day_of_week, start_time, activity, color) VALUES (?, ?, ?, ?)",
+      item.day,
+      item.time,
+      item.activity,
+      item.color,
     );
   }
 }
@@ -317,34 +551,46 @@ export async function seedTimetable() {
 
 export async function getWidgetLayouts(): Promise<any[]> {
   return await getDb().getAllAsync<any>(
-    'SELECT * FROM dashboard_widgets ORDER BY sort_order'
+    "SELECT * FROM dashboard_widgets ORDER BY sort_order",
   );
 }
 
-export async function saveWidgetOrder(widgets: { widget_key: string; sort_order: number }[]) {
+export async function saveWidgetOrder(
+  widgets: { widget_key: string; sort_order: number }[],
+) {
   for (const w of widgets) {
     await getDb().runAsync(
-      'UPDATE dashboard_widgets SET sort_order = ? WHERE widget_key = ?',
-      w.sort_order, w.widget_key
+      "UPDATE dashboard_widgets SET sort_order = ? WHERE widget_key = ?",
+      w.sort_order,
+      w.widget_key,
     );
   }
 }
 
 export async function seedWidgetLayouts() {
-  const existing = await getDb().getAllAsync<any>('SELECT widget_key FROM dashboard_widgets');
+  const existing = await getDb().getAllAsync<any>(
+    "SELECT widget_key FROM dashboard_widgets",
+  );
   const existingKeys = new Set(existing.map((r: any) => r.widget_key));
 
   const defaults = [
-    'at-a-glance', 'quick-stats', 'todos', 'quick-log', 'mood',
-    'expenses', 'prayer-tracker', 'monthly-stats',
+    "at-a-glance",
+    "quick-stats",
+    "todos",
+    "quick-log",
+    "mood",
+    "expenses",
+    "prayer-tracker",
+    "monthly-stats",
   ];
 
   let nextOrder = existing.length;
   for (const key of defaults) {
     if (existingKeys.has(key)) continue;
     await getDb().runAsync(
-      'INSERT INTO dashboard_widgets (widget_key, sort_order) VALUES (?, ?)',
-      key, nextOrder++
+      "INSERT INTO dashboard_widgets (widget_key, sort_order) VALUES (?, ?)",
+      key,
+      nextOrder++,
     );
   }
 }
@@ -354,52 +600,93 @@ export async function seedWidgetLayouts() {
 export async function getPrayerTimings(date?: string) {
   const d = date || today();
   return await getDb().getFirstAsync<any>(
-    'SELECT * FROM prayer_timings WHERE date = ?', d
+    "SELECT * FROM prayer_timings WHERE date = ?",
+    d,
   );
 }
 
 export async function savePrayerTimings(t: {
-  date: string; city?: string; country?: string;
-  fajr: string; sunrise?: string; dhuhr: string; asr: string; maghrib: string; isha: string;
-  hijri_date?: string; hijri_month?: string; hijri_year?: string; gregorian_date?: string;
+  date: string;
+  city?: string;
+  country?: string;
+  fajr: string;
+  sunrise?: string;
+  dhuhr: string;
+  asr: string;
+  maghrib: string;
+  isha: string;
+  hijri_date?: string;
+  hijri_month?: string;
+  hijri_year?: string;
+  gregorian_date?: string;
 }) {
   await getDb().runAsync(
     `INSERT OR REPLACE INTO prayer_timings
      (date, city, country, fajr, sunrise, dhuhr, asr, maghrib, isha, hijri_date, hijri_month, hijri_year, gregorian_date)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    t.date, t.city || '', t.country || '',
-    t.fajr, t.sunrise || '', t.dhuhr, t.asr, t.maghrib, t.isha,
-    t.hijri_date || '', t.hijri_month || '', t.hijri_year || '', t.gregorian_date || ''
+    t.date,
+    t.city || "",
+    t.country || "",
+    t.fajr,
+    t.sunrise || "",
+    t.dhuhr,
+    t.asr,
+    t.maghrib,
+    t.isha,
+    t.hijri_date || "",
+    t.hijri_month || "",
+    t.hijri_year || "",
+    t.gregorian_date || "",
   );
 }
 
-export async function syncPrayersToTimetable(timings: { fajr: string; sunrise?: string; dhuhr: string; asr: string; maghrib: string; isha: string }, date: string) {
-  const dayOfWeek = new Date(date + 'T12:00:00').getDay();
+export async function syncPrayersToTimetable(
+  timings: {
+    fajr: string;
+    sunrise?: string;
+    dhuhr: string;
+    asr: string;
+    maghrib: string;
+    isha: string;
+  },
+  date: string,
+) {
+  const dayOfWeek = new Date(date + "T12:00:00").getDay();
   const prayerItems = [
-    { name: 'Fajr', time: timings.fajr, color: '#6366f1' },
-    { name: 'Sunrise', time: timings.sunrise || '', color: '#f59e0b' },
-    { name: 'Dhuhr', time: timings.dhuhr, color: '#0b6bcf' },
-    { name: 'Asr', time: timings.asr, color: '#0ea5e9' },
-    { name: 'Maghrib', time: timings.maghrib, color: '#e03e3e' },
-    { name: 'Isha', time: timings.isha, color: '#8b5cf6' },
+    { name: "Fajr", time: timings.fajr, color: "#6366f1" },
+    { name: "Sunrise", time: timings.sunrise || "", color: "#f59e0b" },
+    { name: "Dhuhr", time: timings.dhuhr, color: "#0b6bcf" },
+    { name: "Asr", time: timings.asr, color: "#0ea5e9" },
+    { name: "Maghrib", time: timings.maghrib, color: "#e03e3e" },
+    { name: "Isha", time: timings.isha, color: "#8b5cf6" },
   ];
 
   for (const prayer of prayerItems) {
     if (!prayer.time) continue;
     // Check if prayer block already exists for this day
     const existing = await getDb().getFirstAsync<any>(
-      'SELECT id FROM timetable WHERE day_of_week = ? AND activity = ? AND repeat_type = ? AND specific_date = ?',
-      dayOfWeek, `🕌 ${prayer.name} - ${prayer.time}`, 'weekly', date
+      "SELECT id FROM timetable WHERE day_of_week = ? AND activity = ? AND repeat_type = ? AND specific_date = ?",
+      dayOfWeek,
+      `🕌 ${prayer.name} - ${prayer.time}`,
+      "weekly",
+      date,
     );
     if (!existing) {
       // Delete old prayer entries for this day
       await getDb().runAsync(
-        'DELETE FROM timetable WHERE day_of_week = ? AND activity LIKE ? AND repeat_type = ?',
-        dayOfWeek, `🕌 ${prayer.name}%`, 'weekly'
+        "DELETE FROM timetable WHERE day_of_week = ? AND activity LIKE ? AND repeat_type = ?",
+        dayOfWeek,
+        `🕌 ${prayer.name}%`,
+        "weekly",
       );
       await getDb().runAsync(
-        'INSERT INTO timetable (day_of_week, start_time, activity, color, repeat_type, specific_date) VALUES (?, ?, ?, ?, ?, ?)',
-        dayOfWeek, prayer.time, `🕌 ${prayer.name}`, prayer.color, 'weekly', date
+        "INSERT INTO timetable (day_of_week, start_time, activity, color, repeat_type, specific_date) VALUES (?, ?, ?, ?, ?, ?)",
+        dayOfWeek,
+        prayer.time,
+        `🕌 ${prayer.name}`,
+        prayer.color,
+        "weekly",
+        date,
       );
     }
   }
@@ -408,57 +695,78 @@ export async function syncPrayersToTimetable(timings: { fajr: string; sunrise?: 
 // ─── Data Management (Profile) ───
 
 export async function getAllDailyLogs() {
-  return await getDb().getAllAsync<any>('SELECT * FROM daily_logs ORDER BY date DESC');
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM daily_logs ORDER BY date DESC",
+  );
 }
 
 export async function getDailyLogsSince(date: string) {
-  return await getDb().getAllAsync<any>('SELECT * FROM daily_logs WHERE date >= ? ORDER BY date DESC', date);
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM daily_logs WHERE date >= ? ORDER BY date DESC",
+    date,
+  );
 }
 
 export async function getAllPrayers() {
-  return await getDb().getAllAsync<any>('SELECT * FROM prayer_logs ORDER BY date DESC, prayer_name');
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM prayer_logs ORDER BY date DESC, prayer_name",
+  );
 }
 
 export async function getAllGymLogs() {
-  return await getDb().getAllAsync<any>('SELECT * FROM gym_logs ORDER BY date DESC');
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM gym_logs ORDER BY date DESC",
+  );
 }
 
 export async function getAllNutritionLogs() {
-  return await getDb().getAllAsync<any>('SELECT * FROM nutrition_logs ORDER BY date DESC');
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM nutrition_logs ORDER BY date DESC",
+  );
 }
 
 export async function getAllTransactions() {
-  return await getDb().getAllAsync<any>('SELECT * FROM transactions ORDER BY date DESC');
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM transactions ORDER BY date DESC",
+  );
 }
 
 export async function getAllJournalEntries() {
-  return await getDb().getAllAsync<any>('SELECT * FROM journal_entries ORDER BY date DESC');
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM journal_entries ORDER BY date DESC",
+  );
 }
 
 export async function getGoals() {
-  return await getDb().getAllAsync<any>('SELECT * FROM goals ORDER BY created_at DESC');
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM goals ORDER BY created_at DESC",
+  );
 }
 
 export async function getBudgetCategories() {
-  return await getDb().getAllAsync<any>('SELECT * FROM budget_categories ORDER BY name');
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM budget_categories ORDER BY name",
+  );
 }
 
 export async function getHabitLogs() {
-  return await getDb().getAllAsync<any>('SELECT * FROM habit_logs ORDER BY date DESC');
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM habit_logs ORDER BY date DESC",
+  );
 }
 
 export async function getHabitStreak(habitId: number): Promise<number> {
   const rows = await getDb().getAllAsync<any>(
-    'SELECT DISTINCT date FROM habit_logs WHERE habit_id = ? ORDER BY date DESC',
-    habitId
+    "SELECT DISTINCT date FROM habit_logs WHERE habit_id = ? ORDER BY date DESC",
+    habitId,
   );
   if (rows.length === 0) return 0;
   let streak = 0;
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toISOString().split("T")[0];
   for (let i = 0; i < rows.length; i++) {
     const expected = new Date();
     expected.setDate(expected.getDate() - i);
-    const expectedStr = expected.toISOString().split('T')[0];
+    const expectedStr = expected.toISOString().split("T")[0];
     if (rows[i].date === expectedStr) streak++;
     else break;
   }
@@ -467,91 +775,130 @@ export async function getHabitStreak(habitId: number): Promise<number> {
 
 export async function getHabitAnalytics(
   habitId: number,
-  days: number = 7
+  days: number = 7,
 ): Promise<{ date: string; count: number }[]> {
   const end = new Date();
   const start = new Date();
   start.setDate(start.getDate() - days);
   const rows = await getDb().getAllAsync<any>(
-    'SELECT date, count FROM habit_logs WHERE habit_id = ? AND date >= ? AND date <= ? ORDER BY date',
+    "SELECT date, count FROM habit_logs WHERE habit_id = ? AND date >= ? AND date <= ? ORDER BY date",
     habitId,
-    start.toISOString().split('T')[0],
-    end.toISOString().split('T')[0]
+    start.toISOString().split("T")[0],
+    end.toISOString().split("T")[0],
   );
   return rows;
 }
 
 // Delete helpers
 export async function deleteDailyLogById(id: number) {
-  await getDb().runAsync('DELETE FROM daily_logs WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM daily_logs WHERE id = ?", id);
 }
 export async function deletePrayerById(id: number) {
-  await getDb().runAsync('DELETE FROM prayer_logs WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM prayer_logs WHERE id = ?", id);
 }
 export async function deleteGymLogById(id: number) {
-  await getDb().runAsync('DELETE FROM gym_logs WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM gym_logs WHERE id = ?", id);
 }
 export async function deleteNutritionLogById(id: number) {
-  await getDb().runAsync('DELETE FROM nutrition_logs WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM nutrition_logs WHERE id = ?", id);
 }
 export async function deleteTransactionById(id: number) {
-  await getDb().runAsync('DELETE FROM transactions WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM transactions WHERE id = ?", id);
 }
 export async function deleteJournalEntryById(id: number) {
-  await getDb().runAsync('DELETE FROM journal_entries WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM journal_entries WHERE id = ?", id);
 }
 export async function deleteGoalById(id: number) {
-  await getDb().runAsync('DELETE FROM goals WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM goals WHERE id = ?", id);
 }
 export async function deleteHabitById(id: number) {
-  await getDb().runAsync('DELETE FROM habit_logs WHERE habit_id = ?', id);
-  await getDb().runAsync('DELETE FROM habits WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM habit_logs WHERE habit_id = ?", id);
+  await getDb().runAsync("DELETE FROM habits WHERE id = ?", id);
 }
 
 export async function getTodos(): Promise<any[]> {
-  return await getDb().getAllAsync<any>('SELECT * FROM todos ORDER BY completed ASC, priority DESC, created_at DESC');
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM todos ORDER BY completed ASC, priority DESC, created_at DESC",
+  );
 }
 
 export async function getAllTodos(): Promise<any[]> {
-  return await getDb().getAllAsync<any>('SELECT * FROM todos ORDER BY completed ASC, priority DESC, created_at DESC');
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM todos ORDER BY completed ASC, priority DESC, created_at DESC",
+  );
 }
 
-export async function addTodo(title: string, priority: number = 0, dueDate?: string): Promise<number> {
+export async function addTodo(
+  title: string,
+  priority: number = 0,
+  dueDate?: string,
+): Promise<number> {
   const result = await getDb().runAsync(
-    'INSERT INTO todos (title, priority, due_date) VALUES (?, ?, ?)',
-    title, priority, dueDate || null
+    "INSERT INTO todos (title, priority, due_date) VALUES (?, ?, ?)",
+    title,
+    priority,
+    dueDate || null,
   );
   return result.lastInsertRowId;
 }
 
-export async function toggleTodo(id: number, completed: boolean): Promise<void> {
-  await getDb().runAsync('UPDATE todos SET completed = ? WHERE id = ?', completed ? 1 : 0, id);
+export async function toggleTodo(
+  id: number,
+  completed: boolean,
+): Promise<void> {
+  await getDb().runAsync(
+    "UPDATE todos SET completed = ? WHERE id = ?",
+    completed ? 1 : 0,
+    id,
+  );
 }
 
-export async function updateTodo(id: number, fields: { title?: string; priority?: number; due_date?: string }): Promise<void> {
+export async function updateTodo(
+  id: number,
+  fields: { title?: string; priority?: number; due_date?: string },
+): Promise<void> {
   const sets: string[] = [];
   const vals: any[] = [];
-  if (fields.title !== undefined) { sets.push('title = ?'); vals.push(fields.title); }
-  if (fields.priority !== undefined) { sets.push('priority = ?'); vals.push(fields.priority); }
-  if (fields.due_date !== undefined) { sets.push('due_date = ?'); vals.push(fields.due_date); }
+  if (fields.title !== undefined) {
+    sets.push("title = ?");
+    vals.push(fields.title);
+  }
+  if (fields.priority !== undefined) {
+    sets.push("priority = ?");
+    vals.push(fields.priority);
+  }
+  if (fields.due_date !== undefined) {
+    sets.push("due_date = ?");
+    vals.push(fields.due_date);
+  }
   if (sets.length === 0) return;
-  await getDb().runAsync(`UPDATE todos SET ${sets.join(', ')} WHERE id = ?`, ...vals, id);
+  await getDb().runAsync(
+    `UPDATE todos SET ${sets.join(", ")} WHERE id = ?`,
+    ...vals,
+    id,
+  );
 }
 
 export async function deleteTodoById(id: number): Promise<void> {
-  await getDb().runAsync('DELETE FROM todos WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM todos WHERE id = ?", id);
 }
 
 export async function deleteAllHabitData() {
-  await getDb().runAsync('DELETE FROM habit_logs');
-  await getDb().runAsync('DELETE FROM habits');
+  await getDb().runAsync("DELETE FROM habit_logs");
+  await getDb().runAsync("DELETE FROM habits");
 }
 
-export async function insertFocusSession(duration: number, startedAt: string): Promise<number> {
-  const date = startedAt.split('T')[0];
+export async function insertFocusSession(
+  duration: number,
+  startedAt: string,
+): Promise<number> {
+  const date = startedAt.split("T")[0];
   const result = await getDb().runAsync(
-    'INSERT INTO focus_sessions (duration, elapsed, date, started_at, status) VALUES (?, 0, ?, ?, ?)',
-    duration, date, startedAt, 'in_progress'
+    "INSERT INTO focus_sessions (duration, elapsed, date, started_at, status) VALUES (?, 0, ?, ?, ?)",
+    duration,
+    date,
+    startedAt,
+    "in_progress",
   );
   return result.lastInsertRowId;
 }
@@ -559,39 +906,51 @@ export async function insertFocusSession(duration: number, startedAt: string): P
 export async function completeFocusSession(id: number, elapsed: number) {
   await getDb().runAsync(
     'UPDATE focus_sessions SET elapsed = ?, status = ?, completed_at = datetime("now") WHERE id = ?',
-    elapsed, 'completed', id
+    elapsed,
+    "completed",
+    id,
   );
 }
 
 export async function interruptFocusSession(id: number, elapsed: number) {
   await getDb().runAsync(
-    'UPDATE focus_sessions SET elapsed = ?, status = ? WHERE id = ?',
-    elapsed, 'interrupted', id
+    "UPDATE focus_sessions SET elapsed = ?, status = ? WHERE id = ?",
+    elapsed,
+    "interrupted",
+    id,
   );
 }
 
 export async function getFocusSessionHistory(limit = 50): Promise<any[]> {
   return await getDb().getAllAsync(
-    'SELECT * FROM focus_sessions ORDER BY started_at DESC LIMIT ?',
-    limit
+    "SELECT * FROM focus_sessions ORDER BY started_at DESC LIMIT ?",
+    limit,
   );
 }
 
-export async function getFocusStats(): Promise<{ totalTrees: number; totalSessions: number; streak: number; todaySessions: number }> {
+export async function getFocusStats(): Promise<{
+  totalTrees: number;
+  totalSessions: number;
+  streak: number;
+  todaySessions: number;
+}> {
   const sessions = await getDb().getAllAsync<any>(
-    "SELECT * FROM focus_sessions WHERE status IN ('completed', 'interrupted') ORDER BY date DESC"
+    "SELECT * FROM focus_sessions WHERE status IN ('completed', 'interrupted') ORDER BY date DESC",
   );
-  const totalTrees = sessions.reduce((sum, s) => sum + Math.floor(s.elapsed / 300), 0);
+  const totalTrees = sessions.reduce(
+    (sum, s) => sum + Math.floor(s.elapsed / 300),
+    0,
+  );
   const totalSessions = sessions.length;
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
   const todaySessions = sessions.filter((s) => s.date === today).length;
-  const completedSessions = sessions.filter((s) => s.status === 'completed');
+  const completedSessions = sessions.filter((s) => s.status === "completed");
 
   // Calculate streak from completed sessions (consecutive days back from today)
   let streak = 0;
   const checkDate = new Date();
   while (true) {
-    const ds = checkDate.toISOString().split('T')[0];
+    const ds = checkDate.toISOString().split("T")[0];
     const hasSession = completedSessions.some((s) => s.date === ds);
     if (hasSession) {
       streak++;
@@ -605,56 +964,75 @@ export async function getFocusStats(): Promise<{ totalTrees: number; totalSessio
 }
 
 export async function getFocusSessionById(id: number): Promise<any> {
-  return await getDb().getFirstAsync('SELECT * FROM focus_sessions WHERE id = ?', id);
+  return await getDb().getFirstAsync(
+    "SELECT * FROM focus_sessions WHERE id = ?",
+    id,
+  );
 }
 
 export async function deleteHabitLogById(id: number) {
-  await getDb().runAsync('DELETE FROM habit_logs WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM habit_logs WHERE id = ?", id);
 }
 export async function deleteBudgetCategoryById(id: number) {
-  await getDb().runAsync('DELETE FROM budget_categories WHERE id = ?', id);
+  await getDb().runAsync("DELETE FROM budget_categories WHERE id = ?", id);
 }
 
 // ─── AI Providers ───
 
 export async function getAiProviders() {
   return await getDb().getAllAsync<any>(
-    'SELECT * FROM ai_providers ORDER BY provider'
+    "SELECT * FROM ai_providers ORDER BY provider",
   );
 }
 
 export async function getActiveAiProvider() {
   return await getDb().getFirstAsync<any>(
-    'SELECT * FROM ai_providers WHERE is_active = 1'
+    "SELECT * FROM ai_providers WHERE is_active = 1",
   );
 }
 
-export async function upsertAiProvider(p: { provider: string; model: string; api_key: string; is_active?: number }) {
+export async function upsertAiProvider(p: {
+  provider: string;
+  model: string;
+  api_key: string;
+  is_active?: number;
+}) {
   const existing = await getDb().getFirstAsync<any>(
-    'SELECT id FROM ai_providers WHERE provider = ?', p.provider
+    "SELECT id FROM ai_providers WHERE provider = ?",
+    p.provider,
   );
   if (existing) {
     await getDb().runAsync(
-      'UPDATE ai_providers SET model = ?, api_key = ?, is_active = ? WHERE id = ?',
-      p.model, p.api_key, p.is_active || 0, existing.id
+      "UPDATE ai_providers SET model = ?, api_key = ?, is_active = ? WHERE id = ?",
+      p.model,
+      p.api_key,
+      p.is_active || 0,
+      existing.id,
     );
   } else {
     await getDb().runAsync(
-      'INSERT INTO ai_providers (provider, model, api_key, is_active) VALUES (?, ?, ?, ?)',
-      p.provider, p.model, p.api_key, p.is_active || 0
+      "INSERT INTO ai_providers (provider, model, api_key, is_active) VALUES (?, ?, ?, ?)",
+      p.provider,
+      p.model,
+      p.api_key,
+      p.is_active || 0,
     );
   }
 }
 
 export async function setActiveAiProvider(provider: string) {
-  await getDb().runAsync('UPDATE ai_providers SET is_active = 0');
+  await getDb().runAsync("UPDATE ai_providers SET is_active = 0");
   await getDb().runAsync(
-    'UPDATE ai_providers SET is_active = 1 WHERE provider = ?', provider
+    "UPDATE ai_providers SET is_active = 1 WHERE provider = ?",
+    provider,
   );
 }
 
 export async function deleteAiProvider(provider: string) {
-  await getDb().runAsync('DELETE FROM ai_providers WHERE provider = ?', provider);
+  await getDb().runAsync(
+    "DELETE FROM ai_providers WHERE provider = ?",
+    provider,
+  );
 }
 
 // ─── AI Programs ───
@@ -665,48 +1043,73 @@ export async function getActiveAiProgram(type: string) {
   weekStart.setDate(now.getDate() - now.getDay());
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
-  const ws = weekStart.toISOString().split('T')[0];
-  const we = weekEnd.toISOString().split('T')[0];
+  const ws = weekStart.toISOString().split("T")[0];
+  const we = weekEnd.toISOString().split("T")[0];
   return await getDb().getFirstAsync<any>(
-    'SELECT * FROM ai_programs WHERE type = ? AND week_start = ? AND week_end = ? AND is_active = 1',
-    type, ws, we
+    "SELECT * FROM ai_programs WHERE type = ? AND week_start = ? AND week_end = ? AND is_active = 1",
+    type,
+    ws,
+    we,
   );
 }
 
 export async function getAiProgramWithItems(programId: number) {
   const program = await getDb().getFirstAsync<any>(
-    'SELECT * FROM ai_programs WHERE id = ?', programId
+    "SELECT * FROM ai_programs WHERE id = ?",
+    programId,
   );
   if (!program) return null;
   const items = await getDb().getAllAsync<any>(
-    'SELECT * FROM ai_program_items WHERE program_id = ? ORDER BY day_index, sort_order',
-    programId
+    "SELECT * FROM ai_program_items WHERE program_id = ? ORDER BY day_index, sort_order",
+    programId,
   );
   return { ...program, items };
 }
 
 export async function saveAiProgram(program: {
-  type: string; title: string; week_start: string; week_end: string;
-  context_snapshot?: string; raw_response?: string;
-  items: { day_index: number; day_label: string; title: string; description?: string; sort_order?: number }[];
+  type: string;
+  title: string;
+  week_start: string;
+  week_end: string;
+  context_snapshot?: string;
+  raw_response?: string;
+  items: {
+    day_index: number;
+    day_label: string;
+    title: string;
+    description?: string;
+    details_json?: string;
+    sort_order?: number;
+  }[];
 }) {
   // Deactivate any existing active program of this type for this week
   await getDb().runAsync(
-    'UPDATE ai_programs SET is_active = 0 WHERE type = ? AND week_start = ?',
-    program.type, program.week_start
+    "UPDATE ai_programs SET is_active = 0 WHERE type = ? AND week_start = ?",
+    program.type,
+    program.week_start,
   );
 
   const result = await getDb().runAsync(
-    'INSERT INTO ai_programs (type, title, week_start, week_end, context_snapshot, raw_response) VALUES (?, ?, ?, ?, ?, ?)',
-    program.type, program.title, program.week_start, program.week_end,
-    program.context_snapshot || '', program.raw_response || ''
+    "INSERT INTO ai_programs (type, title, week_start, week_end, context_snapshot, raw_response) VALUES (?, ?, ?, ?, ?, ?)",
+    program.type,
+    program.title,
+    program.week_start,
+    program.week_end,
+    program.context_snapshot || "",
+    program.raw_response || "",
   );
   const programId = result.lastInsertRowId;
 
   for (const item of program.items) {
     await getDb().runAsync(
-      'INSERT INTO ai_program_items (program_id, day_index, day_label, title, description, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-      programId, item.day_index, item.day_label, item.title, item.description || '', item.sort_order || 0
+      "INSERT INTO ai_program_items (program_id, day_index, day_label, title, description, details_json, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      programId,
+      item.day_index,
+      item.day_label,
+      item.title,
+      item.description || "",
+      item.details_json || "[]",
+      item.sort_order || 0,
     );
   }
   return programId;
@@ -714,14 +1117,15 @@ export async function saveAiProgram(program: {
 
 export async function toggleAiProgramItem(itemId: number, isCompleted: number) {
   await getDb().runAsync(
-    'UPDATE ai_program_items SET is_completed = ? WHERE id = ?',
-    isCompleted, itemId
+    "UPDATE ai_program_items SET is_completed = ? WHERE id = ?",
+    isCompleted,
+    itemId,
   );
 }
 
 export async function getAllAiPrograms() {
   return await getDb().getAllAsync<any>(
-    'SELECT * FROM ai_programs ORDER BY created_at DESC'
+    "SELECT * FROM ai_programs ORDER BY created_at DESC",
   );
 }
 
@@ -730,11 +1134,13 @@ export async function getAllAiPrograms() {
 function daysAgo(n: number): string {
   const d = new Date();
   d.setDate(d.getDate() - n);
-  return d.toISOString().split('T')[0];
+  return d.toISOString().split("T")[0];
 }
 
 export async function seedAllData() {
-  const existing = await getDb().getFirstAsync<any>('SELECT id FROM daily_logs LIMIT 1');
+  const existing = await getDb().getFirstAsync<any>(
+    "SELECT id FROM daily_logs LIMIT 1",
+  );
   if (existing) return; // already seeded
 
   const today = daysAgo(0);
@@ -742,108 +1148,361 @@ export async function seedAllData() {
 
   // ─── Daily Logs (7 days) — deterministic ───
   const dailySeed = [
-    { date: daysAgo(6), w: 78.5, wa: 1500, s: 5000, mo: 3, sl: 6.5, sq: 3, c: 1800, p: 80, note: 'Good day' },
-    { date: daysAgo(5), w: 79.0, wa: 1800, s: 8000, mo: 4, sl: 7.0, sq: 4, c: 2000, p: 120, note: 'Focused' },
-    { date: daysAgo(4), w: 78.2, wa: 2000, s: 10000, mo: 5, sl: 8.0, sq: 5, c: 2200, p: 140, note: 'Tired' },
-    { date: daysAgo(3), w: 79.5, wa: 1200, s: 6000, mo: 3, sl: 6.0, sq: 3, c: 1900, p: 90, note: 'Productive' },
-    { date: daysAgo(2), w: 78.8, wa: 1600, s: 7000, mo: 4, sl: 7.5, sq: 4, c: 2100, p: 110, note: 'Meh' },
-    { date: daysAgo(1), w: 79.3, wa: 1900, s: 9000, mo: 5, sl: 8.5, sq: 5, c: 2300, p: 130, note: 'Great' },
-    { date: daysAgo(0), w: 78.6, wa: 2000, s: 10000, mo: 5, sl: 8.0, sq: 5, c: 2500, p: 150, note: 'Okay' },
+    {
+      date: daysAgo(6),
+      w: 78.5,
+      wa: 1500,
+      s: 5000,
+      mo: 3,
+      sl: 6.5,
+      sq: 3,
+      c: 1800,
+      p: 80,
+      note: "Good day",
+    },
+    {
+      date: daysAgo(5),
+      w: 79.0,
+      wa: 1800,
+      s: 8000,
+      mo: 4,
+      sl: 7.0,
+      sq: 4,
+      c: 2000,
+      p: 120,
+      note: "Focused",
+    },
+    {
+      date: daysAgo(4),
+      w: 78.2,
+      wa: 2000,
+      s: 10000,
+      mo: 5,
+      sl: 8.0,
+      sq: 5,
+      c: 2200,
+      p: 140,
+      note: "Tired",
+    },
+    {
+      date: daysAgo(3),
+      w: 79.5,
+      wa: 1200,
+      s: 6000,
+      mo: 3,
+      sl: 6.0,
+      sq: 3,
+      c: 1900,
+      p: 90,
+      note: "Productive",
+    },
+    {
+      date: daysAgo(2),
+      w: 78.8,
+      wa: 1600,
+      s: 7000,
+      mo: 4,
+      sl: 7.5,
+      sq: 4,
+      c: 2100,
+      p: 110,
+      note: "Meh",
+    },
+    {
+      date: daysAgo(1),
+      w: 79.3,
+      wa: 1900,
+      s: 9000,
+      mo: 5,
+      sl: 8.5,
+      sq: 5,
+      c: 2300,
+      p: 130,
+      note: "Great",
+    },
+    {
+      date: daysAgo(0),
+      w: 78.6,
+      wa: 2000,
+      s: 10000,
+      mo: 5,
+      sl: 8.0,
+      sq: 5,
+      c: 2500,
+      p: 150,
+      note: "Okay",
+    },
   ];
   for (const dd of dailySeed) {
     await getDb().runAsync(
-      'INSERT OR IGNORE INTO daily_logs (date, weight, water_ml, steps, mood, sleep_hours, sleep_quality, calories, protein_g, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      dd.date, dd.w, dd.wa, dd.s, dd.mo, dd.sl, dd.sq, dd.c, dd.p, dd.note
+      "INSERT OR IGNORE INTO daily_logs (date, weight, water_ml, steps, mood, sleep_hours, sleep_quality, calories, protein_g, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      dd.date,
+      dd.w,
+      dd.wa,
+      dd.s,
+      dd.mo,
+      dd.sl,
+      dd.sq,
+      dd.c,
+      dd.p,
+      dd.note,
     );
   }
 
   // ─── Prayer Logs (today + yesterday) ───
   for (const date of [today, yesterday]) {
-    for (const name of ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']) {
+    for (const name of ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]) {
       await getDb().runAsync(
-        'INSERT OR IGNORE INTO prayer_logs (date, prayer_name, on_time, qada) VALUES (?, ?, ?, ?)',
-        date, name, 1, 0 // all on time, no qada
+        "INSERT OR IGNORE INTO prayer_logs (date, prayer_name, on_time, qada) VALUES (?, ?, ?, ?)",
+        date,
+        name,
+        1,
+        0, // all on time, no qada
       );
     }
   }
 
   // ─── Gym Logs (3 sessions) ───
   const gymWorkouts = [
-    { date: daysAgo(5), name: 'Push A', ex: 'Bench Press 4x8, OHP 3x10, Tricep Pushdown 3x12', dur: 50, note: 'Felt strong' },
-    { date: daysAgo(3), name: 'Pull A', ex: 'Deadlift 3x5, Pull-ups 3x8, Barbell Row 3x10', dur: 55, note: 'Good form' },
-    { date: daysAgo(1), name: 'Legs', ex: 'Squat 4x6, RDL 3x8, Leg Press 3x12', dur: 50, note: 'Legs sore' },
+    {
+      date: daysAgo(5),
+      name: "Push A",
+      ex: "Bench Press 4x8, OHP 3x10, Tricep Pushdown 3x12",
+      dur: 50,
+      note: "Felt strong",
+    },
+    {
+      date: daysAgo(3),
+      name: "Pull A",
+      ex: "Deadlift 3x5, Pull-ups 3x8, Barbell Row 3x10",
+      dur: 55,
+      note: "Good form",
+    },
+    {
+      date: daysAgo(1),
+      name: "Legs",
+      ex: "Squat 4x6, RDL 3x8, Leg Press 3x12",
+      dur: 50,
+      note: "Legs sore",
+    },
   ];
   for (const w of gymWorkouts) {
     await getDb().runAsync(
-      'INSERT OR IGNORE INTO gym_logs (date, workout_name, exercises, duration_minutes, notes) VALUES (?, ?, ?, ?, ?)',
-      w.date, w.name, w.ex, w.dur, w.note
+      "INSERT OR IGNORE INTO gym_logs (date, workout_name, exercises, duration_minutes, notes) VALUES (?, ?, ?, ?, ?)",
+      w.date,
+      w.name,
+      w.ex,
+      w.dur,
+      w.note,
     );
   }
 
   // ─── Nutrition Logs (2 per day for 3 days) ───
   const meals = [
-    { date: daysAgo(2), type: 'Breakfast', foods: 'Oatmeal, banana, protein shake', cal: 450, protein: 35 },
-    { date: daysAgo(2), type: 'Lunch', foods: 'Chicken breast, rice, broccoli', cal: 650, protein: 45 },
-    { date: daysAgo(1), type: 'Breakfast', foods: 'Eggs, toast, avocado', cal: 420, protein: 25 },
-    { date: daysAgo(1), type: 'Lunch', foods: 'Salmon, sweet potato, asparagus', cal: 580, protein: 40 },
-    { date: today, type: 'Breakfast', foods: 'Greek yogurt, granola, berries', cal: 380, protein: 28 },
-    { date: today, type: 'Lunch', foods: 'Turkey sandwich, salad', cal: 520, protein: 32 },
+    {
+      date: daysAgo(2),
+      type: "Breakfast",
+      foods: "Oatmeal, banana, protein shake",
+      cal: 450,
+      protein: 35,
+    },
+    {
+      date: daysAgo(2),
+      type: "Lunch",
+      foods: "Chicken breast, rice, broccoli",
+      cal: 650,
+      protein: 45,
+    },
+    {
+      date: daysAgo(1),
+      type: "Breakfast",
+      foods: "Eggs, toast, avocado",
+      cal: 420,
+      protein: 25,
+    },
+    {
+      date: daysAgo(1),
+      type: "Lunch",
+      foods: "Salmon, sweet potato, asparagus",
+      cal: 580,
+      protein: 40,
+    },
+    {
+      date: today,
+      type: "Breakfast",
+      foods: "Greek yogurt, granola, berries",
+      cal: 380,
+      protein: 28,
+    },
+    {
+      date: today,
+      type: "Lunch",
+      foods: "Turkey sandwich, salad",
+      cal: 520,
+      protein: 32,
+    },
   ];
   for (const m of meals) {
     await getDb().runAsync(
-      'INSERT INTO nutrition_logs (date, meal_type, foods, calories, protein_g, carbs_g, fat_g) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      m.date, m.type, m.foods, m.cal, m.protein, Math.floor(Math.random() * 60) + 30, Math.floor(Math.random() * 30) + 15
+      "INSERT INTO nutrition_logs (date, meal_type, foods, calories, protein_g, carbs_g, fat_g) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      m.date,
+      m.type,
+      m.foods,
+      m.cal,
+      m.protein,
+      Math.floor(Math.random() * 60) + 30,
+      Math.floor(Math.random() * 30) + 15,
     );
   }
 
   // ─── Transactions (12 entries over past week) ───
   const txns = [
-    { date: daysAgo(6), cat: 'Food', amount: 45.50, type: 'expense', desc: 'Groceries' },
-    { date: daysAgo(6), cat: 'Transport', amount: 12.00, type: 'expense', desc: 'Metro card' },
-    { date: daysAgo(5), cat: 'Salary', amount: 3500.00, type: 'income', desc: 'Monthly salary' },
-    { date: daysAgo(4), cat: 'Food', amount: 28.30, type: 'expense', desc: 'Dinner out' },
-    { date: daysAgo(4), cat: 'Learning', amount: 19.99, type: 'expense', desc: 'Udemy course' },
-    { date: daysAgo(3), cat: 'Shopping', amount: 85.00, type: 'expense', desc: 'New shoes' },
-    { date: daysAgo(3), cat: 'Food', amount: 52.10, type: 'expense', desc: 'Weekly groceries' },
-    { date: daysAgo(2), cat: 'Bills', amount: 120.00, type: 'expense', desc: 'Electricity bill' },
-    { date: daysAgo(2), cat: 'Food', amount: 15.50, type: 'expense', desc: 'Coffee + snack' },
-    { date: daysAgo(1), cat: 'Savings', amount: 500.00, type: 'expense', desc: 'Auto-transfer' },
-    { date: today, cat: 'Food', amount: 33.75, type: 'expense', desc: 'Lunch' },
-    { date: today, cat: 'Healthcare', amount: 25.00, type: 'expense', desc: 'Vitamins' },
+    {
+      date: daysAgo(6),
+      cat: "Food",
+      amount: 45.5,
+      type: "expense",
+      desc: "Groceries",
+    },
+    {
+      date: daysAgo(6),
+      cat: "Transport",
+      amount: 12.0,
+      type: "expense",
+      desc: "Metro card",
+    },
+    {
+      date: daysAgo(5),
+      cat: "Salary",
+      amount: 3500.0,
+      type: "income",
+      desc: "Monthly salary",
+    },
+    {
+      date: daysAgo(4),
+      cat: "Food",
+      amount: 28.3,
+      type: "expense",
+      desc: "Dinner out",
+    },
+    {
+      date: daysAgo(4),
+      cat: "Learning",
+      amount: 19.99,
+      type: "expense",
+      desc: "Udemy course",
+    },
+    {
+      date: daysAgo(3),
+      cat: "Shopping",
+      amount: 85.0,
+      type: "expense",
+      desc: "New shoes",
+    },
+    {
+      date: daysAgo(3),
+      cat: "Food",
+      amount: 52.1,
+      type: "expense",
+      desc: "Weekly groceries",
+    },
+    {
+      date: daysAgo(2),
+      cat: "Bills",
+      amount: 120.0,
+      type: "expense",
+      desc: "Electricity bill",
+    },
+    {
+      date: daysAgo(2),
+      cat: "Food",
+      amount: 15.5,
+      type: "expense",
+      desc: "Coffee + snack",
+    },
+    {
+      date: daysAgo(1),
+      cat: "Savings",
+      amount: 500.0,
+      type: "expense",
+      desc: "Auto-transfer",
+    },
+    { date: today, cat: "Food", amount: 33.75, type: "expense", desc: "Lunch" },
+    {
+      date: today,
+      cat: "Healthcare",
+      amount: 25.0,
+      type: "expense",
+      desc: "Vitamins",
+    },
   ];
   for (const t of txns) {
     await getDb().runAsync(
-      'INSERT INTO transactions (date, category, amount, type, description) VALUES (?, ?, ?, ?, ?)',
-      t.date, t.cat, t.amount, t.type, t.desc
+      "INSERT INTO transactions (date, category, amount, type, description) VALUES (?, ?, ?, ?, ?)",
+      t.date,
+      t.cat,
+      t.amount,
+      t.type,
+      t.desc,
     );
   }
 
   // ─── Journal Entries (4 entries) ───
   const entries = [
-    { date: daysAgo(6), title: 'Week Reflection', content: 'This week was productive. I managed to hit all my goals except for the workout. Need to focus on consistency next week.', type: 'reflection' },
-    { date: daysAgo(4), title: 'Great Workout', content: 'Had an amazing push session today. Felt strong on bench press and hit a new PR of 4x8 at 185lbs.', type: 'general' },
-    { date: daysAgo(2), title: 'Feeling Tired', content: 'Did not sleep well last night. Need to prioritize sleep hygiene. Going to bed by 10pm tonight no excuses.', type: 'general' },
-    { date: today, title: 'Daily Standup', content: 'Today\'s focus: complete the system design review, hit the gym, and read 10 pages of Atomic Habits.', type: 'planning' },
+    {
+      date: daysAgo(6),
+      title: "Week Reflection",
+      content:
+        "This week was productive. I managed to hit all my goals except for the workout. Need to focus on consistency next week.",
+      type: "reflection",
+    },
+    {
+      date: daysAgo(4),
+      title: "Great Workout",
+      content:
+        "Had an amazing push session today. Felt strong on bench press and hit a new PR of 4x8 at 185lbs.",
+      type: "general",
+    },
+    {
+      date: daysAgo(2),
+      title: "Feeling Tired",
+      content:
+        "Did not sleep well last night. Need to prioritize sleep hygiene. Going to bed by 10pm tonight no excuses.",
+      type: "general",
+    },
+    {
+      date: today,
+      title: "Daily Standup",
+      content:
+        "Today's focus: complete the system design review, hit the gym, and read 10 pages of Atomic Habits.",
+      type: "planning",
+    },
   ];
   for (const e of entries) {
     await getDb().runAsync(
-      'INSERT INTO journal_entries (date, title, content, type) VALUES (?, ?, ?, ?)',
-      e.date, e.title, e.content, e.type
+      "INSERT INTO journal_entries (date, title, content, type) VALUES (?, ?, ?, ?)",
+      e.date,
+      e.title,
+      e.content,
+      e.type,
     );
   }
 
   // ─── Habits (5 habits) ───
   const habits = [
-    { name: 'Read 10 pages', emoji: '📖', target: 1, unit: 'pages' },
-    { name: 'Drink water', emoji: '💧', target: 8, unit: 'glasses' },
-    { name: 'Meditate', emoji: '🧘', target: 1, unit: 'session' },
-    { name: 'No sugar', emoji: '🚫', target: 1, unit: 'day' },
-    { name: 'Walk 10k steps', emoji: '🚶', target: 10000, unit: 'steps' },
+    { name: "Read 10 pages", emoji: "📖", target: 1, unit: "pages" },
+    { name: "Drink water", emoji: "💧", target: 8, unit: "glasses" },
+    { name: "Meditate", emoji: "🧘", target: 1, unit: "session" },
+    { name: "No sugar", emoji: "🚫", target: 1, unit: "day" },
+    { name: "Walk 10k steps", emoji: "🚶", target: 10000, unit: "steps" },
   ];
   for (const h of habits) {
     await getDb().runAsync(
-      'INSERT INTO habits (name, emoji, target_per_day, unit) VALUES (?, ?, ?, ?)',
-      h.name, h.emoji, h.target, h.unit
+      "INSERT INTO habits (name, emoji, target_per_day, unit) VALUES (?, ?, ?, ?)",
+      h.name,
+      h.emoji,
+      h.target,
+      h.unit,
     );
   }
 
@@ -851,39 +1510,76 @@ export async function seedAllData() {
   for (let i = 0; i < 5; i++) {
     for (let d = 0; d < 4; d++) {
       await getDb().runAsync(
-        'INSERT OR IGNORE INTO habit_logs (habit_id, date, count) VALUES (?, ?, ?)',
-        i + 1, daysAgo(d), Math.floor(Math.random() * 2) + 1
+        "INSERT OR IGNORE INTO habit_logs (habit_id, date, count) VALUES (?, ?, ?)",
+        i + 1,
+        daysAgo(d),
+        Math.floor(Math.random() * 2) + 1,
       );
     }
   }
 
   // ─── Goals (4 goals) ───
   const goals = [
-    { title: 'Lose 5kg', target: 5, current: 2.5, unit: 'kg', area: 'Health', color: '#e03e3e' },
-    { title: 'Save $5,000', target: 5000, current: 1800, unit: '$', area: 'Finance', color: '#0a8c2e' },
-    { title: 'Complete AWS Certification', target: 1, current: 0.3, unit: 'cert', area: 'Career', color: '#0b6bcf' },
-    { title: 'Read 20 books', target: 20, current: 7, unit: 'books', area: 'Learning', color: '#8b5cf6' },
+    {
+      title: "Lose 5kg",
+      target: 5,
+      current: 2.5,
+      unit: "kg",
+      area: "Health",
+      color: "#e03e3e",
+    },
+    {
+      title: "Save $5,000",
+      target: 5000,
+      current: 1800,
+      unit: "$",
+      area: "Finance",
+      color: "#0a8c2e",
+    },
+    {
+      title: "Complete AWS Certification",
+      target: 1,
+      current: 0.3,
+      unit: "cert",
+      area: "Career",
+      color: "#0b6bcf",
+    },
+    {
+      title: "Read 20 books",
+      target: 20,
+      current: 7,
+      unit: "books",
+      area: "Learning",
+      color: "#8b5cf6",
+    },
   ];
   for (const g of goals) {
     await getDb().runAsync(
-      'INSERT INTO goals (title, target_value, current_value, unit, area, color) VALUES (?, ?, ?, ?, ?, ?)',
-      g.title, g.target, g.current, g.unit, g.area, g.color
+      "INSERT INTO goals (title, target_value, current_value, unit, area, color) VALUES (?, ?, ?, ?, ?, ?)",
+      g.title,
+      g.target,
+      g.current,
+      g.unit,
+      g.area,
+      g.color,
     );
   }
 
   // ─── Budget Categories (6 categories) ───
   const budgetCats = [
-    { name: 'Rent', budget: 1200, icon: '🏠' },
-    { name: 'Food', budget: 500, icon: '🍎' },
-    { name: 'Transport', budget: 150, icon: '🚇' },
-    { name: 'Learning', budget: 200, icon: '📚' },
-    { name: 'Savings', budget: 500, icon: '💰' },
-    { name: 'Entertainment', budget: 150, icon: '🎬' },
+    { name: "Rent", budget: 1200, icon: "🏠" },
+    { name: "Food", budget: 500, icon: "🍎" },
+    { name: "Transport", budget: 150, icon: "🚇" },
+    { name: "Learning", budget: 200, icon: "📚" },
+    { name: "Savings", budget: 500, icon: "💰" },
+    { name: "Entertainment", budget: 150, icon: "🎬" },
   ];
   for (const bc of budgetCats) {
     await getDb().runAsync(
-      'INSERT INTO budget_categories (name, monthly_budget, icon) VALUES (?, ?, ?)',
-      bc.name, bc.budget, bc.icon
+      "INSERT INTO budget_categories (name, monthly_budget, icon) VALUES (?, ?, ?)",
+      bc.name,
+      bc.budget,
+      bc.icon,
     );
   }
 
@@ -895,18 +1591,19 @@ export async function seedAllData() {
 
   // ─── Daily Affirmations (7 days) ───
   const affirmations = [
-    'I am consistent and disciplined.',
-    'Every small step compounds into greatness.',
-    'I choose progress over perfection.',
-    'My focus is my superpower.',
-    'I am building the future I want to live in.',
-    'Discipline is the bridge between goals and accomplishment.',
-    'Today I will be better than yesterday.',
+    "I am consistent and disciplined.",
+    "Every small step compounds into greatness.",
+    "I choose progress over perfection.",
+    "My focus is my superpower.",
+    "I am building the future I want to live in.",
+    "Discipline is the bridge between goals and accomplishment.",
+    "Today I will be better than yesterday.",
   ];
   for (let i = 0; i < 7; i++) {
     await getDb().runAsync(
-      'INSERT OR IGNORE INTO daily_affirmations (date, content) VALUES (?, ?)',
-      daysAgo(i), affirmations[i]
+      "INSERT OR IGNORE INTO daily_affirmations (date, content) VALUES (?, ?)",
+      daysAgo(i),
+      affirmations[i],
     );
   }
 }
@@ -937,34 +1634,101 @@ export async function setTrackerTargets(fields: {
 // ─── User Profile ───
 
 export async function getUserProfile(): Promise<any> {
-  const row = await getDb().getFirstAsync<any>('SELECT * FROM user_profile LIMIT 1');
+  const row = await getDb().getFirstAsync<any>(
+    "SELECT * FROM user_profile LIMIT 1",
+  );
   if (row) return row;
   // Create default profile if none exists
   await getDb().runAsync(
     `INSERT INTO user_profile (name, gender, date_of_birth, height_cm, weight_kg, target_weight_kg, activity_level, goals, preferences)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    '', '', '', 0, 0, 0, 'moderate', '[]', '[]'
+    "",
+    "",
+    "",
+    0,
+    0,
+    0,
+    "moderate",
+    "[]",
+    "[]",
   );
-  return await getDb().getFirstAsync<any>('SELECT * FROM user_profile LIMIT 1');
+  return await getDb().getFirstAsync<any>("SELECT * FROM user_profile LIMIT 1");
 }
 
-export async function updateUserProfile(fields: Partial<{
-  name: string;
-  gender: string;
-  date_of_birth: string;
-  height_cm: number;
-  weight_kg: number;
-  target_weight_kg: number;
-  activity_level: string;
-  goals: string;
-  preferences: string;
-}>): Promise<void> {
+// ─── AI Programs (Enhanced) ───
+
+// Update an individual AI program item (title, description, etc.)
+export async function updateAiProgramItem(
+  itemId: number,
+  updates: { title?: string; description?: string; sort_order?: number },
+) {
+  const sets: string[] = [];
+  const vals: any[] = [];
+
+  if (updates.title !== undefined) {
+    sets.push("title = ?");
+    vals.push(updates.title);
+  }
+  if (updates.description !== undefined) {
+    sets.push("description = ?");
+    vals.push(updates.description);
+  }
+  if (updates.sort_order !== undefined) {
+    sets.push("sort_order = ?");
+    vals.push(updates.sort_order);
+  }
+
+  if (sets.length === 0) return;
+
+  await getDb().runAsync(
+    `UPDATE ai_program_items
+     SET ${sets.join(", ")}
+     WHERE id = ?`,
+    ...vals,
+    itemId,
+  );
+}
+
+// Optional: Delete a specific AI program item (if you want to allow removal)
+export async function deleteAiProgramItem(itemId: number) {
+  await getDb().runAsync("DELETE FROM ai_program_items WHERE id = ?", itemId);
+}
+
+// Optional: Reset completion status for all items in a program (useful for regeneration)
+export async function resetAiProgramCompletions(programId: number) {
+  await getDb().runAsync(
+    "UPDATE ai_program_items SET is_completed = 0 WHERE program_id = ?",
+    programId,
+  );
+}
+
+// Optional: Get a single AI program item
+export async function getAiProgramItem(itemId: number) {
+  return await getDb().getFirstAsync<any>(
+    "SELECT * FROM ai_program_items WHERE id = ?",
+    itemId,
+  );
+}
+
+export async function updateUserProfile(
+  fields: Partial<{
+    name: string;
+    gender: string;
+    date_of_birth: string;
+    height_cm: number;
+    weight_kg: number;
+    target_weight_kg: number;
+    activity_level: string;
+    goals: string;
+    preferences: string;
+  }>,
+): Promise<void> {
   const keys = Object.keys(fields) as (keyof typeof fields)[];
   if (keys.length === 0) return;
-  const sets = keys.map((k) => `${k} = ?`).join(', ');
+  const sets = keys.map((k) => `${k} = ?`).join(", ");
   const vals = keys.map((k) => (fields as any)[k]);
   await getDb().runAsync(
     `UPDATE user_profile SET ${sets}, updated_at = datetime('now') WHERE id = (SELECT id FROM user_profile LIMIT 1)`,
-    ...vals
+    ...vals,
   );
 }

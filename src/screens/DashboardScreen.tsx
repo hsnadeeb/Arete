@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -24,6 +24,8 @@ import {
 } from "../types";
 import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import { getIslamicGreeting, getGreeting } from "../services/prayerApi";
+import * as db from "../db/service";
+import { generateAiProgram } from "../services/ai";
 
 const EXPENSE_CATEGORIES = [
   "Food",
@@ -801,9 +803,184 @@ function MonthlyStatsWidget() {
   );
 }
 
+function AiPlanWidget() {
+  const { theme } = useTheme();
+  const tc = theme.colors;
+  const [gymProg, setGymProg] = useState<any>(null);
+  const [mealProg, setMealProg] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const gp = await db.getActiveAiProgram("gym");
+        const mp = await db.getActiveAiProgram("food");
+        if (mounted) {
+          setGymProg(gp ? await db.getAiProgramWithItems(gp.id) : null);
+          setMealProg(mp ? await db.getAiProgramWithItems(mp.id) : null);
+        }
+      } catch (e) {
+        console.error("AiPlanWidget load failed:", e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [refreshTick]);
+
+  const todayIdx = new Date().getDay();
+  const todayGym = gymProg?.items?.filter((i: any) => i.day_index === todayIdx) || [];
+  const todayMeal = mealProg?.items?.filter((i: any) => i.day_index === todayIdx) || [];
+
+  const handleToggle = async (itemId: number, current: number) => {
+    await db.toggleAiProgramItem(itemId, current ? 0 : 1);
+    setRefreshTick((t) => t + 1);
+  };
+
+  const handleRegenerate = async (type: "gym" | "food") => {
+    try {
+      await generateAiProgram(type);
+      setRefreshTick((t) => t + 1);
+    } catch (e: any) {
+      Alert.alert("Generation Failed", e.message);
+    }
+  };
+
+  const handleReset = async (programId: number) => {
+    await db.resetAiProgramCompletions(programId);
+    setRefreshTick((t) => t + 1);
+  };
+
+  if (loading) {
+    return (
+      <Card title="Today's Plan" titleStyle={{ color: tc.textTertiary }}>
+        <ActivityIndicator size="small" color={tc.accent} style={{ margin: 12 }} />
+      </Card>
+    );
+  }
+
+  if (!gymProg && !mealProg) {
+    return (
+      <Card title="Today's Plan" titleStyle={{ color: tc.textTertiary }}>
+        <View style={{ padding: 16, alignItems: "center", gap: 10 }}>
+          <Icon name={LUCIDE_ICONS.sparkles} size={24} color={tc.accent} />
+          <Text style={{ color: tc.textSecondary, textAlign: "center", fontSize: 13 }}>
+            No AI plan yet. Go to Journal → Gym or Food to generate one.
+          </Text>
+        </View>
+      </Card>
+    );
+  }
+
+  return (
+    <Card title="Today's Plan" titleStyle={{ color: tc.textTertiary }}>
+      <View style={{ gap: 12 }}>
+        {gymProg && (
+          <View style={[s.planMiniCard, { backgroundColor: tc.bgSecondary, borderColor: tc.border }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ color: tc.text, fontWeight: "600", flex: 1 }} numberOfLines={1}>
+                🏋️ {gymProg.title}
+              </Text>
+              <TouchableOpacity onPress={() => handleRegenerate("gym")} style={{ padding: 4 }}>
+                <Icon name={LUCIDE_ICONS.refresh} size={14} color={tc.accent} />
+              </TouchableOpacity>
+            </View>
+            {todayGym.slice(0, 3).map((item: any) => (
+              <View key={item.id} style={[s.planMiniRow, { borderBottomColor: tc.divider }]}>
+                <TouchableOpacity
+                  onPress={() => handleToggle(item.id, item.is_completed)}
+                  style={[
+                    s.miniCheckbox,
+                    { borderColor: tc.border },
+                    item.is_completed === 1 ? { backgroundColor: tc.success, borderColor: tc.success } : undefined,
+                  ]}
+                >
+                  {item.is_completed === 1 && <Icon name={LUCIDE_ICONS.check} size={10} color="#fff" />}
+                </TouchableOpacity>
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    color: item.is_completed ? tc.textTertiary : tc.text,
+                    textDecorationLine: item.is_completed ? "line-through" : "none",
+                  }}
+                >
+                  {item.title}
+                </Text>
+              </View>
+            ))}
+            {todayGym.length > 3 && (
+              <Text style={{ fontSize: 11, color: tc.textTertiary, paddingLeft: 26 }}>
+                +{todayGym.length - 3} more
+              </Text>
+            )}
+            <TouchableOpacity onPress={() => handleReset(gymProg.id)} style={{ paddingHorizontal: 4, paddingTop: 2 }}>
+              <Text style={{ fontSize: 11, color: tc.textTertiary }}>
+                {todayGym.filter((i: any) => i.is_completed).length}/{todayGym.length} done
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {mealProg && (
+          <View style={[s.planMiniCard, { backgroundColor: tc.bgSecondary, borderColor: tc.border }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ color: tc.text, fontWeight: "600", flex: 1 }} numberOfLines={1}>
+                🍽️ {mealProg.title}
+              </Text>
+              <TouchableOpacity onPress={() => handleRegenerate("food")} style={{ padding: 4 }}>
+                <Icon name={LUCIDE_ICONS.refresh} size={14} color={tc.accent} />
+              </TouchableOpacity>
+            </View>
+            {todayMeal.slice(0, 3).map((item: any) => (
+              <View key={item.id} style={[s.planMiniRow, { borderBottomColor: tc.divider }]}>
+                <TouchableOpacity
+                  onPress={() => handleToggle(item.id, item.is_completed)}
+                  style={[
+                    s.miniCheckbox,
+                    { borderColor: tc.border },
+                    item.is_completed === 1 ? { backgroundColor: tc.success, borderColor: tc.success } : undefined,
+                  ]}
+                >
+                  {item.is_completed === 1 && <Icon name={LUCIDE_ICONS.check} size={10} color="#fff" />}
+                </TouchableOpacity>
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    color: item.is_completed ? tc.textTertiary : tc.text,
+                    textDecorationLine: item.is_completed ? "line-through" : "none",
+                  }}
+                >
+                  {item.title}
+                </Text>
+              </View>
+            ))}
+            {todayMeal.length > 3 && (
+              <Text style={{ fontSize: 11, color: tc.textTertiary, paddingLeft: 26 }}>
+                +{todayMeal.length - 3} more
+              </Text>
+            )}
+            <TouchableOpacity onPress={() => handleReset(mealProg.id)} style={{ paddingHorizontal: 4, paddingTop: 2 }}>
+              <Text style={{ fontSize: 11, color: tc.textTertiary }}>
+                {todayMeal.filter((i: any) => i.is_completed).length}/{todayMeal.length} done
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </Card>
+  );
+}
+
 const WIDGET_MAP: Record<string, React.FC> = {
   "at-a-glance": AtAGlanceWidget,
-  // "quick-stats": QuickStatsWidget,
+  "ai-plan": AiPlanWidget,
   todos: TodoWidget,
   "quick-log": QuickLogWidget,
   mood: MoodWidget,
@@ -1270,6 +1447,28 @@ const s = StyleSheet.create({
   emptyRefreshBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 
   cardWrap: { marginBottom: 12, position: "relative" },
+
+  planMiniCard: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    gap: 8,
+  },
+  planMiniRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+  },
+  miniCheckbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   editControls: {
     flexDirection: "row",

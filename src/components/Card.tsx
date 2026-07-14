@@ -4,7 +4,7 @@ import { TYPOGRAPHY } from "../constants/typography";
 
 interface CardProps {
   title?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   style?: ViewStyle;
   titleStyle?: any;
 }

@@ -195,6 +195,56 @@ function explainHttpError(
   return raw || `${providerLabel} returned an error (${status}).`;
 }
 
+function extractJsonBlock(text: string): string | null {
+  // Strip markdown fences
+  const cleaned = text
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+
+  // Try naive parse first
+  try {
+    JSON.parse(cleaned);
+    return cleaned;
+  } catch {}
+
+  // Balanced brace extraction: find the outermost { ... }
+  let depth = 0;
+  let start = -1;
+  for (let i = 0; i < cleaned.length; i++) {
+    if (cleaned[i] === "{") {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (cleaned[i] === "}") {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        return cleaned.slice(start, i + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseAiJson(rawResponse: string): any {
+  const block = extractJsonBlock(rawResponse);
+  if (!block) {
+    console.error("AI raw response (no JSON block found):", rawResponse);
+    throw new Error(
+      "Failed to parse AI response. Unexpected format. Try a different model or check the raw response in logs.",
+    );
+  }
+  try {
+    return JSON.parse(block);
+  } catch (e: any) {
+    console.error("AI raw response:", rawResponse);
+    console.error("Extracted JSON block:", block);
+    throw new Error(
+      `Failed to parse AI response as JSON: ${e.message}. Try a different model or regenerate.`,
+    );
+  }
+}
+
 async function makeRequest(
   provider: string,
   model: string,
@@ -219,6 +269,7 @@ async function makeRequest(
               { role: "user", content: userMessage },
             ],
             temperature: 0.7,
+            response_format: { type: "json_object" },
           }),
         },
       );
@@ -286,8 +337,6 @@ async function makeRequest(
       }
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) {
-        // Gemini's free tier commonly returns 200 with no candidates when a
-        // safety filter blocks the response instead of an HTTP error.
         const blockReason = data?.promptFeedback?.blockReason;
         throw new Error(
           blockReason
@@ -345,6 +394,7 @@ export async function generateAiProgram(
     day_label: string;
     title: string;
     description: string;
+    details_json: string;
     sort_order: number;
   }[];
 }> {
@@ -377,27 +427,71 @@ export async function generateAiProgram(
 
   const systemPrompt =
     type === "gym"
-      ? "You are an expert personal trainer creating weekly workout programs. Use the user's gym history, daily logs, and goals to create a personalized weekly program. Return ONLY valid JSON."
-      : "You are an expert nutritionist creating weekly meal plans. Use the user's nutrition history, daily logs, and goals to create a personalized weekly meal plan. Return ONLY valid JSON.";
+      ? `You are an expert personal trainer creating weekly workout programs. Use the user's gym history, daily logs, and goals to create a personalized weekly program.
+
+Each day should contain 4-6 concrete exercises with:
+- name, sets, reps, rest seconds
+- estimated weight recommendation
+- warm-up / cool-down notes
+- total volume estimate
+
+Return ONLY valid JSON.`
+      : `You are an expert nutritionist creating weekly meal plans. Use the user's nutrition history, daily logs, and goals to create a personalized weekly meal plan.
+
+Each meal should include:
+- specific food name, portion size
+- calories, protein, carbs, fat breakdown
+- prep instructions
+- total daily macros
+
+Return ONLY valid JSON.`;
 
   const userMessage = `Generate a weekly ${type === "gym" ? "workout" : "meal"} program for the user for the week of ${weekStart.toISOString().split("T")[0]} to ${weekEnd.toISOString().split("T")[0]}.
 Here is the user's historical data to personalize the plan:
 ${contextStr}
 ${userPreferences ? `\nUser preferences:\n${userPreferences}\n` : ""}
-Respond with ONLY valid JSON in this exact format:
+
+You MUST respond with ONLY a single valid JSON object. Do not wrap it in markdown code blocks, do not add explanations, and do not include any text before or after the JSON.
+
+Required JSON structure:
 {
   "title": "Week of [date] - [Program Name]",
   "items": [
     {
       "day_index": 0,
       "day_label": "Sunday",
-      "title": "Day title (e.g. Push Day or High Protein Day)",
-      "description": "Detailed description of what to do/eat",
-      "sort_order": 0
+      "title": "Day title",
+      "description": "Brief description",
+      "sort_order": 0,
+      "details": [
+        {
+          "type": "${type === "gym" ? "exercise" : "meal"}",
+          "name": "Name",
+          ${type === "gym"
+            ? `"sets": 4,
+          "reps": 8,
+          "rest_seconds": 90,
+          "weight": "185 lbs",
+          "notes": "Warm up with empty bar first"`
+            : `"calories": 450,
+          "protein": 35,
+          "carbs": 45,
+          "fat": 12,
+          "portion": "1 bowl"`
+          }
+        }
+      ]
     }
   ]
 }
-Generate exactly 7 items, one for each day of the week (day_index 0-6). Make the plan personalized based on the user's data, goals, and history.`;
+
+Rules:
+- Output exactly 7 items, one for each day of the week (day_index 0-6).
+- Every item MUST include a "details" array with at least 3 entries.
+- For gym programs, each detail is an exercise with sets, reps, rest_seconds, weight, notes.
+- For meal programs, each detail is a food item with calories, protein, carbs, fat, portion.
+- Provide real, actionable numbers based on the user's history and goals.
+- Return valid JSON only.`;
 
   const rawResponse = await makeRequest(
     provider.provider,
@@ -407,11 +501,7 @@ Generate exactly 7 items, one for each day of the week (day_index 0-6). Make the
     userMessage,
   );
 
-  const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
-  if (!jsonMatch)
-    throw new Error("Failed to parse AI response. Unexpected format.");
-
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = parseAiJson(rawResponse);
 
   const ws = weekStart.toISOString().split("T")[0];
   const we = weekEnd.toISOString().split("T")[0];
@@ -429,6 +519,7 @@ Generate exactly 7 items, one for each day of the week (day_index 0-6). Make the
       day_label: item.day_label || dayLabels[item.day_index],
       title: item.title,
       description: item.description,
+      details_json: item.details ? JSON.stringify(item.details) : "[]",
       sort_order: item.sort_order ?? item.day_index,
     })),
   });

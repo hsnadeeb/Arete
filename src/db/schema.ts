@@ -33,6 +33,20 @@ CREATE TABLE IF NOT EXISTS ai_program_items (
   FOREIGN KEY (program_id) REFERENCES ai_programs(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS ai_program_item_details (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  program_id INTEGER NOT NULL,
+  item_id INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  name TEXT NOT NULL,
+  metadata_json TEXT DEFAULT '{}',
+  is_completed INTEGER DEFAULT 0,
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (program_id) REFERENCES ai_programs(id) ON DELETE CASCADE,
+  FOREIGN KEY (item_id) REFERENCES ai_program_items(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS daily_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   date TEXT UNIQUE NOT NULL,
