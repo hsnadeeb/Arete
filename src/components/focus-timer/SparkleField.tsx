@@ -72,12 +72,10 @@ function Sparkle({
     inputRange: [0, 1],
     outputRange: [0, -(40 + spread * 0.4)],
   });
-  const opacity = rise.interpolate({
+  const riseOpacity = rise.interpolate({
     inputRange: [0, 0.1, 0.6, 1],
     outputRange: [0, 1, 1, 0],
   });
-  const sparkleCount = Math.min(1, (maturity - 0.3) / 0.7);
-  const finalOpacity = Animated.multiply(opacity, twinkle);
 
   return (
     <Animated.View
@@ -89,7 +87,7 @@ function Sparkle({
         height: size,
         borderRadius: size / 2,
         backgroundColor: color,
-        opacity: Animated.multiply(finalOpacity, sparkleCount),
+        opacity: Animated.multiply(riseOpacity, twinkle),
         transform: [{ translateY }],
         shadowColor: color,
         shadowOpacity: 0.8,

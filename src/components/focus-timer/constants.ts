@@ -140,3 +140,112 @@ export function smoothstep(x: number): number {
   const c = Math.max(0, Math.min(1, x));
   return c * c * (3 - 2 * c);
 }
+
+// ── Banyan Life Cycle Stages ──
+
+export interface BanyanStage {
+  at: number;
+  name: string;
+  emoji: string;
+}
+
+export const BANYAN_STAGES: BanyanStage[] = [
+  { at: 0, name: "Germination", emoji: "\u{1F331}" },
+  { at: 0.08, name: "Seedling", emoji: "\u{1F33F}" },
+  { at: 0.20, name: "Sapling", emoji: "\uD83C\uDF33" },
+  { at: 0.40, name: "Young Banyan", emoji: "\uD83C\uDF34" },
+  { at: 0.60, name: "Maturing", emoji: "\u{1F333}" },
+  { at: 0.80, name: "Mature Banyan", emoji: "\u{1F3DB}" },
+  { at: 0.92, name: "Ancient Banyan", emoji: "\u{1F451}" },
+];
+
+export function getBanyanStage(pct: number): {
+  name: string;
+  emoji: string;
+  index: number;
+  at: number;
+} {
+  const t = Math.min(1, Math.max(0, pct / 100));
+  let stage = BANYAN_STAGES[0];
+  let idx = 0;
+  for (let i = BANYAN_STAGES.length - 1; i >= 0; i--) {
+    if (t >= BANYAN_STAGES[i].at) {
+      stage = BANYAN_STAGES[i];
+      idx = i;
+      break;
+    }
+  }
+  return { name: stage.name, emoji: stage.emoji, index: idx, at: stage.at };
+}
+
+export const BANYAN_CANOPY = [
+  { dx: 0, dy: -0.15, r: 1.0, layer: 0, growAt: 0.1 },
+  { dx: -0.45, dy: -0.18, r: 0.88, layer: 0, growAt: 0.14 },
+  { dx: 0.45, dy: -0.18, r: 0.88, layer: 0, growAt: 0.17 },
+  { dx: -0.75, dy: -0.32, r: 0.72, layer: 1, growAt: 0.25 },
+  { dx: 0.75, dy: -0.32, r: 0.72, layer: 1, growAt: 0.28 },
+  { dx: -0.3, dy: -0.52, r: 0.68, layer: 1, growAt: 0.34 },
+  { dx: 0.3, dy: -0.52, r: 0.68, layer: 1, growAt: 0.37 },
+  { dx: -1.05, dy: -0.22, r: 0.58, layer: 2, growAt: 0.44 },
+  { dx: 1.05, dy: -0.22, r: 0.58, layer: 2, growAt: 0.47 },
+  { dx: -0.85, dy: -0.55, r: 0.52, layer: 2, growAt: 0.54 },
+  { dx: 0.85, dy: -0.55, r: 0.52, layer: 2, growAt: 0.57 },
+  { dx: -1.25, dy: -0.12, r: 0.42, layer: 3, growAt: 0.64 },
+  { dx: 1.25, dy: -0.12, r: 0.42, layer: 3, growAt: 0.67 },
+  { dx: -0.95, dy: -0.65, r: 0.4, layer: 3, growAt: 0.71 },
+  { dx: 0.95, dy: -0.65, r: 0.4, layer: 3, growAt: 0.74 },
+  { dx: 0, dy: -0.82, r: 0.52, layer: 1, growAt: 0.4 },
+  { dx: -0.5, dy: -0.78, r: 0.42, layer: 2, growAt: 0.5 },
+  { dx: 0.5, dy: -0.78, r: 0.42, layer: 2, growAt: 0.52 },
+  { dx: -1.15, dy: -0.42, r: 0.36, layer: 3, growAt: 0.78 },
+  { dx: 1.15, dy: -0.42, r: 0.36, layer: 3, growAt: 0.8 },
+];
+
+export const BANYAN_AERIAL_ROOTS = [
+  { dx: -0.75, dy: -0.2, maxLen: 0.55, thickness: 2, growAt: 0.22 },
+  { dx: 0.75, dy: -0.2, maxLen: 0.55, thickness: 2, growAt: 0.24 },
+  { dx: -0.45, dy: -0.12, maxLen: 0.75, thickness: 2.5, growAt: 0.32 },
+  { dx: 0.45, dy: -0.12, maxLen: 0.75, thickness: 2.5, growAt: 0.34 },
+  { dx: -0.95, dy: -0.16, maxLen: 0.45, thickness: 2, growAt: 0.42 },
+  { dx: 0.95, dy: -0.16, maxLen: 0.45, thickness: 2, growAt: 0.44 },
+  { dx: -0.65, dy: -0.32, maxLen: 0.65, thickness: 2.5, growAt: 0.52 },
+  { dx: 0.65, dy: -0.32, maxLen: 0.65, thickness: 2.5, growAt: 0.54 },
+  { dx: -0.25, dy: -0.42, maxLen: 0.85, thickness: 3, growAt: 0.62 },
+  { dx: 0.25, dy: -0.42, maxLen: 0.85, thickness: 3, growAt: 0.64 },
+  { dx: -1.05, dy: -0.06, maxLen: 0.35, thickness: 2, growAt: 0.7 },
+  { dx: 1.05, dy: -0.06, maxLen: 0.35, thickness: 2, growAt: 0.72 },
+  { dx: -0.85, dy: -0.42, maxLen: 0.55, thickness: 2.5, growAt: 0.78 },
+  { dx: 0.85, dy: -0.42, maxLen: 0.55, thickness: 2.5, growAt: 0.8 },
+  { dx: -0.55, dy: -0.52, maxLen: 0.7, thickness: 2, growAt: 0.84 },
+  { dx: 0.55, dy: -0.52, maxLen: 0.7, thickness: 2, growAt: 0.86 },
+];
+
+export const BANYAN_PROP_ROOTS = [
+  { dx: -0.35, dy: -0.15, spread: 0.55, thickness: 5, growAt: 0.48 },
+  { dx: 0.35, dy: -0.15, spread: 0.55, thickness: 5, growAt: 0.5 },
+  { dx: -0.55, dy: -0.25, spread: 0.75, thickness: 4, growAt: 0.62 },
+  { dx: 0.55, dy: -0.25, spread: 0.75, thickness: 4, growAt: 0.64 },
+  { dx: -0.15, dy: -0.1, spread: 0.35, thickness: 6, growAt: 0.72 },
+  { dx: 0.15, dy: -0.1, spread: 0.35, thickness: 6, growAt: 0.74 },
+  { dx: -0.7, dy: -0.35, spread: 0.9, thickness: 3.5, growAt: 0.82 },
+  { dx: 0.7, dy: -0.35, spread: 0.9, thickness: 3.5, growAt: 0.84 },
+];
+
+export const BANYAN_FIGS = [
+  { dx: -0.25, dy: -0.22, size: 3.5, growAt: 0.42 },
+  { dx: 0.55, dy: -0.26, size: 3, growAt: 0.46 },
+  { dx: -0.65, dy: -0.12, size: 4, growAt: 0.5 },
+  { dx: 0.28, dy: -0.38, size: 3, growAt: 0.55 },
+  { dx: -0.48, dy: -0.42, size: 3.5, growAt: 0.6 },
+  { dx: 0.78, dy: -0.16, size: 3, growAt: 0.65 },
+  { dx: -0.08, dy: -0.55, size: 4, growAt: 0.7 },
+  { dx: 0.88, dy: -0.38, size: 3.5, growAt: 0.74 },
+  { dx: -0.82, dy: -0.52, size: 3, growAt: 0.78 },
+  { dx: 0.12, dy: -0.18, size: 4, growAt: 0.46 },
+  { dx: -0.88, dy: -0.38, size: 3, growAt: 0.82 },
+  { dx: 0.48, dy: -0.52, size: 3.5, growAt: 0.85 },
+  { dx: -0.38, dy: -0.62, size: 3, growAt: 0.88 },
+  { dx: 0.38, dy: -0.62, size: 3, growAt: 0.9 },
+];
+
+export const FIG_COLORS = ["#8d6e63", "#6d4c41", "#5d4037", "#4e342e", "#7b1fa2", "#6a1b9a"];

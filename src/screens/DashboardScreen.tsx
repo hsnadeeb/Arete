@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import {
   View,
   Text,
@@ -9,6 +15,8 @@ import {
   Modal,
   ActivityIndicator,
   FlatList,
+  Animated,
+  PanResponder,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "../context/AppContext";
@@ -26,6 +34,22 @@ import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import { getIslamicGreeting, getGreeting } from "../services/prayerApi";
 import * as db from "../db/service";
 import { generateAiProgram } from "../services/ai";
+
+// ─── Design tokens ───
+// A single, shared scale keeps spacing/radius/typography consistent across
+// every widget instead of each one inventing its own numbers.
+const RADIUS = { sm: 8, md: 12, lg: 16, xl: 22, pill: 999 };
+const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28 };
+
+function cardShadow(color: string = "#000") {
+  return {
+    shadowColor: color,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  } as const;
+}
 
 const EXPENSE_CATEGORIES = [
   "Food",
@@ -59,6 +83,37 @@ function t12(time: string): string {
   return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
 
+// Small reusable "icon in a tinted circle" bit used across widgets for a
+// consistent, premium look instead of bare icons floating in rows.
+function IconAvatar({
+  icon,
+  color,
+  bg,
+  size = 16,
+  boxSize = 32,
+}: {
+  icon: any;
+  color: string;
+  bg: string;
+  size?: number;
+  boxSize?: number;
+}) {
+  return (
+    <View
+      style={{
+        width: boxSize,
+        height: boxSize,
+        borderRadius: boxSize / 2,
+        backgroundColor: bg,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Icon name={icon} size={size} color={color} />
+    </View>
+  );
+}
+
 // ─── Individual Widget Components ───
 
 function AtAGlanceWidget() {
@@ -89,49 +144,70 @@ function AtAGlanceWidget() {
   return (
     <Card title="At a Glance" titleStyle={{ color: tc.textTertiary }}>
       {islamicDate && (
-        <View style={[s.glanceRow]}>
-          <Text style={[s.hijriDate, { color: tc.heading }]}>
-            {islamicDate.hijriDate} {islamicDate.hijriMonth}{" "}
-            {islamicDate.hijriYear} AH
-          </Text>
-          <Text style={[s.hijriDay, { color: tc.accent }]}>
-            {islamicDate.dayOfWeek ||
-              new Date().toLocaleDateString("en-US", { weekday: "long" })}
-          </Text>
+        <View style={s.glanceRow}>
+          <View>
+            <Text style={[s.hijriDate, { color: tc.heading }]}>
+              {islamicDate.hijriDate} {islamicDate.hijriMonth}{" "}
+              {islamicDate.hijriYear} AH
+            </Text>
+            <Text style={[s.hijriDay, { color: tc.textTertiary }]}>
+              {islamicDate.dayOfWeek ||
+                new Date().toLocaleDateString("en-US", { weekday: "long" })}
+            </Text>
+          </View>
         </View>
       )}
 
       {allDone ? (
-        <View style={[s.nextPrayerBox, { backgroundColor: tc.successBg }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Icon name={LUCIDE_ICONS.checkCircle} size={18} color={tc.success} />
-            <Text style={[s.npLabel, { color: tc.success }]}>
+        <View
+          style={[
+            s.nextPrayerBox,
+            { backgroundColor: tc.successBg, borderColor: tc.success + "33" },
+          ]}
+        >
+          <View style={s.rowCenter}>
+            <IconAvatar
+              icon={LUCIDE_ICONS.checkCircle}
+              color="#fff"
+              bg={tc.success}
+              size={16}
+              boxSize={30}
+            />
+            <Text style={[s.npLabelSolo, { color: tc.success }]}>
               All prayers completed
             </Text>
           </View>
         </View>
       ) : nextPrayer ? (
-        <View style={[s.nextPrayerBox, { backgroundColor: tc.accentBg }]}>
+        <View
+          style={[
+            s.nextPrayerBox,
+            { backgroundColor: tc.accentBg, borderColor: tc.accent + "33" },
+          ]}
+        >
           <Text style={[s.npLabel, { color: tc.accent }]}>Next Prayer</Text>
-          <Text style={[s.npName, { color: tc.heading }]}>
-            {nextPrayer.name}
-          </Text>
-          <Text style={[s.npTime, { color: tc.textSecondary }]}>
-            at {t12(nextPrayer.time)} · in{" "}
-            <Text style={[s.npCountdown, { color: tc.accent }]}>
-              {nextPrayer.remaining}
+          <View style={s.npMainRow}>
+            <Text style={[s.npName, { color: tc.heading }]}>
+              {nextPrayer.name}
             </Text>
+            <View style={[s.npBadge, { backgroundColor: tc.accent }]}>
+              <Text style={s.npBadgeText}>{nextPrayer.remaining}</Text>
+            </View>
+          </View>
+          <Text style={[s.npTime, { color: tc.textSecondary }]}>
+            at {t12(nextPrayer.time)}
           </Text>
         </View>
       ) : null}
 
       {prayerTimings && (
-        <View style={[s.prayerStrip, { marginBottom: 12 }]}>
+        <View style={s.prayerStrip}>
           {PRAYER_TIMES_ORDER.filter((p) => p !== "sunrise").map((prayer) => {
             const time = prayerTimings[prayer] as string;
-            const [h, m] = (time || '').split(':').map(Number);
+            const [h, m] = (time || "").split(":").map(Number);
             const prayerMinutes = h * 60 + m;
-            const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+            const nowMinutes =
+              new Date().getHours() * 60 + new Date().getMinutes();
             const canToggle = nowMinutes >= prayerMinutes;
             const isNext = nextPrayer?.name?.toLowerCase() === prayer;
             const pData = prayers.find(
@@ -144,7 +220,9 @@ function AtAGlanceWidget() {
                 key={prayer}
                 onPress={() =>
                   canToggle
-                    ? togglePrayer(prayer.charAt(0).toUpperCase() + prayer.slice(1))
+                    ? togglePrayer(
+                        prayer.charAt(0).toUpperCase() + prayer.slice(1),
+                      )
                     : undefined
                 }
                 style={[
@@ -153,17 +231,20 @@ function AtAGlanceWidget() {
                     backgroundColor: done ? tc.accent : tc.bgSecondary,
                     borderColor: done ? tc.accent : tc.borderLight,
                   },
-                  isNext && { borderColor: tc.accent, borderWidth: 2 },
-                  !canToggle && { opacity: 0.5 },
+                  done && cardShadow(tc.accent),
+                  isNext &&
+                    !done && { borderColor: tc.accent, borderWidth: 1.5 },
+                  !canToggle && { opacity: 0.45 },
                   allDone && { opacity: 0.4 },
                 ]}
                 disabled={!canToggle}
+                activeOpacity={0.7}
               >
                 <Icon
                   name={PRAYER_ICONS[prayer]?.name ?? LUCIDE_ICONS.sun}
                   size={14}
                   color={done ? "#fff" : tc.textTertiary}
-                  style={{ marginBottom: 2 }}
+                  style={{ marginBottom: 4 }}
                   label={PRAYER_DISPLAY[prayer]}
                 />
                 <Text
@@ -183,7 +264,9 @@ function AtAGlanceWidget() {
                   {t12(time)}
                 </Text>
                 {qada && (
-                  <Text style={[s.qadaBadge, { color: tc.warning }]}>Q</Text>
+                  <View style={[s.qadaBadge, { backgroundColor: tc.warning }]}>
+                    <Text style={s.qadaBadgeText}>Q</Text>
+                  </View>
                 )}
               </TouchableOpacity>
             );
@@ -195,15 +278,9 @@ function AtAGlanceWidget() {
         <TouchableOpacity
           style={[s.refreshPrayerBtn, { backgroundColor: tc.accentBg }]}
           onPress={refreshPrayerTimings}
+          activeOpacity={0.7}
         >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-            }}
-          >
+          <View style={s.rowCenterGap6}>
             <Icon
               name={LUCIDE_ICONS.compass}
               size={14}
@@ -220,7 +297,7 @@ function AtAGlanceWidget() {
         <ActivityIndicator
           size="small"
           color={tc.accent}
-          style={{ marginTop: 8 }}
+          style={{ marginTop: SPACE.sm }}
         />
       )}
     </Card>
@@ -237,53 +314,58 @@ function QuickLogWidget() {
   const [w, setW] = useState("");
   const [wa, setWa] = useState("");
   const [st, setSt] = useState("");
+
   const rows = [
     {
+      key: "weight",
       l: "Weight",
       icon: LUCIDE_ICONS.weight,
+      color: tc.info,
       v: w,
-      s: setW,
-      ph: "Please log your weight in kg",
-      a: () => {
+      set: setW,
+      ph: "e.g. 70.5",
+      action: () => {
         const n = parseFloat(w);
         if (n > 0 && n < 300) {
           logWeight(n);
           setW("");
         }
       },
-      b: "Log",
     },
     {
+      key: "water",
       l: "Water",
       icon: LUCIDE_ICONS.droplet,
+      color: "#0ea5e9",
       v: wa,
-      s: setWa,
-      ph: "Please log water intake in ml",
-      a: () => {
+      set: setWa,
+      ph: "ml, e.g. 250",
+      action: () => {
         const n = parseInt(wa);
         if (n > 0) {
           logWater((dailyLog?.water_ml || 0) + n);
           setWa("");
         }
       },
-      b: "Add",
     },
     {
+      key: "steps",
       l: "Steps",
       icon: LUCIDE_ICONS.activity,
+      color: tc.warning,
       v: st,
-      s: setSt,
-      ph: "Please log you todays steps",
-      a: () => {
+      set: setSt,
+      ph: "e.g. 8000",
+      action: () => {
         const n = parseInt(st);
         if (n > 0) {
           logSteps(n);
           setSt("");
         }
       },
-      b: "Set",
     },
   ];
+
   const items = [
     {
       l: "Weight",
@@ -305,16 +387,20 @@ function QuickLogWidget() {
     {
       l: "Mood",
       v: dailyLog?.mood
-        ? `${"\u2022".repeat(dailyLog.mood)}${"\u25CB".repeat(5 - dailyLog.mood)}`
+        ? `${"\u25CF".repeat(dailyLog.mood)}${"\u25CB".repeat(5 - dailyLog.mood)}`
         : "\u2014",
       c: tc.accent,
     },
   ];
+
   return (
     <Card title="Quick Log" titleStyle={{ color: tc.textTertiary }}>
       <View style={s.statGrid}>
         {items.map((it) => (
-          <View key={it.l} style={s.statTile}>
+          <View
+            key={it.l}
+            style={[s.statTile, { backgroundColor: tc.bgSecondary }]}
+          >
             <Text style={[s.statValue, { color: it.c }]}>{it.v}</Text>
             <Text style={[s.statLabel, { color: tc.textTertiary }]}>
               {it.l}
@@ -322,43 +408,36 @@ function QuickLogWidget() {
           </View>
         ))}
       </View>
-      {rows.map((r: any) => (
-        <View key={r.l} style={s.qlRow}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              width: 72,
-            }}
-          >
-            <Icon
-              name={r.icon}
-              size={14}
-              color={tc.textSecondary}
-              label={r.l}
-            />
-            <Text style={[s.qlLabel, { color: tc.textSecondary }]}>{r.l}</Text>
+      <View style={{ gap: SPACE.sm, marginTop: SPACE.sm }}>
+        {rows.map((r) => (
+          <View key={r.key} style={s.qlRow}>
+            <IconAvatar icon={r.icon} color={r.color} bg={r.color + "1A"} />
+            <View style={[s.qlInputRow, { backgroundColor: tc.bgSecondary }]}>
+              <TextInput
+                style={[s.qlInput, { color: tc.text }]}
+                value={r.v}
+                onChangeText={r.set}
+                keyboardType="numeric"
+                placeholder={r.ph}
+                placeholderTextColor={tc.placeholder}
+              />
+              <TouchableOpacity
+                style={[
+                  s.qlBtn,
+                  {
+                    backgroundColor: r.v ? tc.accent : tc.border,
+                  },
+                ]}
+                onPress={r.action}
+                activeOpacity={0.7}
+                disabled={!r.v}
+              >
+                <Icon name={LUCIDE_ICONS.plus} size={16} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={[s.qlInputRow, { backgroundColor: tc.bgSecondary }]}>
-            <TextInput
-              style={[s.qlInput, { color: tc.text }]}
-              value={r.v}
-              onChangeText={r.s}
-              keyboardType="numeric"
-              placeholder={r.}
-              placeholderTextColor={tc.placeholder}
-            />
-            <TouchableOpacity
-              style={[s.qlBtn, { backgroundColor: tc.accent }]}
-              onPress={r.a}
-              activeOpacity={0.7}
-            >
-              <Icon name={LUCIDE_ICONS.plus} size={18} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      ))}
+        ))}
+      </View>
     </Card>
   );
 }
@@ -378,42 +457,198 @@ function MoodWidget() {
   return (
     <Card title="Mood" titleStyle={{ color: tc.textTertiary }}>
       <View style={s.moodRow}>
-        {moods.map((m) => (
+        {moods.map((m) => {
+          const selected = dailyLog?.mood === m.v;
+          return (
+            <TouchableOpacity
+              key={m.v}
+              style={[
+                s.moodBtn,
+                {
+                  backgroundColor: tc.bgSecondary,
+                  borderColor: tc.borderLight,
+                },
+                selected && {
+                  backgroundColor: tc.accentBg,
+                  borderColor: tc.accent,
+                },
+                selected && cardShadow(tc.accent),
+              ]}
+              onPress={() => logMood(m.v)}
+              activeOpacity={0.7}
+            >
+              <Icon
+                name={m.icon}
+                size={20}
+                color={selected ? tc.accent : tc.textTertiary}
+                style={{ marginBottom: 4 }}
+                label={m.l}
+              />
+              <Text
+                style={[
+                  s.moodLabel,
+                  { color: tc.textTertiary },
+                  selected && { color: tc.accent, fontWeight: "700" },
+                ]}
+              >
+                {m.l}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </Card>
+  );
+}
+
+// Swipe-left-to-delete row. Uses only the built-in Animated + PanResponder
+// APIs (no extra gesture-library dependency needed) and collapses its own
+// height smoothly once the delete animation finishes.
+const SWIPE_DELETE_THRESHOLD = -90;
+const SWIPE_MAX = -84;
+
+function SwipeableTodoRow({
+  todo,
+  tc,
+  onToggle,
+  onDelete,
+}: {
+  todo: any;
+  tc: any;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const collapse = useRef(new Animated.Value(1)).current; // 1 = full size, animates to 0
+  const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
+  const isDeleting = useRef(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponderCapture: (_, g) =>
+        Math.abs(g.dx) > 10 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onPanResponderMove: (_, g) => {
+        if (g.dx < 0) {
+          translateX.setValue(Math.max(g.dx, SWIPE_MAX * 1.4));
+        } else {
+          translateX.setValue(0);
+        }
+      },
+      onPanResponderRelease: (_, g) => {
+        if (g.dx < SWIPE_DELETE_THRESHOLD) {
+          runDelete();
+        } else if (g.dx < SWIPE_MAX / 2) {
+          Animated.spring(translateX, {
+            toValue: SWIPE_MAX,
+            useNativeDriver: true,
+            bounciness: 0,
+          }).start();
+        } else {
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 0,
+          }).start();
+        }
+      },
+    }),
+  ).current;
+
+  const runDelete = () => {
+    if (isDeleting.current) return;
+    isDeleting.current = true;
+    Animated.parallel([
+      Animated.timing(translateX, {
+        toValue: -420,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(collapse, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: false,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) onDelete();
+    });
+  };
+
+  const done = todo.completed === 1;
+
+  return (
+    <Animated.View
+      style={{
+        opacity: collapse,
+        maxHeight:
+          measuredHeight != null
+            ? collapse.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, measuredHeight],
+              })
+            : undefined,
+        overflow: "hidden",
+      }}
+    >
+      <View
+        onLayout={(e) => {
+          if (measuredHeight == null) {
+            setMeasuredHeight(e.nativeEvent.layout.height);
+          }
+        }}
+      >
+        <View style={[s.swipeBg, { backgroundColor: tc.error }]}>
           <TouchableOpacity
-            key={m.v}
+            style={s.swipeBgTouchable}
+            onPress={runDelete}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Icon name={LUCIDE_ICONS.x} size={18} color="#fff" label="delete" />
+          </TouchableOpacity>
+        </View>
+        <Animated.View
+          {...panResponder.panHandlers}
+          style={[
+            s.todoItem,
+            { borderBottomColor: tc.divider, backgroundColor: tc.surface },
+            { transform: [{ translateX }] },
+          ]}
+        >
+          <TouchableOpacity
             style={[
-              s.moodBtn,
-              { backgroundColor: tc.bgSecondary, borderColor: tc.borderLight },
-              dailyLog?.mood === m.v && {
-                backgroundColor: tc.accentBg,
+              s.todoCheckbox,
+              { borderColor: tc.border },
+              done && {
+                backgroundColor: tc.accent,
                 borderColor: tc.accent,
               },
             ]}
-            onPress={() => logMood(m.v)}
+            onPress={onToggle}
+            activeOpacity={0.6}
           >
-            <Icon
-              name={m.icon}
-              size={22}
-              color={dailyLog?.mood === m.v ? tc.accent : tc.textTertiary}
-              style={{ marginBottom: 4 }}
-              label={m.l}
-            />
+            {done && <Icon name={LUCIDE_ICONS.check} size={12} color="#fff" />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            onPress={onToggle}
+            activeOpacity={0.6}
+          >
             <Text
               style={[
-                s.moodLabel,
-                { color: tc.textTertiary },
-                dailyLog?.mood === m.v && {
-                  color: tc.accent,
-                  fontWeight: "700",
+                s.todoText,
+                { color: tc.text },
+                done && {
+                  textDecorationLine: "line-through",
+                  color: tc.textTertiary,
                 },
               ]}
+              numberOfLines={1}
             >
-              {m.l}
+              {todo.title}
             </Text>
           </TouchableOpacity>
-        ))}
+        </Animated.View>
       </View>
-    </Card>
+    </Animated.View>
   );
 }
 
@@ -471,58 +706,32 @@ function TodoWidget() {
         </TouchableOpacity>
       </View>
       {visible.length === 0 ? (
-        <Text style={[s.todoEmpty, { color: tc.textTertiary }]}>
-          No tasks yet — add one above
-        </Text>
+        <View style={s.todoEmptyWrap}>
+          <Icon
+            name={LUCIDE_ICONS.checkCircle}
+            size={20}
+            color={tc.textTertiary}
+            label="no tasks"
+          />
+          <Text style={[s.todoEmpty, { color: tc.textTertiary }]}>
+            No tasks yet — add one above
+          </Text>
+        </View>
       ) : (
-        visible.map((t: any) => {
-          const done = t.completed === 1;
-          return (
-            <View
+        <>
+          {visible.map((t: any) => (
+            <SwipeableTodoRow
               key={t.id}
-              style={[s.todoItem, { borderBottomColor: tc.divider }]}
-            >
-              <TouchableOpacity
-                style={[
-                  s.todoCheckbox,
-                  { borderColor: tc.border },
-                  done && { backgroundColor: tc.accent, borderColor: tc.accent },
-                ]}
-                onPress={() => toggleTodo(t.id, !done)}
-                activeOpacity={0.6}
-              >
-                {done && (
-                  <Icon name={LUCIDE_ICONS.check} size={12} color="#fff" />
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{ flex: 1 }}
-                onPress={() => toggleTodo(t.id, !done)}
-                activeOpacity={0.6}
-              >
-                <Text
-                  style={[
-                    s.todoText,
-                    { color: tc.text },
-                    done && {
-                      textDecorationLine: 'line-through',
-                      color: tc.textTertiary,
-                    },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {t.title}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-              onPress={() => deleteTodo(t.id)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Icon name={LUCIDE_ICONS.x} size={14} color={tc.textTertiary} />
-            </TouchableOpacity>
-          </View>
-        );
-        })
+              todo={t}
+              tc={tc}
+              onToggle={() => toggleTodo(t.id, !(t.completed === 1))}
+              onDelete={() => deleteTodo(t.id)}
+            />
+          ))}
+          <Text style={[s.swipeHint, { color: tc.textTertiary }]}>
+            Swipe left to delete
+          </Text>
+        </>
       )}
     </Card>
   );
@@ -540,7 +749,7 @@ function ExpensesWidget() {
   const exps = (todayTransactions || []).filter(
     (t: any) => t.type === "expense",
   );
-  const total = exps.reduce((s: number, t: any) => s + t.amount, 0);
+  const total = exps.reduce((sum: number, t: any) => sum + t.amount, 0);
   const handleAdd = () => {
     const a = parseFloat(amt);
     if (!a || a <= 0) {
@@ -554,69 +763,56 @@ function ExpensesWidget() {
   };
   return (
     <Card>
-      <View>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Text style={[s.cardTitle, { color: tc.textTertiary }]}>
-            Expenses · ₹ {total.toFixed(2)}
+      <View style={s.expHeaderRow}>
+        <View>
+          <Text style={[s.cardTitle, { color: tc.heading }]}>Expenses</Text>
+          <Text style={[s.expTotal, { color: tc.error }]}>
+            ₹ {total.toFixed(2)} today
           </Text>
-
-          <TouchableOpacity
-            style={[s.addExpBtn, { backgroundColor: tc.success }]}
-            onPress={() => setShow(true)}
-          >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
-              <Icon
-                name={LUCIDE_ICONS.plus}
-                size={14}
-                color="#fff"
-                label="add expense"
-              />
-              <Text style={s.addExpBtnText}>Add Expense</Text>
-            </View>
-          </TouchableOpacity>
         </View>
+        <TouchableOpacity
+          style={[s.addExpBtn, { backgroundColor: tc.success }]}
+          onPress={() => setShow(true)}
+          activeOpacity={0.8}
+        >
+          <View style={s.rowCenterGap6}>
+            <Icon
+              name={LUCIDE_ICONS.plus}
+              size={14}
+              color="#fff"
+              label="add expense"
+            />
+            <Text style={s.addExpBtnText}>Add</Text>
+          </View>
+        </TouchableOpacity>
       </View>
       {exps.length > 0 ? (
-        <View>
+        <View style={{ marginTop: SPACE.xs }}>
           {exps.slice(0, 5).map((t: any, i: number) => (
             <View
               key={t.id || i}
               style={[s.expRow, { borderBottomColor: tc.divider }]}
             >
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
-                  width: 90,
-                }}
-              >
-                <Icon
-                  name={
-                    LUCIDE_ICONS[CATEGORY_ICONS[t.category]] ?? LUCIDE_ICONS.pin
-                  }
-                  size={14}
-                  color={tc.heading}
-                  label={t.category}
-                />
+              <IconAvatar
+                icon={
+                  LUCIDE_ICONS[CATEGORY_ICONS[t.category]] ?? LUCIDE_ICONS.pin
+                }
+                color={tc.heading}
+                bg={tc.bgSecondary}
+                size={14}
+                boxSize={28}
+              />
+              <View style={s.expMid}>
                 <Text style={[s.expCat, { color: tc.heading }]}>
                   {t.category}
                 </Text>
+                <Text
+                  style={[s.expDesc, { color: tc.textTertiary }]}
+                  numberOfLines={1}
+                >
+                  {t.description || "—"}
+                </Text>
               </View>
-              <Text
-                style={[s.expDesc, { color: tc.textTertiary }]}
-                numberOfLines={1}
-              >
-                {t.description}
-              </Text>
               <Text style={[s.expAmt, { color: tc.error }]}>
                 ₹ {t.amount.toFixed(2)}
               </Text>
@@ -635,19 +831,17 @@ function ExpensesWidget() {
             activeOpacity={1}
             onPress={() => setShow(false)}
           />
-          <View style={[s.modal, { backgroundColor: tc.surface }]}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <Icon
-                name={LUCIDE_ICONS.dollarSign}
-                size={20}
-                color={tc.heading}
-                label="add expense"
+          <View
+            style={[s.modal, { backgroundColor: tc.surface }, cardShadow()]}
+          >
+            <View style={s.modalHandle} />
+            <View style={s.rowCenterGap8}>
+              <IconAvatar
+                icon={LUCIDE_ICONS.dollarSign}
+                color={tc.success}
+                bg={tc.successBg}
+                boxSize={36}
+                size={18}
               />
               <Text style={[s.modalTitle, { color: tc.heading }]}>
                 Add Expense
@@ -670,6 +864,7 @@ function ExpensesWidget() {
                     },
                   ]}
                   onPress={() => setCat(c)}
+                  activeOpacity={0.7}
                 >
                   <Icon
                     name={LUCIDE_ICONS[CATEGORY_ICONS[c]] ?? LUCIDE_ICONS.pin}
@@ -730,6 +925,7 @@ function ExpensesWidget() {
               <TouchableOpacity
                 style={[s.cancelBtn, { backgroundColor: tc.bgSecondary }]}
                 onPress={() => setShow(false)}
+                activeOpacity={0.7}
               >
                 <Text style={[s.cancelBtnText, { color: tc.textTertiary }]}>
                   Cancel
@@ -738,6 +934,7 @@ function ExpensesWidget() {
               <TouchableOpacity
                 style={[s.saveBtn, { backgroundColor: tc.success }]}
                 onPress={handleAdd}
+                activeOpacity={0.85}
               >
                 <Text style={s.saveBtnText}>Add Expense</Text>
               </TouchableOpacity>
@@ -757,7 +954,11 @@ function MonthlyStatsWidget() {
     return (
       <Card title="Monthly Stats" titleStyle={{ color: tc.textTertiary }}>
         <Text
-          style={{ color: tc.textTertiary, textAlign: "center", padding: 8 }}
+          style={{
+            color: tc.textTertiary,
+            textAlign: "center",
+            padding: SPACE.md,
+          }}
         >
           No data yet
         </Text>
@@ -791,7 +992,10 @@ function MonthlyStatsWidget() {
     <Card title="Monthly Stats" titleStyle={{ color: tc.textTertiary }}>
       <View style={s.statGrid}>
         {items.map((it) => (
-          <View key={it.l} style={s.statTile}>
+          <View
+            key={it.l}
+            style={[s.statTile, { backgroundColor: tc.bgSecondary }]}
+          >
             <Text style={[s.statValue, { color: it.c }]}>{it.v}</Text>
             <Text style={[s.statLabel, { color: tc.textTertiary }]}>
               {it.l}
@@ -836,11 +1040,12 @@ function AiPlanWidget() {
   const todayIdx = new Date().getDay();
 
   const detailsForProgram = (prog: any) => {
-    const items = prog?.items?.filter((i: any) => i.day_index === todayIdx) || [];
+    const items =
+      prog?.items?.filter((i: any) => i.day_index === todayIdx) || [];
     return items.flatMap((item: any) =>
       (prog?.details || [])
         .filter((d: any) => d.item_id === item.id)
-        .sort((a: any, b: any) => a.sort_order - b.sort_order)
+        .sort((a: any, b: any) => a.sort_order - b.sort_order),
     );
   };
 
@@ -881,7 +1086,11 @@ function AiPlanWidget() {
   if (loading) {
     return (
       <Card title="Today's Plan" titleStyle={{ color: tc.textTertiary }}>
-        <ActivityIndicator size="small" color={tc.accent} style={{ margin: 12 }} />
+        <ActivityIndicator
+          size="small"
+          color={tc.accent}
+          style={{ margin: SPACE.md }}
+        />
       </Card>
     );
   }
@@ -889,9 +1098,15 @@ function AiPlanWidget() {
   if (!gymProg && !mealProg) {
     return (
       <Card title="Today's Plan" titleStyle={{ color: tc.textTertiary }}>
-        <View style={{ padding: 16, alignItems: "center", gap: 10 }}>
-          <Icon name={LUCIDE_ICONS.sparkles} size={24} color={tc.accent} />
-          <Text style={{ color: tc.textSecondary, textAlign: "center", fontSize: 13 }}>
+        <View style={s.aiEmptyWrap}>
+          <IconAvatar
+            icon={LUCIDE_ICONS.sparkles}
+            color={tc.accent}
+            bg={tc.accentBg}
+            boxSize={44}
+            size={22}
+          />
+          <Text style={[s.aiEmptyText, { color: tc.textSecondary }]}>
             No AI plan yet. Go to Journal → Gym or Food to generate one.
           </Text>
         </View>
@@ -899,106 +1114,95 @@ function AiPlanWidget() {
     );
   }
 
+  const renderPlanCard = (
+    prog: any,
+    details: any[],
+    emoji: string,
+    type: "gym" | "food",
+  ) => (
+    <View
+      style={[
+        s.planMiniCard,
+        { backgroundColor: tc.bgSecondary, borderColor: tc.border },
+      ]}
+    >
+      <View style={s.planHeaderRow}>
+        <Text style={[s.planTitle, { color: tc.text }]} numberOfLines={1}>
+          {emoji} {prog.title}
+        </Text>
+        <TouchableOpacity
+          onPress={() => handleRegenerate(type)}
+          style={s.planIconBtn}
+          activeOpacity={0.6}
+        >
+          <Icon name={LUCIDE_ICONS.refresh} size={14} color={tc.accent} />
+        </TouchableOpacity>
+      </View>
+      {details.slice(0, 5).map((detail: any) => (
+        <View
+          key={detail.id}
+          style={[s.planMiniRow, { borderBottomColor: tc.divider }]}
+        >
+          <TouchableOpacity
+            onPress={() => handleToggle(detail.id, detail.is_completed)}
+            style={[
+              s.miniCheckbox,
+              { borderColor: tc.border },
+              detail.is_completed === 1 && {
+                backgroundColor: tc.success,
+                borderColor: tc.success,
+              },
+            ]}
+            activeOpacity={0.6}
+          >
+            {detail.is_completed === 1 && (
+              <Icon name={LUCIDE_ICONS.check} size={10} color="#fff" />
+            )}
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: "500",
+                color: detail.is_completed ? tc.textTertiary : tc.text,
+                textDecorationLine: detail.is_completed
+                  ? "line-through"
+                  : "none",
+              }}
+            >
+              {detail.name}
+            </Text>
+            <Text
+              style={{ fontSize: 10, color: tc.textTertiary, marginTop: 1 }}
+            >
+              {formatSubtitle(detail)}
+            </Text>
+          </View>
+        </View>
+      ))}
+      {details.length > 5 && (
+        <Text style={{ fontSize: 11, color: tc.textTertiary, paddingLeft: 28 }}>
+          +{details.length - 5} more
+        </Text>
+      )}
+      <TouchableOpacity
+        onPress={() => handleReset(prog.id)}
+        style={{ paddingTop: 2 }}
+        activeOpacity={0.6}
+      >
+        <Text style={{ fontSize: 11, fontWeight: "600", color: tc.accent }}>
+          {details.filter((d: any) => d.is_completed).length}/{details.length}{" "}
+          done
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <Card title="Today's Plan" titleStyle={{ color: tc.textTertiary }}>
-      <View style={{ gap: 12 }}>
-        {gymProg && (
-          <View style={[s.planMiniCard, { backgroundColor: tc.bgSecondary, borderColor: tc.border }]}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text style={{ color: tc.text, fontWeight: "600", flex: 1 }} numberOfLines={1}>
-                🏋️ {gymProg.title}
-              </Text>
-              <TouchableOpacity onPress={() => handleRegenerate("gym")} style={{ padding: 4 }}>
-                <Icon name={LUCIDE_ICONS.refresh} size={14} color={tc.accent} />
-              </TouchableOpacity>
-            </View>
-            {gymDetails.slice(0, 5).map((detail: any) => (
-              <View key={detail.id} style={[s.planMiniRow, { borderBottomColor: tc.divider }]}>
-                <TouchableOpacity
-                  onPress={() => handleToggle(detail.id, detail.is_completed)}
-                  style={[
-                    s.miniCheckbox,
-                    { borderColor: tc.border },
-                    detail.is_completed === 1 ? { backgroundColor: tc.success, borderColor: tc.success } : undefined,
-                  ]}
-                >
-                  {detail.is_completed === 1 && <Icon name={LUCIDE_ICONS.check} size={10} color="#fff" />}
-                </TouchableOpacity>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      color: detail.is_completed ? tc.textTertiary : tc.text,
-                      textDecorationLine: detail.is_completed ? "line-through" : "none",
-                    }}
-                  >
-                    {detail.name}
-                  </Text>
-                  <Text style={{ fontSize: 10, color: tc.textTertiary }}>{formatSubtitle(detail)}</Text>
-                </View>
-              </View>
-            ))}
-            {gymDetails.length > 5 && (
-              <Text style={{ fontSize: 11, color: tc.textTertiary, paddingLeft: 26 }}>
-                +{gymDetails.length - 5} more
-              </Text>
-            )}
-            <TouchableOpacity onPress={() => handleReset(gymProg.id)} style={{ paddingHorizontal: 4, paddingTop: 2 }}>
-              <Text style={{ fontSize: 11, color: tc.textTertiary }}>
-                {gymDetails.filter((d: any) => d.is_completed).length}/{gymDetails.length} done
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {mealProg && (
-          <View style={[s.planMiniCard, { backgroundColor: tc.bgSecondary, borderColor: tc.border }]}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text style={{ color: tc.text, fontWeight: "600", flex: 1 }} numberOfLines={1}>
-                🍽️ {mealProg.title}
-              </Text>
-              <TouchableOpacity onPress={() => handleRegenerate("food")} style={{ padding: 4 }}>
-                <Icon name={LUCIDE_ICONS.refresh} size={14} color={tc.accent} />
-              </TouchableOpacity>
-            </View>
-            {mealDetails.slice(0, 5).map((detail: any) => (
-              <View key={detail.id} style={[s.planMiniRow, { borderBottomColor: tc.divider }]}>
-                <TouchableOpacity
-                  onPress={() => handleToggle(detail.id, detail.is_completed)}
-                  style={[
-                    s.miniCheckbox,
-                    { borderColor: tc.border },
-                    detail.is_completed === 1 ? { backgroundColor: tc.success, borderColor: tc.success } : undefined,
-                  ]}
-                >
-                  {detail.is_completed === 1 && <Icon name={LUCIDE_ICONS.check} size={10} color="#fff" />}
-                </TouchableOpacity>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      color: detail.is_completed ? tc.textTertiary : tc.text,
-                      textDecorationLine: detail.is_completed ? "line-through" : "none",
-                    }}
-                  >
-                    {detail.name}
-                  </Text>
-                  <Text style={{ fontSize: 10, color: tc.textTertiary }}>{formatSubtitle(detail)}</Text>
-                </View>
-              </View>
-            ))}
-            {mealDetails.length > 5 && (
-              <Text style={{ fontSize: 11, color: tc.textTertiary, paddingLeft: 26 }}>
-                +{mealDetails.length - 5} more
-              </Text>
-            )}
-            <TouchableOpacity onPress={() => handleReset(mealProg.id)} style={{ paddingHorizontal: 4, paddingTop: 2 }}>
-              <Text style={{ fontSize: 11, color: tc.textTertiary }}>
-                {mealDetails.filter((d: any) => d.is_completed).length}/{mealDetails.length} done
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      <View style={{ gap: SPACE.md }}>
+        {gymProg && renderPlanCard(gymProg, gymDetails, "🏋️", "gym")}
+        {mealProg && renderPlanCard(mealProg, mealDetails, "🍽️", "food")}
       </View>
     </Card>
   );
@@ -1054,13 +1258,18 @@ function ReorderableList({
             <View
               style={[
                 s.editControls,
-                { backgroundColor: tc.accentBg, borderColor: tc.accent + "66" },
+                { backgroundColor: tc.accentBg, borderColor: tc.accent + "40" },
               ]}
             >
               <TouchableOpacity
-                style={[s.editArrow, index === 0 && s.editArrowDisabled]}
+                style={[
+                  s.editArrow,
+                  { backgroundColor: tc.accent },
+                  index === 0 && { backgroundColor: tc.border },
+                ]}
                 onPress={() => moveUp(index)}
                 disabled={index === 0}
+                activeOpacity={0.7}
               >
                 <Icon
                   name={LUCIDE_ICONS.arrowUp}
@@ -1075,10 +1284,12 @@ function ReorderableList({
               <TouchableOpacity
                 style={[
                   s.editArrow,
-                  index === data.length - 1 && s.editArrowDisabled,
+                  { backgroundColor: tc.accent },
+                  index === data.length - 1 && { backgroundColor: tc.border },
                 ]}
                 onPress={() => moveDown(index)}
                 disabled={index === data.length - 1}
+                activeOpacity={0.7}
               >
                 <Icon
                   name={LUCIDE_ICONS.arrowDown}
@@ -1113,7 +1324,6 @@ export default function DashboardScreen() {
   const userProfile = useApp((s) => s.userProfile);
 
   const [editing, setEditing] = useState(false);
-  // const greeting = useMemo(() => getIslamicGreeting, []);
   const todayStr = useMemo(
     () =>
       new Date().toLocaleDateString("en-US", {
@@ -1176,6 +1386,7 @@ export default function DashboardScreen() {
           <TouchableOpacity
             onPress={() => setSidebarOpen(true)}
             style={s.menuBtn}
+            activeOpacity={0.7}
           >
             <Icon
               name={LUCIDE_ICONS.menu}
@@ -1213,6 +1424,7 @@ export default function DashboardScreen() {
           <TouchableOpacity
             onPress={() => setSidebarOpen(true)}
             style={s.menuBtn}
+            activeOpacity={0.7}
           >
             <Icon
               name={LUCIDE_ICONS.menu}
@@ -1229,7 +1441,11 @@ export default function DashboardScreen() {
               {todayStr}
             </Text>
           </View>
-          <TouchableOpacity onPress={refresh} style={s.iconBtn}>
+          <TouchableOpacity
+            onPress={refresh}
+            style={s.iconBtn}
+            activeOpacity={0.7}
+          >
             <Icon
               name={LUCIDE_ICONS.refreshCw}
               size={16}
@@ -1239,12 +1455,12 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
         <View style={s.emptyContainer}>
-          <Icon
-            name={LUCIDE_ICONS.barChart2}
-            size={48}
-            color={tc.textTertiary}
-            style={{ marginBottom: 8 }}
-            label="dashboard"
+          <IconAvatar
+            icon={LUCIDE_ICONS.barChart2}
+            color={tc.accent}
+            bg={tc.accentBg}
+            boxSize={72}
+            size={32}
           />
           <Text style={[s.emptyTitle, { color: tc.heading }]}>
             {userProfile?.name
@@ -1257,10 +1473,9 @@ export default function DashboardScreen() {
           <TouchableOpacity
             style={[s.emptyRefreshBtn, { backgroundColor: tc.accent }]}
             onPress={refresh}
+            activeOpacity={0.85}
           >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
+            <View style={s.rowCenterGap6}>
               <Icon
                 name={LUCIDE_ICONS.refreshCw}
                 size={14}
@@ -1281,11 +1496,13 @@ export default function DashboardScreen() {
         style={[
           s.topbar,
           { backgroundColor: tc.surface, borderBottomColor: tc.divider },
+          cardShadow(),
         ]}
       >
         <TouchableOpacity
           onPress={() => setSidebarOpen(true)}
           style={s.menuBtn}
+          activeOpacity={0.7}
         >
           <Icon
             name={LUCIDE_ICONS.menu}
@@ -1305,9 +1522,7 @@ export default function DashboardScreen() {
               </Text>
             </>
           ) : (
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
+            <View style={s.rowCenterGap6}>
               <Icon
                 name={LUCIDE_ICONS.arrowUp}
                 size={14}
@@ -1328,7 +1543,11 @@ export default function DashboardScreen() {
         </View>
         {!editing ? (
           <>
-            <TouchableOpacity onPress={refresh} style={s.iconBtn}>
+            <TouchableOpacity
+              onPress={refresh}
+              style={s.iconBtn}
+              activeOpacity={0.7}
+            >
               <Icon
                 name={LUCIDE_ICONS.refreshCw}
                 size={16}
@@ -1339,10 +1558,9 @@ export default function DashboardScreen() {
             <TouchableOpacity
               onPress={() => setEditing(true)}
               style={[s.editBtn, { backgroundColor: tc.bgSecondary }]}
+              activeOpacity={0.7}
             >
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-              >
+              <View style={s.rowCenterGap4}>
                 <Icon
                   name={LUCIDE_ICONS.edit}
                   size={12}
@@ -1353,9 +1571,7 @@ export default function DashboardScreen() {
               </View>
             </TouchableOpacity>
             <View style={[s.streak, { backgroundColor: tc.warningBg }]}>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-              >
+              <View style={s.rowCenterGap4}>
                 <Icon
                   name={LUCIDE_ICONS.zap}
                   size={12}
@@ -1372,10 +1588,9 @@ export default function DashboardScreen() {
           <TouchableOpacity
             onPress={exitEdit}
             style={[s.doneBtn, { backgroundColor: tc.accent }]}
+            activeOpacity={0.85}
           >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
+            <View style={s.rowCenterGap4}>
               <Icon
                 name={LUCIDE_ICONS.check}
                 size={14}
@@ -1393,7 +1608,11 @@ export default function DashboardScreen() {
         onReorder={handleReorder}
         renderItem={renderCard}
         editing={editing}
-        contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 48 }}
+        contentContainerStyle={{
+          paddingHorizontal: SPACE.md,
+          paddingTop: SPACE.sm,
+          paddingBottom: 48,
+        }}
       />
     </SafeAreaView>
   );
@@ -1403,42 +1622,55 @@ export default function DashboardScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1 },
+
+  // Shared row helpers
+  rowCenter: { flexDirection: "row", alignItems: "center", gap: 8 },
+  rowCenterGap4: { flexDirection: "row", alignItems: "center", gap: 4 },
+  rowCenterGap6: { flexDirection: "row", alignItems: "center", gap: 6 },
+  rowCenterGap8: { flexDirection: "row", alignItems: "center", gap: 8 },
+
   topbar: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    height: 56,
-    borderBottomWidth: 1,
+    paddingHorizontal: SPACE.lg,
+    height: 58,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   menuBtn: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
   },
-  menuIcon: { fontSize: 20 },
-  topCenter: { flex: 1, marginLeft: 10 },
-  greeting: { fontSize: 14, fontWeight: "700" },
-  dateSmall: { fontSize: 11, marginTop: 1 },
+  topCenter: { flex: 1, marginLeft: SPACE.sm },
+  greeting: { fontSize: 15, fontWeight: "800", letterSpacing: 0.1 },
+  dateSmall: { fontSize: 11, marginTop: 2, fontWeight: "500" },
   editHint: { fontSize: 13, fontWeight: "600" },
   iconBtn: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 4,
+    marginRight: 2,
   },
-  iconBtnText: { fontSize: 16 },
   editBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    marginRight: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
+    marginRight: SPACE.sm,
   },
-  editBtnText: { fontSize: 12, fontWeight: "600" },
-  doneBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8 },
+  editBtnText: { fontSize: 12, fontWeight: "700" },
+  doneBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+  },
   doneBtnText: { fontSize: 13, fontWeight: "700", color: "#fff" },
-  streak: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
+  streak: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: RADIUS.pill,
+  },
   streakText: { fontSize: 12, fontWeight: "700" },
 
   loadingContainer: {
@@ -1454,72 +1686,82 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 32,
-    gap: 8,
+    gap: 10,
   },
-  emptyIcon: { fontSize: 48, marginBottom: 8 },
-  emptyTitle: { fontSize: 18, fontWeight: "700", textAlign: "center" },
+  emptyTitle: {
+    fontSize: 19,
+    fontWeight: "800",
+    textAlign: "center",
+    marginTop: 4,
+  },
   emptySubtitle: {
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   emptyRefreshBtn: {
     marginTop: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 26,
+    borderRadius: RADIUS.md,
   },
   emptyRefreshBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 
-  cardWrap: { marginBottom: 12, position: "relative" },
+  cardWrap: { marginBottom: SPACE.md, position: "relative" },
 
   planMiniCard: {
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    gap: 8,
+    borderRadius: RADIUS.md,
+    padding: SPACE.md,
+    gap: SPACE.xs,
   },
+  planHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  planTitle: { fontSize: 14, fontWeight: "700", flex: 1 },
+  planIconBtn: { padding: 4 },
   planMiniRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 4,
-    borderBottomWidth: 1,
+    gap: 10,
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   miniCheckbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 5,
+    width: 20,
+    height: 20,
+    borderRadius: 6,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
 
+  aiEmptyWrap: { padding: SPACE.lg, alignItems: "center", gap: SPACE.sm },
+  aiEmptyText: { textAlign: "center", fontSize: 13, lineHeight: 19 },
+
   editControls: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
-    paddingVertical: 8,
-    marginBottom: 12,
-    borderRadius: 8,
+    gap: SPACE.xl,
+    paddingVertical: SPACE.sm,
+    marginBottom: SPACE.md,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
   },
   editArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: "#6366f1",
+    width: 38,
+    height: 38,
+    borderRadius: RADIUS.sm,
     alignItems: "center",
     justifyContent: "center",
   },
-  editArrowDisabled: { backgroundColor: "#d0d0d0" },
-  editArrowText: { fontSize: 16, color: "#fff", fontWeight: "700" },
-  editArrowTextDisabled: { color: "#999" },
   editIndex: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "800",
     minWidth: 20,
     textAlign: "center",
   },
@@ -1527,170 +1769,199 @@ const s = StyleSheet.create({
   glanceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: SPACE.sm,
   },
-  hijriDate: { fontSize: 14, fontWeight: "600" },
-  hijriDay: { fontSize: 12, fontWeight: "500" },
-  nextPrayerBox: { borderRadius: 10, padding: 12, marginBottom: 10 },
+  hijriDate: { fontSize: 14, fontWeight: "700" },
+  hijriDay: { fontSize: 12, fontWeight: "500", marginTop: 2 },
+  nextPrayerBox: {
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    padding: SPACE.md,
+    marginBottom: SPACE.md,
+  },
   npLabel: {
     fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-  },
-  npName: { fontSize: 18, fontWeight: "700", marginTop: 2 },
-  npTime: { fontSize: 13, marginTop: 2 },
-  npCountdown: { fontWeight: "700" },
-  npAlhamd: { fontSize: 16, fontWeight: "600", marginTop: 4 },
-  prayerStrip: { flexDirection: "row", gap: 6 },
-  pStripItem: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  pStripEmoji: { fontSize: 14, marginBottom: 2 },
-  pStripLabel: { fontSize: 9, fontWeight: "600" },
-  pStripTime: {
-    fontSize: 10,
     fontWeight: "700",
-    fontVariant: ["tabular-nums"],
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  qadaBadge: { fontSize: 9, fontWeight: "700", marginTop: 2 },
-  refreshPrayerBtn: {
-    paddingVertical: 10,
-    borderRadius: 8,
+  npLabelSolo: { fontSize: 14, fontWeight: "700" },
+  npTopRow: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 4,
+    justifyContent: "space-between",
   },
-  refreshPrayerBtnText: { fontSize: 13, fontWeight: "600" },
+  npMainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: SPACE.sm,
+  },
+  npName: { fontSize: 17, fontWeight: "800" },
+  npTime: { fontSize: 12, marginTop: 2, fontWeight: "500" },
+  qadaChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.pill,
+  },
+  qadaChipText: { fontSize: 10, fontWeight: "800", color: "#fff" },
+  markDoneBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: RADIUS.pill,
+  },
+  markDoneBtnText: { fontSize: 12, fontWeight: "700", color: "#fff" },
+  refreshPrayerBtn: {
+    paddingVertical: SPACE.sm + 2,
+    borderRadius: RADIUS.md,
+    alignItems: "center",
+    marginTop: SPACE.xs,
+  },
+  refreshPrayerBtnText: { fontSize: 13, fontWeight: "700" },
 
   statGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 12,
+    gap: SPACE.sm,
   },
-  statTile: { alignItems: "center", gap: 2, width: "23%" },
-  statValue: { fontSize: 18, fontWeight: "700" },
+  statTile: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    width: "47.5%",
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACE.md,
+  },
+  statValue: { fontSize: 18, fontWeight: "800" },
   statLabel: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.3,
-    minHeight: 28,
-    alignSelf: "center",
     textAlign: "center",
   },
 
   qlRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
-    gap: 8,
+    gap: SPACE.sm,
   },
-  qlLabel: { ...TYPOGRAPHY.bodySm, fontWeight: "600" },
   qlInputRow: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 18,
-    paddingHorizontal: 6,
-    paddingVertical: 6,
+    borderRadius: RADIUS.pill,
+    paddingLeft: SPACE.md,
+    paddingRight: 5,
+    height: 46,
     gap: 6,
   },
   qlInput: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
     fontSize: 14,
     fontWeight: "500",
   },
   qlBtn: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: RADIUS.pill,
     alignItems: "center",
     justifyContent: "center",
   },
-  qlBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
 
-  moodRow: { flexDirection: "row", gap: 8 },
+  moodRow: { flexDirection: "row", gap: SPACE.sm },
   moodBtn: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: SPACE.md - 2,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
   },
-  moodEmoji: { fontSize: 22, marginBottom: 4 },
-  moodLabel: { fontSize: 10, fontWeight: "600" },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    flex: 1,
+  moodLabel: { fontSize: 10, fontWeight: "700" },
+
+  cardTitle: { fontSize: 17, fontWeight: "800" },
+  expHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: SPACE.sm,
   },
+  expTotal: { fontSize: 13, fontWeight: "700", marginTop: 2 },
   addExpBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-    marginBottom: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: RADIUS.sm,
   },
   addExpBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
   expRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
+    gap: 10,
+    paddingVertical: SPACE.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  expCat: { fontSize: 13, fontWeight: "600", width: 90 },
-  expDesc: { fontSize: 12, flex: 1, marginHorizontal: 8 },
+  expMid: { flex: 1 },
+  expCat: { fontSize: 13, fontWeight: "700" },
+  expDesc: { fontSize: 12, marginTop: 1 },
   expAmt: { fontSize: 13, fontWeight: "700" },
-  expEmpty: { textAlign: "center", fontSize: 13, paddingVertical: 12 },
+  expEmpty: { textAlign: "center", fontSize: 13, paddingVertical: SPACE.md },
 
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modal: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACE.xl,
     paddingBottom: 40,
   },
-  modalTitle: { fontSize: 20, fontWeight: "700", marginBottom: 16 },
-  label: { fontSize: 12, fontWeight: "600", marginBottom: 6, marginTop: 4 },
-  catGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#00000022",
+    alignSelf: "center",
+    marginBottom: SPACE.md,
+  },
+  modalTitle: { fontSize: 19, fontWeight: "800" },
+  label: {
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 6,
+    marginTop: SPACE.md,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  catGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACE.sm },
   catChip: {
     flexDirection: "row",
-    gap: 4,
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
   },
-  catIcon: { fontSize: 14 },
   catLabel: { fontSize: 12, fontWeight: "600" },
   modalInput: {
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    marginBottom: 14,
   },
-  modalActions: { flexDirection: "row", gap: 12, marginTop: 8 },
+  modalActions: { flexDirection: "row", gap: SPACE.md, marginTop: SPACE.lg },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: SPACE.md + 2,
+    borderRadius: RADIUS.md,
     alignItems: "center",
   },
-  cancelBtnText: { fontSize: 15, fontWeight: "600" },
+  cancelBtnText: { fontSize: 15, fontWeight: "700" },
   saveBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: SPACE.md + 2,
+    borderRadius: RADIUS.md,
     alignItems: "center",
   },
   saveBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
@@ -1698,36 +1969,65 @@ const s = StyleSheet.create({
   todoRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    borderRadius: 10,
+    gap: SPACE.sm,
+    borderRadius: RADIUS.pill,
     borderWidth: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: SPACE.md,
     paddingVertical: 4,
-    marginBottom: 10,
+    marginBottom: SPACE.sm,
   },
-  todoInput: { flex: 1, paddingVertical: 8, fontSize: 14 },
+  todoInput: { flex: 1, paddingVertical: 10, fontSize: 14 },
   todoAddBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: RADIUS.pill,
     alignItems: "center",
     justifyContent: "center",
   },
-  todoEmpty: { fontSize: 13, paddingVertical: 8 },
+  todoEmptyWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACE.sm,
+    paddingVertical: SPACE.lg,
+  },
+  todoEmpty: { fontSize: 13 },
   todoItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    gap: 10,
-    borderBottomWidth: 1,
+    paddingVertical: SPACE.sm + 2,
+    gap: SPACE.sm + 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   todoCheckbox: {
     width: 22,
     height: 22,
-    borderRadius: 6,
+    borderRadius: 7,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
-  todoText: { flex: 1, fontSize: 14 },
+  todoText: { flex: 1, fontSize: 14, fontWeight: "500" },
+
+  swipeBg: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    right: 0,
+    width: 84,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  swipeBgTouchable: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  swipeHint: {
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: SPACE.xs,
+    fontWeight: "500",
+  },
 });

@@ -97,16 +97,11 @@ export function FloatingLeaf({
   });
   const opacity = fall.interpolate({
     inputRange: [0, 0.05, 0.85, 1],
-    outputRange: [0, 1, 1, 0],
+    outputRange: [0, 0.8, 0.8, 0],
   });
   const rotate = spin.interpolate({
     inputRange: [0, 1],
     outputRange: ["0deg", "360deg"],
-  });
-  const leafCount = Math.min(1, (maturity - 0.25) / 0.75);
-  const finalOpacity = opacity.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, leafCount],
   });
 
   return (
@@ -119,7 +114,7 @@ export function FloatingLeaf({
         height: size * 1.4,
         borderRadius: size * 0.2,
         backgroundColor: color,
-        opacity: finalOpacity,
+        opacity,
         transform: [
           { translateY },
           { translateX },

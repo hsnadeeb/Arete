@@ -24,11 +24,12 @@ import {
   SPARK,
   getLevel,
   nextLevelTrees,
+  getBanyanStage,
   DurationPicker,
   TimerDisplay,
   StatsRow,
   FocusControls,
-  GrowingTree,
+  BanyanTree,
   CelebrationBurst,
   ConfettiField,
   LevelUpBanner,
@@ -65,6 +66,7 @@ export default function FocusScreen() {
   const lastActivityRef = useRef(Date.now());
   const lastTapRef = useRef(0);
   const prevLevelTitleRef = useRef<string | null>(null);
+  const prevStageIdxRef = useRef(0);
   const streakPulse = useRef(new Animated.Value(1)).current;
   const doneGlow = useRef(new Animated.Value(0)).current;
 
@@ -157,11 +159,12 @@ export default function FocusScreen() {
             ]).start();
             return duration;
           }
-          const prevMilestone = Math.floor(prev / (duration / 4));
-          const currMilestone = Math.floor(next / (duration / 4));
-          if (currMilestone > prevMilestone && currMilestone < 4) {
-            setMilestone(currMilestone * 25);
-            Vibration.vibrate(100);
+          const newStage = getBanyanStage((next / duration) * 100);
+          if (newStage.index > prevStageIdxRef.current && next < duration) {
+            prevStageIdxRef.current = newStage.index;
+            const stagePct = Math.round(newStage.at);
+            setMilestone(stagePct === 100 ? 100 : stagePct);
+            Vibration.vibrate(80);
           }
           if (
             Math.floor(prev / 300) < Math.floor(next / 300) &&
@@ -337,7 +340,7 @@ export default function FocusScreen() {
         />
 
         <View style={s.treeStage}>
-          <GrowingTree pct={progress} isDark={isDark} running={running} />
+          <BanyanTree pct={progress} isDark={isDark} running={running} />
           <CelebrationBurst
             trigger={burstTrigger}
             colorSet={SPARK}

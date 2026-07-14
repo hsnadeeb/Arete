@@ -5,6 +5,7 @@ export { FocusHistorySheet } from "./FocusHistorySheet";
 export { CelebrationBurst } from "./CelebrationBurst";
 export { ConfettiField } from "./ConfettiField";
 export { GrowingTree } from "./GrowingTree";
+export { BanyanTree } from "./BanyanTree";
 export { LevelUpBanner } from "./LevelUpBanner";
 export { DurationPicker } from "./DurationPicker";
 export { TimerDisplay } from "./TimerDisplay";
@@ -30,11 +31,18 @@ export {
   ROOTS,
   LEAF_FALL_COLORS,
   SPARKLE_COLORS,
+  BANYAN_STAGES,
+  BANYAN_CANOPY,
+  BANYAN_AERIAL_ROOTS,
+  BANYAN_PROP_ROOTS,
+  BANYAN_FIGS,
+  FIG_COLORS,
   hash,
   lerpColor,
   skyColorAt,
   getLevel,
   nextLevelTrees,
   smoothstep,
+  getBanyanStage,
 } from "./constants";
-export type { LevelInfo } from "./constants";
+export type { LevelInfo, BanyanStage } from "./constants";

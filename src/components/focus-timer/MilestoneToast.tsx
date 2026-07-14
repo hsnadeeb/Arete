@@ -1,6 +1,7 @@
 import React from "react";
 import { Text, Animated, StyleSheet } from "react-native";
 import { TYPOGRAPHY } from "../../constants/typography";
+import { getBanyanStage, BANYAN_STAGES } from "./constants";
 
 interface MilestoneToastProps {
   milestone: number | null;
@@ -9,6 +10,17 @@ interface MilestoneToastProps {
 
 export function MilestoneToast({ milestone, animValue }: MilestoneToastProps) {
   if (milestone === null) return null;
+
+  const stage = getBanyanStage(milestone);
+
+  let message = "";
+  if (milestone === 100) {
+    message = `${stage.emoji} Ancient Banyan \u2014 Session Complete!`;
+  } else {
+    const prevStageIdx = Math.max(0, stage.index - 1);
+    const nextStage = BANYAN_STAGES[Math.min(stage.index + 1, BANYAN_STAGES.length - 1)];
+    message = `${stage.emoji} ${stage.name} \u2014 ${milestone}%`;
+  }
 
   return (
     <Animated.View
@@ -20,24 +32,20 @@ export function MilestoneToast({ milestone, animValue }: MilestoneToastProps) {
             {
               translateY: animValue.interpolate({
                 inputRange: [0, 1],
-                outputRange: [-20, 0],
+                outputRange: [-24, 0],
               }),
             },
             {
               scale: animValue.interpolate({
                 inputRange: [0, 1],
-                outputRange: [0.85, 1],
+                outputRange: [0.8, 1],
               }),
             },
           ],
         },
       ]}
     >
-      <Text style={styles.mToastText}>
-        {milestone === 100
-          ? "\u{1F332} Session Complete!"
-          : `${milestone}% \u2014 Keep going!`}
-      </Text>
+      <Text style={styles.mToastText}>{message}</Text>
     </Animated.View>
   );
 }
