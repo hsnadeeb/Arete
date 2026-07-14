@@ -28,7 +28,7 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
   const cx = 130;
 
   // Trunk
-  const trunkBot = 32;
+  const trunkBot = 42;
   const trunkH = 42 + t * 58;
   const trunkW = 18 + t * 12;
 
@@ -385,7 +385,11 @@ const s = StyleSheet.create({
     justifyContent: "center",
     zIndex: 5,
   },
-  potText: { ...TYPOGRAPHY.captionSm, fontWeight: "700", color: "#fff" },
+  potText: {
+    ...TYPOGRAPHY.captionSm,
+    fontWeight: "700",
+    color: "#fff",
+  },
   trunk: {
     position: "absolute",
     borderRadius: 4,
