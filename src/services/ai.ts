@@ -150,12 +150,35 @@ function buildContextString(ctx: AiContext): string {
   return sections.join("\n\n");
 }
 
+// ---------------------------------------------------------------------------
+// Error types
+// ---------------------------------------------------------------------------
+
+/**
+ * Distinguishes *why* a response failed to become usable JSON, so callers
+ * can decide how to react (retry with more tokens, retry with a corrective
+ * prompt, or give up with a clear message) instead of guessing from a
+ * generic Error string.
+ */
+class AiResponseError extends Error {
+  code: "PARSE_ERROR" | "TRUNCATED" | "EMPTY" | "VALIDATION_ERROR";
+  constructor(code: AiResponseError["code"], message: string) {
+    super(message);
+    this.code = code;
+    this.name = "AiResponseError";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// HTTP helpers
+// ---------------------------------------------------------------------------
+
 // Wraps fetch with a timeout so a stalled request doesn't hang forever and
 // look identical to "the app is broken."
 async function fetchWithTimeout(
   url: string,
   options: RequestInit,
-  timeoutMs = 30000,
+  timeoutMs = 60000,
 ): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -195,54 +218,122 @@ function explainHttpError(
   return raw || `${providerLabel} returned an error (${status}).`;
 }
 
-function extractJsonBlock(text: string): string | null {
-  // Strip markdown fences
+// ---------------------------------------------------------------------------
+// Robust JSON extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts the outermost JSON object from a raw model response.
+ *
+ * This is string-aware: it will not get confused by `{`/`}` characters that
+ * appear inside quoted strings (e.g. a meal description containing braces),
+ * which was the main source of "unable to parse" failures before. It also
+ * distinguishes a genuinely malformed response from a *truncated* one (an
+ * opening brace that never closes), since those need different fixes.
+ */
+function extractJsonBlock(text: string): {
+  json: string | null;
+  truncated: boolean;
+} {
   const cleaned = text
     .replace(/```json\s*/gi, "")
     .replace(/```\s*/g, "")
     .trim();
 
-  // Try naive parse first
+  // Fast path: the whole response is already valid JSON.
   try {
     JSON.parse(cleaned);
-    return cleaned;
+    return { json: cleaned, truncated: false };
   } catch {}
 
-  // Balanced brace extraction: find the outermost { ... }
   let depth = 0;
   let start = -1;
+  let inString = false;
+  let stringChar = "";
+  let escaped = false;
+
   for (let i = 0; i < cleaned.length; i++) {
-    if (cleaned[i] === "{") {
+    const c = cleaned[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (c === "\\") {
+        escaped = true;
+      } else if (c === stringChar) {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (c === '"' || c === "'") {
+      inString = true;
+      stringChar = c;
+      continue;
+    }
+
+    if (c === "{") {
       if (depth === 0) start = i;
       depth++;
-    } else if (cleaned[i] === "}") {
+    } else if (c === "}") {
       depth--;
       if (depth === 0 && start !== -1) {
-        return cleaned.slice(start, i + 1);
+        return { json: cleaned.slice(start, i + 1), truncated: false };
       }
     }
   }
 
-  return null;
+  // An opening brace was found but never balanced out — the response was
+  // almost certainly cut off mid-generation (ran out of output tokens).
+  if (start !== -1) {
+    return { json: null, truncated: true };
+  }
+
+  return { json: null, truncated: false };
 }
 
 function parseAiJson(rawResponse: string): any {
-  const block = extractJsonBlock(rawResponse);
-  if (!block) {
-    console.error("AI raw response (no JSON block found):", rawResponse);
-    throw new Error(
-      "Failed to parse AI response. Unexpected format. Try a different model or check the raw response in logs.",
+  if (!rawResponse || !rawResponse.trim()) {
+    throw new AiResponseError("EMPTY", "The AI returned an empty response.");
+  }
+
+  const { json, truncated } = extractJsonBlock(rawResponse);
+
+  if (truncated) {
+    throw new AiResponseError(
+      "TRUNCATED",
+      "The AI response was cut off before the JSON was complete (it likely ran out of output tokens).",
     );
   }
+
+  if (!json) {
+    console.error("AI raw response (no JSON block found):", rawResponse);
+    throw new AiResponseError(
+      "PARSE_ERROR",
+      "Could not find a JSON object anywhere in the AI's response.",
+    );
+  }
+
   try {
-    return JSON.parse(block);
+    return JSON.parse(json);
   } catch (e: any) {
     console.error("AI raw response:", rawResponse);
-    console.error("Extracted JSON block:", block);
-    throw new Error(
-      `Failed to parse AI response as JSON: ${e.message}. Try a different model or regenerate.`,
+    console.error("Extracted JSON block:", json);
+    throw new AiResponseError(
+      "PARSE_ERROR",
+      `Extracted text was not valid JSON: ${e.message}`,
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Provider requests
+// ---------------------------------------------------------------------------
+
+interface AiCompletion {
+  text: string;
+  /** True if the provider's own finish/stop reason indicates it ran out of tokens. */
+  truncated: boolean;
 }
 
 async function makeRequest(
@@ -251,29 +342,51 @@ async function makeRequest(
   apiKey: string,
   systemPrompt: string,
   userMessage: string,
-): Promise<string> {
+  timeoutMs = 60000,
+  maxTokens = 4096,
+  jsonMode = false,
+): Promise<AiCompletion> {
   switch (provider) {
     case "openai": {
-      const res = await fetchWithTimeout(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userMessage },
-            ],
-            temperature: 0.7,
-            response_format: { type: "json_object" },
-          }),
-        },
+      const url = "https://api.openai.com/v1/chat/completions";
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      };
+      const body: any = {
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        temperature: 0.7,
+        max_tokens: maxTokens,
+      };
+      if (jsonMode) body.response_format = { type: "json_object" };
+
+      let res = await fetchWithTimeout(
+        url,
+        { method: "POST", headers, body: JSON.stringify(body) },
+        timeoutMs,
       );
-      const data = await res.json().catch(() => ({}));
+      let data = await res.json().catch(() => ({}));
+
+      // Some models/providers reject response_format — fall back gracefully
+      // instead of failing outright, since our own JSON extraction can cope.
+      if (
+        !res.ok &&
+        jsonMode &&
+        /response_format/i.test(data?.error?.message || "")
+      ) {
+        delete body.response_format;
+        res = await fetchWithTimeout(
+          url,
+          { method: "POST", headers, body: JSON.stringify(body) },
+          timeoutMs,
+        );
+        data = await res.json().catch(() => ({}));
+      }
+
       if (!res.ok) {
         throw new Error(
           explainHttpError(res.status, "OpenAI", data?.error?.message),
@@ -281,26 +394,43 @@ async function makeRequest(
       }
       const content = data?.choices?.[0]?.message?.content;
       if (!content) throw new Error("OpenAI returned an empty response.");
-      return content;
+      return {
+        text: content,
+        truncated: data?.choices?.[0]?.finish_reason === "length",
+      };
     }
 
     case "anthropic": {
+      const url = "https://api.anthropic.com/v1/messages";
+      const headers = {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      };
+
+      // Anthropic has no dedicated JSON mode. Prefilling the assistant turn
+      // with "{" reliably forces the model to skip preamble/markdown fences
+      // and start directly with the object, which we reassemble below.
+      const messages = jsonMode
+        ? [
+            { role: "user", content: userMessage },
+            { role: "assistant", content: "{" },
+          ]
+        : [{ role: "user", content: userMessage }];
+
       const res = await fetchWithTimeout(
-        "https://api.anthropic.com/v1/messages",
+        url,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-          },
+          headers,
           body: JSON.stringify({
             model,
-            max_tokens: 4096,
+            max_tokens: maxTokens,
             system: systemPrompt,
-            messages: [{ role: "user", content: userMessage }],
+            messages,
           }),
         },
+        timeoutMs,
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -308,12 +438,21 @@ async function makeRequest(
           explainHttpError(res.status, "Anthropic", data?.error?.message),
         );
       }
-      const text = data?.content?.[0]?.text;
-      if (!text) throw new Error("Anthropic returned an empty response.");
-      return text;
+      const continuation = data?.content?.[0]?.text;
+      if (continuation === undefined || continuation === null) {
+        throw new Error("Anthropic returned an empty response.");
+      }
+      const text = jsonMode ? "{" + continuation : continuation;
+      return { text, truncated: data?.stop_reason === "max_tokens" };
     }
 
     case "google": {
+      const generationConfig: any = {
+        temperature: 0.7,
+        maxOutputTokens: maxTokens,
+      };
+      if (jsonMode) generationConfig.responseMimeType = "application/json";
+
       const res = await fetchWithTimeout(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
@@ -321,13 +460,12 @@ async function makeRequest(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [
-              {
-                parts: [{ text: `${systemPrompt}\n\n${userMessage}` }],
-              },
+              { parts: [{ text: `${systemPrompt}\n\n${userMessage}` }] },
             ],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+            generationConfig,
           }),
         },
+        timeoutMs,
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -335,8 +473,14 @@ async function makeRequest(
           explainHttpError(res.status, "Gemini", data?.error?.message),
         );
       }
+      const finishReason = data?.candidates?.[0]?.finishReason;
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) {
+        if (finishReason === "MAX_TOKENS") {
+          // Cut off so early there's no text at all — report as truncated
+          // rather than a generic empty-response error.
+          return { text: "", truncated: true };
+        }
         const blockReason = data?.promptFeedback?.blockReason;
         throw new Error(
           blockReason
@@ -344,31 +488,49 @@ async function makeRequest(
             : "Gemini returned an empty response.",
         );
       }
-      return text;
+      return { text, truncated: finishReason === "MAX_TOKENS" };
     }
 
     case "openrouter": {
-      const res = await fetchWithTimeout(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-            "HTTP-Referer": "https://arete.app",
-            "X-Title": "Arete",
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userMessage },
-            ],
-            temperature: 0.7,
-          }),
-        },
+      const url = "https://openrouter.ai/api/v1/chat/completions";
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://arete.app",
+        "X-Title": "Arete",
+      };
+      const body: any = {
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        temperature: 0.7,
+        max_tokens: maxTokens,
+      };
+      if (jsonMode) body.response_format = { type: "json_object" };
+
+      let res = await fetchWithTimeout(
+        url,
+        { method: "POST", headers, body: JSON.stringify(body) },
+        timeoutMs,
       );
-      const data = await res.json().catch(() => ({}));
+      let data = await res.json().catch(() => ({}));
+
+      if (
+        !res.ok &&
+        jsonMode &&
+        /response_format/i.test(data?.error?.message || "")
+      ) {
+        delete body.response_format;
+        res = await fetchWithTimeout(
+          url,
+          { method: "POST", headers, body: JSON.stringify(body) },
+          timeoutMs,
+        );
+        data = await res.json().catch(() => ({}));
+      }
+
       if (!res.ok) {
         throw new Error(
           explainHttpError(res.status, "OpenRouter", data?.error?.message),
@@ -376,13 +538,148 @@ async function makeRequest(
       }
       const content = data?.choices?.[0]?.message?.content;
       if (!content) throw new Error("OpenRouter returned an empty response.");
-      return content;
+      return {
+        text: content,
+        truncated: data?.choices?.[0]?.finish_reason === "length",
+      };
     }
 
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
 }
+
+async function makeRequestWithRetry(
+  provider: string,
+  model: string,
+  apiKey: string,
+  systemPrompt: string,
+  userMessage: string,
+  timeoutMs = 90000,
+  maxRetries = 1,
+  maxTokens = 4096,
+  jsonMode = false,
+): Promise<AiCompletion> {
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await makeRequest(
+        provider,
+        model,
+        apiKey,
+        systemPrompt,
+        userMessage,
+        timeoutMs,
+        maxTokens,
+        jsonMode,
+      );
+    } catch (e: any) {
+      lastError = e;
+      const msg = (e.message || "").toLowerCase();
+      const isTransient =
+        e.name === "AbortError" ||
+        msg.includes("timed out") ||
+        msg.includes("timeout") ||
+        msg.includes("server issues") ||
+        msg.includes("rate-limited");
+      if (!isTransient || attempt === maxRetries) {
+        throw e;
+      }
+      console.warn(
+        `AI request failed (attempt ${attempt + 1}/${maxRetries + 1}): ${e.message}. Retrying...`,
+      );
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+    }
+  }
+  throw lastError || new Error("AI request failed after retries.");
+}
+
+// ---------------------------------------------------------------------------
+// Program shape validation
+// ---------------------------------------------------------------------------
+
+function validateProgramShape(parsed: any): void {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new AiResponseError(
+      "VALIDATION_ERROR",
+      "Top-level response was not a JSON object.",
+    );
+  }
+  if (!Array.isArray(parsed.items)) {
+    throw new AiResponseError(
+      "VALIDATION_ERROR",
+      `Missing or invalid "items" array.`,
+    );
+  }
+  if (parsed.items.length === 0) {
+    throw new AiResponseError(
+      "VALIDATION_ERROR",
+      `"items" array is empty — expected 7 days.`,
+    );
+  }
+
+  const seenDays = new Set<number>();
+  parsed.items.forEach((item: any, idx: number) => {
+    if (
+      typeof item?.day_index !== "number" ||
+      item.day_index < 0 ||
+      item.day_index > 6
+    ) {
+      throw new AiResponseError(
+        "VALIDATION_ERROR",
+        `Item ${idx} has a missing/invalid "day_index" (expected a number 0-6).`,
+      );
+    }
+    seenDays.add(item.day_index);
+    if (!item.title || typeof item.title !== "string") {
+      throw new AiResponseError(
+        "VALIDATION_ERROR",
+        `Item ${idx} (day_index ${item.day_index}) is missing a "title".`,
+      );
+    }
+    if (!Array.isArray(item.details) || item.details.length < 3) {
+      throw new AiResponseError(
+        "VALIDATION_ERROR",
+        `Item ${idx} (day_index ${item.day_index}) needs a "details" array with at least 3 entries.`,
+      );
+    }
+    item.details.forEach((d: any, di: number) => {
+      if (!d || !d.name || typeof d.name !== "string") {
+        throw new AiResponseError(
+          "VALIDATION_ERROR",
+          `Detail ${di} of item ${idx} (day_index ${item.day_index}) is missing a "name".`,
+        );
+      }
+    });
+  });
+
+  if (seenDays.size < 7) {
+    const missing = [0, 1, 2, 3, 4, 5, 6].filter((d) => !seenDays.has(d));
+    throw new AiResponseError(
+      "VALIDATION_ERROR",
+      `Response is missing day_index(es): ${missing.join(", ")}. All 7 days (0-6) are required.`,
+    );
+  }
+}
+
+function buildFinalErrorMessage(e: any): string {
+  if (e instanceof AiResponseError) {
+    if (e.code === "TRUNCATED") {
+      return "The AI response kept getting cut off even after increasing the token budget. Try a model with a larger output limit, or simplify the request.";
+    }
+    if (e.code === "VALIDATION_ERROR") {
+      return `The AI kept returning JSON that didn't match the required structure (${e.message}). Try regenerating, or switch to a different model.`;
+    }
+    if (e.code === "PARSE_ERROR" || e.code === "EMPTY") {
+      return "Failed to get valid JSON from the AI after multiple attempts. Try a different model or regenerate.";
+    }
+  }
+  return e?.message || "Failed to generate the program.";
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
 
 export async function generateAiProgram(
   type: "gym" | "food",
@@ -405,6 +702,7 @@ export async function generateAiProgram(
     );
   if (!provider.api_key)
     throw new Error("API key not set for the active provider.");
+  const apiKey = provider.api_key.trim();
 
   const context = await collectContext();
   const contextStr = buildContextString(context);
@@ -425,9 +723,27 @@ export async function generateAiProgram(
     "Saturday",
   ];
 
+  const localeInstructions = `
+  The user is in India.
+
+  Use Indian standards:
+  - Use kilograms (kg) for body weight and exercise weights.
+  - Use centimeters (cm) for height.
+  - Use kilometers (km) for distance.
+  - Use liters (L) and milliliters (ml) for liquids.
+  - Use Celsius (°C) if temperatures are mentioned.
+
+  For meal plans:
+  - Prefer Indian foods unless the user explicitly requests another cuisine.
+  - Use ingredients commonly available in India.
+  - Mention portions in grams, cups, rotis, bowls, etc.
+  - Mention prices in INR if discussing costs.
+  `;
+
   const systemPrompt =
-    type === "gym"
-      ? `You are an expert personal trainer creating weekly workout programs. Use the user's gym history, daily logs, and goals to create a personalized weekly program.
+    localeInstructions +
+    (type === "gym"
+      ? `You are an expert personal trainer creating weekly workout programs. Use the user's gym history, daily logs, and goals to create a personalized weekly program.)
 
 Each day should contain 4-6 concrete exercises with:
 - name, sets, reps, rest seconds
@@ -443,10 +759,10 @@ Each meal should include:
 - calories, protein, carbs, fat breakdown
 - prep instructions
 - total daily macros
+Return ONLY valid JSON.
+`);
 
-Return ONLY valid JSON.`;
-
-  const userMessage = `Generate a weekly ${type === "gym" ? "workout" : "meal"} program for the user for the week of ${weekStart.toISOString().split("T")[0]} to ${weekEnd.toISOString().split("T")[0]}.
+  const baseUserMessage = `Generate a weekly ${type === "gym" ? "workout" : "meal"} program for the user for the week of ${weekStart.toISOString().split("T")[0]} to ${weekEnd.toISOString().split("T")[0]}.
 Here is the user's historical data to personalize the plan:
 ${contextStr}
 ${userPreferences ? `\nUser preferences:\n${userPreferences}\n` : ""}
@@ -467,13 +783,14 @@ Required JSON structure:
         {
           "type": "${type === "gym" ? "exercise" : "meal"}",
           "name": "Name",
-          ${type === "gym"
-            ? `"sets": 4,
+          ${
+            type === "gym"
+              ? `"sets": 4,
           "reps": 8,
           "rest_seconds": 90,
-          "weight": "185 lbs",
+          "weight": "185 kg",
           "notes": "Warm up with empty bar first"`
-            : `"calories": 450,
+              : `"calories": 450,
           "protein": 35,
           "carbs": 45,
           "fat": 12,
@@ -486,22 +803,69 @@ Required JSON structure:
 }
 
 Rules:
-- Output exactly 7 items, one for each day of the week (day_index 0-6).
+- Output exactly 7 items, one for each day of the week (day_index 0-6, all 7 present, no duplicates).
 - Every item MUST include a "details" array with at least 3 entries.
 - For gym programs, each detail is an exercise with sets, reps, rest_seconds, weight, notes.
 - For meal programs, each detail is a food item with calories, protein, carbs, fat, portion.
 - Provide real, actionable numbers based on the user's history and goals.
 - Return valid JSON only.`;
 
-  const rawResponse = await makeRequest(
-    provider.provider,
-    provider.model,
-    provider.api_key,
-    systemPrompt,
-    userMessage,
-  );
+  const MAX_ATTEMPTS = 3;
+  const MAX_TOKEN_CEILING = 16384;
+  let maxTokens = 8192;
+  let correction = "";
+  let rawResponse = "";
+  let parsed: any;
+  let lastError: Error | undefined;
 
-  const parsed = parseAiJson(rawResponse);
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const completion = await makeRequestWithRetry(
+        provider.provider,
+        provider.model,
+        apiKey,
+        systemPrompt,
+        baseUserMessage + correction,
+        120000,
+        1,
+        maxTokens,
+        true,
+      );
+      rawResponse = completion.text;
+
+      if (completion.truncated) {
+        maxTokens = Math.min(maxTokens * 2, MAX_TOKEN_CEILING);
+        throw new AiResponseError(
+          "TRUNCATED",
+          "Response was cut off before completion (ran out of output tokens).",
+        );
+      }
+
+      parsed = parseAiJson(rawResponse);
+      validateProgramShape(parsed);
+      lastError = undefined;
+      break;
+    } catch (e: any) {
+      lastError = e;
+      if (attempt === MAX_ATTEMPTS) break;
+
+      if (e instanceof AiResponseError && e.code === "TRUNCATED") {
+        console.warn(
+          `Program generation attempt ${attempt} was truncated. Retrying with maxTokens=${maxTokens}...`,
+        );
+      } else {
+        console.warn(
+          `Program generation attempt ${attempt} failed: ${e.message}. Retrying with a corrective prompt...`,
+        );
+        correction = `\n\nIMPORTANT: Your previous response was invalid (${e.message}). Fix this and return ONLY a single valid JSON object matching the schema exactly — no markdown, no commentary, all 7 days present.`;
+      }
+    }
+  }
+
+  if (lastError) {
+    console.error("AI raw response (final failed attempt):", rawResponse);
+    throw new Error(buildFinalErrorMessage(lastError));
+  }
 
   const ws = weekStart.toISOString().split("T")[0];
   const we = weekEnd.toISOString().split("T")[0];
@@ -551,6 +915,36 @@ Rules:
   };
 }
 
+export async function verifyProvider(
+  provider: string,
+  model: string,
+  apiKey: string,
+): Promise<{ ok: boolean; message: string }> {
+  if (!apiKey.trim()) {
+    return { ok: false, message: "API key is empty." };
+  }
+
+  try {
+    await makeRequestWithRetry(
+      provider,
+      model,
+      apiKey.trim(),
+      "You are a helpful assistant. Reply with a single short sentence.",
+      "Say 'API key works!' and nothing else.",
+      30000,
+      0,
+      256,
+      false,
+    );
+    return {
+      ok: true,
+      message: "API key is valid and the provider responded.",
+    };
+  } catch (e: any) {
+    return { ok: false, message: e.message || "Verification failed." };
+  }
+}
+
 export async function askAi(question: string): Promise<string> {
   const provider = await db.getActiveAiProvider();
   if (!provider) throw new Error("No active AI provider configured.");
@@ -565,13 +959,18 @@ export async function askAi(question: string): Promise<string> {
 
   const userMessage = `Here is the user's data:\n\n${contextStr}\n\nUser question: ${question}`;
 
-  return await makeRequest(
+  const completion = await makeRequestWithRetry(
     provider.provider,
     provider.model,
-    provider.api_key,
+    provider.api_key.trim(),
     systemPrompt,
     userMessage,
+    90000,
+    1,
+    4096,
+    false,
   );
+  return completion.text;
 }
 
 export interface ProviderModel {

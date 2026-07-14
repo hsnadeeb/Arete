@@ -17,7 +17,7 @@ import { Card } from "../components/Card";
 import { Icon } from "../components/Icons";
 import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import * as db from "../db/service";
-import { PROVIDERS, askAi } from "../services/ai";
+import { PROVIDERS, askAi, verifyProvider } from "../services/ai";
 
 type ProviderConfig = {
   provider: string;
@@ -41,6 +41,11 @@ export default function AISettingsScreen() {
   const [testing, setTesting] = useState(false);
   const [testQuestion, setTestQuestion] = useState("");
   const [testAnswer, setTestAnswer] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -110,6 +115,28 @@ export default function AISettingsScreen() {
       setTestAnswer(`Error: ${e.message}`);
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleVerify = async () => {
+    if (!apiKey.trim()) {
+      Alert.alert("Error", "Please enter an API key first.");
+      return;
+    }
+    setVerifying(true);
+    setVerifyResult(null);
+    try {
+      const result = await verifyProvider(selectedProvider, model, apiKey.trim());
+      setVerifyResult(result);
+      if (result.ok) {
+        Alert.alert("API Key Works", result.message);
+      } else {
+        Alert.alert("API Key Check Failed", result.message);
+      }
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -378,6 +405,24 @@ export default function AISettingsScreen() {
             <TouchableOpacity
               style={[
                 styles.saveBtn,
+                { backgroundColor: colors.info },
+                verifying && { opacity: 0.5 },
+              ]}
+              onPress={handleVerify}
+              disabled={verifying}
+            >
+              {verifying ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff", fontWeight: "600" }}>
+                  Verify API Key
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.saveBtn,
                 { backgroundColor: colors.accent },
                 saving && { opacity: 0.5 },
               ]}
@@ -392,6 +437,31 @@ export default function AISettingsScreen() {
                 </Text>
               )}
             </TouchableOpacity>
+
+            {verifyResult && (
+              <View
+                style={[
+                  styles.answerBox,
+                  {
+                    backgroundColor: verifyResult.ok
+                      ? colors.successBg
+                      : colors.bgSecondary,
+                    borderColor: verifyResult.ok
+                      ? colors.success
+                      : colors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    color: verifyResult.ok ? colors.success : colors.error,
+                    fontSize: 13,
+                  }}
+                >
+                  {verifyResult.ok ? "✓ " : "✗ "} {verifyResult.message}
+                </Text>
+              </View>
+            )}
           </Card>
         )}
 
