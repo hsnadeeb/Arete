@@ -1,4 +1,6 @@
 export { Firefly } from "./Firefly";
+export { FloatingLeaf } from "./FloatingLeaf";
+export { SparkleField } from "./SparkleField";
 export { FocusHistorySheet } from "./FocusHistorySheet";
 export { CelebrationBurst } from "./CelebrationBurst";
 export { ConfettiField } from "./ConfettiField";
@@ -24,6 +26,10 @@ export {
   LEVELS,
   CANOPY_BLOBS,
   BLOSSOM_SPOTS,
+  SIDE_TUFTS,
+  ROOTS,
+  LEAF_FALL_COLORS,
+  SPARKLE_COLORS,
   hash,
   lerpColor,
   skyColorAt,

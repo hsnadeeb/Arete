@@ -346,7 +346,7 @@ function QuickLogWidget() {
               value={r.v}
               onChangeText={r.s}
               keyboardType="numeric"
-              placeholder={r.ph}
+              placeholder={r.}
               placeholderTextColor={tc.placeholder}
             />
             <TouchableOpacity

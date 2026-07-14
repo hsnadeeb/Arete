@@ -62,6 +62,33 @@ export const BLOSSOM_SPOTS = [
   { dx: 0.75, dy: 0.05, growAt: 0.95 },
 ];
 
+export const SIDE_TUFTS = [
+  { side: -1, yRatio: 0.22, size: 9, leafColor: GREEN[3], growAt: 0.12 },
+  { side: 1, yRatio: 0.22, size: 9, leafColor: GREEN[3], growAt: 0.15 },
+  { side: -1, yRatio: 0.4, size: 8, leafColor: GREEN[4], growAt: 0.28 },
+  { side: 1, yRatio: 0.4, size: 8, leafColor: GREEN[4], growAt: 0.31 },
+  { side: -1, yRatio: 0.56, size: 7, leafColor: GREEN[2], growAt: 0.42 },
+  { side: 1, yRatio: 0.56, size: 7, leafColor: GREEN[2], growAt: 0.45 },
+  { side: -1, yRatio: 0.72, size: 6, leafColor: GREEN[3], growAt: 0.58 },
+  { side: 1, yRatio: 0.72, size: 6, leafColor: GREEN[3], growAt: 0.6 },
+  { side: -1, yRatio: 0.86, size: 5, leafColor: GREEN[1], growAt: 0.72 },
+  { side: 1, yRatio: 0.86, size: 5, leafColor: GREEN[1], growAt: 0.74 },
+];
+
+export const ROOTS = [
+  { side: -1, angle: -42, length: 22, thickness: 3, growAt: 0.05 },
+  { side: 1, angle: 42, length: 22, thickness: 3, growAt: 0.07 },
+  { side: -1, angle: -62, length: 16, thickness: 2.5, growAt: 0.15 },
+  { side: 1, angle: 62, length: 16, thickness: 2.5, growAt: 0.17 },
+  { side: -1, angle: -24, length: 14, thickness: 2, growAt: 0.25 },
+  { side: 1, angle: 24, length: 14, thickness: 2, growAt: 0.27 },
+  { side: -1, angle: -78, length: 11, thickness: 2, growAt: 0.35 },
+  { side: 1, angle: 78, length: 11, thickness: 2, growAt: 0.37 },
+];
+
+export const LEAF_FALL_COLORS = ["#66bb6a", "#81c784", "#a5d6a7", "#4caf50", "#ffcc02", "#ffd54f"];
+export const SPARKLE_COLORS = ["#ffd54f", "#fff176", "#ffecb3", "#a5d6a7", "#ffffff"];
+
 export function hash(i: number, t: number): number {
   return ((i * 16807 + t * 100) % 2147483647) / 2147483647;
 }

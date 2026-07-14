@@ -5,7 +5,6 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "jsEngine": "hermes",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
@@ -23,7 +22,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-sqlite"],
+    "plugins": ["expo-sqlite", "expo-font", "expo-sharing", "expo-status-bar"],
     "extra": {
       "eas": {
         "projectId": "ea99bc11-6dc9-4f00-92af-cfd4deb714af"
