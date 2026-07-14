@@ -232,9 +232,7 @@ export function GrowingTree({ pct, isDark, running }: GrowingTreeProps) {
           />
         ))}
       </View>
-      <Animated.View
-        style={[s.treeWrap, { transform: [{ scale: animScale }] }]}
-      >
+      <Animated.View style={[s.treeWrap, { transform: [{ scale: 1.25 }] }]}>
         <View
           style={[
             s.groundShadow,

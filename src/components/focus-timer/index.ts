@@ -1,4 +1,5 @@
 export { Firefly } from "./Firefly";
+export { FocusHistorySheet } from "./FocusHistorySheet";
 export { CelebrationBurst } from "./CelebrationBurst";
 export { ConfettiField } from "./ConfettiField";
 export { GrowingTree } from "./GrowingTree";

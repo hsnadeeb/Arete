@@ -35,6 +35,7 @@ import {
   MilestoneToast,
   LevelBadge,
   ScreensaverView,
+  FocusHistorySheet,
 } from "../components/focus-timer";
 
 export default function FocusScreen() {
@@ -46,6 +47,7 @@ export default function FocusScreen() {
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
+  const [sessionId, setSessionId] = useState<number | null>(null);
   const [stats, setStats] = useState({
     totalTrees: 0,
     totalSessions: 0,
@@ -57,6 +59,7 @@ export default function FocusScreen() {
   const [burstTrigger, setBurstTrigger] = useState(0);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [levelUpVisible, setLevelUpVisible] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const animMilestone = useRef(new Animated.Value(0)).current;
   const lastActivityRef = useRef(Date.now());
@@ -133,7 +136,10 @@ export default function FocusScreen() {
             setRunning(false);
             setDone(true);
             Vibration.vibrate([0, 200, 100, 200]);
-            db.saveFocusSession(duration, duration);
+            setSessionId((id) => {
+              if (id) db.completeFocusSession(id, duration);
+              return null;
+            });
             setMilestone(100);
             setConfettiTrigger((v) => v + 1);
             setBurstTrigger((v) => v + 1);
@@ -200,7 +206,8 @@ export default function FocusScreen() {
     }
     setRunning(true);
     lastActivityRef.current = Date.now();
-  }, [done]);
+    db.insertFocusSession(duration, new Date().toISOString()).then(setSessionId);
+  }, [done, duration]);
 
   const handlePause = useCallback(() => {
     setRunning(false);
@@ -209,22 +216,30 @@ export default function FocusScreen() {
 
   const handleReset = useCallback(() => {
     setRunning(false);
+    setSessionId((id) => {
+      if (id) db.interruptFocusSession(id, elapsed);
+      return null;
+    });
     setElapsed(0);
     setDone(false);
     lastActivityRef.current = Date.now();
-  }, []);
+  }, [elapsed]);
 
   const handleAddTime = useCallback(() => {
     setElapsed((prev) => Math.min(prev + 300, duration));
   }, [duration]);
 
   const handleDuration = useCallback((d: number) => {
+    setRunning(false);
+    setSessionId((id) => {
+      if (id) db.interruptFocusSession(id, elapsed);
+      return null;
+    });
     setDuration(d);
     setElapsed(0);
-    setRunning(false);
     setDone(false);
     lastActivityRef.current = Date.now();
-  }, []);
+  }, [elapsed]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -271,7 +286,14 @@ export default function FocusScreen() {
     >
       <View style={[s.header, { borderBottomColor: tc.divider }]}>
         <TouchableOpacity
-          onPress={() => setCurrentRoute("Greeting")}
+          onPress={() => {
+            setSessionId((id) => {
+              if (id) db.interruptFocusSession(id, elapsed);
+              return null;
+            });
+            setRunning(false);
+            setCurrentRoute("Greeting");
+          }}
           style={s.backBtn}
         >
           <Icon
@@ -286,6 +308,16 @@ export default function FocusScreen() {
           onSelect={handleDuration}
           colors={tc}
         />
+        <TouchableOpacity
+          onPress={() => setShowHistory(true)}
+          style={s.historyBtn}
+        >
+          <Icon
+            name={LUCIDE_ICONS.barChart}
+            size={20}
+            color={tc.textSecondary}
+          />
+        </TouchableOpacity>
       </View>
 
       <MilestoneToast milestone={milestone} animValue={animMilestone} />
@@ -344,6 +376,11 @@ export default function FocusScreen() {
           doneGlow={doneGlow}
         />
       </View>
+
+      <FocusHistorySheet
+        visible={showHistory}
+        onClose={() => setShowHistory(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -359,6 +396,12 @@ const s = StyleSheet.create({
     gap: 12,
   },
   backBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  historyBtn: {
     width: 32,
     height: 32,
     alignItems: "center",

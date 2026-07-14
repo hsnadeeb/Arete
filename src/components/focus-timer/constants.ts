@@ -36,11 +36,11 @@ export interface LevelInfo {
 
 export const LEVELS: LevelInfo[] = [
   { minTrees: 0, title: "Seedling", iconKey: "Sprout" },
-  { minTrees: 5, title: "Sprout", iconKey: "TreePine" },
-  { minTrees: 15, title: "Sapling", iconKey: "TreePine" },
-  { minTrees: 30, title: "Forest Keeper", iconKey: "TreeDeciduous" },
-  { minTrees: 50, title: "Forest Guardian", iconKey: "Mountain" },
-  { minTrees: 100, title: "Ancient Forest", iconKey: "TreePine" },
+  { minTrees: 15, title: "Sprout", iconKey: "TreePine" },
+  { minTrees: 45, title: "Sapling", iconKey: "TreePine" },
+  { minTrees: 90, title: "Forest Keeper", iconKey: "TreeDeciduous" },
+  { minTrees: 150, title: "Forest Guardian", iconKey: "Mountain" },
+  { minTrees: 300, title: "Ancient Forest", iconKey: "TreePine" },
 ];
 
 export const CANOPY_BLOBS = [
