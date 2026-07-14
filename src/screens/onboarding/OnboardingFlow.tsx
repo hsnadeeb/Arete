@@ -30,8 +30,11 @@ interface OnboardingData {
   };
 }
 
+// Step mapping: 0=Welcome, 1=Name, 2=Goals, 3=Body, 4=TrackerGoals, 5=Preferences
+const STEPS = ['welcome', 'name', 'goals', 'body', 'trackerGoals', 'preferences'];
+
 export default function OnboardingFlow({ onComplete }: { onComplete: (data: OnboardingData) => void }) {
-  const [step, setStep] = useState(0);
+  const [stepIndex, setStepIndex] = useState(0);
   const [data, setData] = useState<Partial<OnboardingData>>({});
   const [showRestorePopup, setShowRestorePopup] = useState(false);
   const [hasOldData, setHasOldData] = useState(false);
@@ -78,7 +81,6 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
         console.error('Error clearing database:', e);
       }
 
-      // Reset the cached connection so initDatabase() reopens fresh
       resetDb();
       await initDatabase();
 
@@ -91,38 +93,38 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
   const handleStartFresh = async () => {
     setShowRestorePopup(false);
     await clearAllData();
-    setStep(0);
+    setStepIndex(0);
   };
 
   const handleKeepData = () => {
     setShowRestorePopup(false);
-    setStep(0);
+    setStepIndex(0);
   };
 
   const handleNameNext = (name: string) => {
-    setData(prev => ({ ...prev, name }));
-    setStep(2);
+    setData((prev) => ({ ...prev, name }));
+    setStepIndex(2); // Goals
   };
 
   const handleGoalsNext = (goals: string[]) => {
-    setData(prev => ({ ...prev, goals }));
-    setStep(3);
+    setData((prev) => ({ ...prev, goals }));
+    setStepIndex(3); // Body
   };
 
   const handleBodyNext = (body: OnboardingData['body']) => {
-    setData(prev => ({ ...prev, body }));
-    setStep(4);
+    setData((prev) => ({ ...prev, body }));
+    setStepIndex(4); // TrackerGoals
   };
 
   const handleTrackerGoalsNext = (trackerTargets: { steps_target: number; water_target: number; sleep_target: number }) => {
-    setData(prev => ({
+    setData((prev) => ({
       ...prev,
       trackerTargets: {
         ...trackerTargets,
         weight_target: prev.body?.targetWeightKg ? parseFloat(prev.body.targetWeightKg) : 75,
       },
     }));
-    setStep(5);
+    setStepIndex(5); // Preferences
   };
 
   const handlePreferencesComplete = async (preferences: string[]) => {
@@ -165,14 +167,33 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
   };
 
   const handleBack = () => {
-    if (step > 0) {
-      setStep(step - 1);
+    if (stepIndex > 0) {
+      setStepIndex(stepIndex - 1);
     }
   };
 
   if (!dataChecked) {
     return null;
   }
+
+  const renderStep = () => {
+    switch (stepIndex) {
+      case 0:
+        return <WelcomeScreen onNext={() => setStepIndex(1)} />;
+      case 1:
+        return <NameScreen onNext={handleNameNext} onBack={handleBack} />;
+      case 2:
+        return <GoalsScreen onNext={handleGoalsNext} onBack={handleBack} />;
+      case 3:
+        return <BodyScreen onNext={handleBodyNext} onBack={handleBack} />;
+      case 4:
+        return <TrackerGoalsScreen onNext={handleTrackerGoalsNext} onBack={handleBack} />;
+      case 5:
+        return <PreferencesScreen onNext={handlePreferencesComplete} onBack={handleBack} />;
+      default:
+        return <WelcomeScreen onNext={() => setStepIndex(1)} />;
+    }
+  };
 
   return (
     <>
@@ -182,24 +203,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
         onStartFresh={handleStartFresh}
         onKeepData={handleKeepData}
       />
-      {(() => {
-        switch (step) {
-          case 0:
-            return <WelcomeScreen onNext={() => setStep(1)} />;
-          case 1:
-            return <NameScreen onNext={handleNameNext} onBack={handleBack} />;
-          case 2:
-            return <GoalsScreen onNext={handleGoalsNext} onBack={handleBack} />;
-          case 3:
-            return <BodyScreen onNext={handleBodyNext} onBack={handleBack} />;
-          case 4:
-            return <TrackerGoalsScreen onNext={handleTrackerGoalsNext} onBack={handleBack} />;
-          case 5:
-            return <PreferencesScreen onNext={handlePreferencesComplete} onBack={handleBack} />;
-          default:
-            return <WelcomeScreen onNext={() => setStep(1)} />;
-        }
-      })()}
+      {renderStep()}
     </>
   );
 }

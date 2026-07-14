@@ -1,140 +1,104 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { TYPOGRAPHY } from '../../constants/typography';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, TextInput, Keyboard } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { TYPOGRAPHY, LUCIDE_ICONS } from '../../constants/typography';
+import { Icon } from '../../components/Icons';
+import { OnboardingLayout, OnboardingIcon, OnboardingInput } from './OnboardingComponents';
 
 export default function NameScreen({ onNext, onBack }: { onNext: (name: string) => void; onBack: () => void }) {
   const { theme } = useTheme();
   const tc = theme.colors;
   const [name, setName] = useState('');
+  const inputRef = useRef<TextInput>(null);
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => inputRef.current?.focus(), 300);
+  }, []);
 
   const handleNext = () => {
     if (name.trim()) {
+      Keyboard.dismiss();
       onNext(name.trim());
     }
   };
 
+  const isValid = name.trim().length >= 2;
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardContainer}
-      >
-        <View style={styles.content}>
-          <View style={styles.progressContainer}>
-            <View style={[styles.progressBar, { backgroundColor: tc.accent, width: '20%' }]} />
-          </View>
+    <OnboardingLayout
+      step={1}
+      totalSteps={6}
+      title="What's your name?"
+      subtitle="Let's get to know you better"
+      onNext={handleNext}
+      onBack={onBack}
+      nextDisabled={!isValid}
+      nextLabel="Next"
+      backLabel="Back"
+    >
+      <View style={styles.headerWrapper}>
+        <OnboardingIcon
+          name="user"
+          size={32}
+          variant="primary"
+          containerStyle={styles.headerIcon}
+        />
+      </View>
 
-          <Text style={[styles.title, { color: tc.text }]}>What's your name?</Text>
-          <Text style={[styles.subtitle, { color: tc.textSecondary }]}>
-            Let's get to know you better
-          </Text>
-
-          <TextInput
-            style={[styles.input, { backgroundColor: tc.surface, borderColor: tc.border, color: tc.text }]}
-            placeholder="Enter your name"
-            placeholderTextColor={tc.textSecondary}
-            value={name}
-            onChangeText={setName}
-            autoFocus
-            onSubmitEditing={handleNext}
-          />
-
-          <View style={styles.spacer} />
-        </View>
-
-        <View style={styles.buttons}>
-          <TouchableOpacity
-            style={[styles.backButton, { borderColor: tc.border }]}
-            onPress={onBack}
-          >
-            <Text style={[styles.backButtonText, { color: tc.textSecondary }]}>Back</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.nextButton, { backgroundColor: tc.accent, opacity: name.trim() ? 1 : 0.5 }]}
-            onPress={handleNext}
-            disabled={!name.trim()}
-          >
-            <Text style={[styles.nextButtonText, { color: '#fff' }]}>Next</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <View style={styles.inputWrapper}>
+        <OnboardingInput
+          ref={inputRef}
+          value={name}
+          onChangeText={setName}
+          placeholder="Enter your name"
+          onSubmitEditing={handleNext}
+          autoFocus={true}
+          maxLength={30}
+          fontSize={24}
+          textAlign="center"
+          helperText="At least 2 characters"
+        />
+      </View>
+    </OnboardingLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-  },
-  keyboardContainer: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  progressContainer: {
-    height: 4,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 2,
-    marginBottom: 32,
-    alignSelf: 'flex-start',
-    width: '100%',
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  headerWrapper: {
+    alignItems: 'center',
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 32,
+  headerIcon: {},
+  inputWrapper: {
+    alignItems: 'center',
+    width: '100%',
   },
   input: {
-    fontSize: 18,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    fontSize: 24,
+    fontWeight: '500',
+    padding: 20,
+    borderRadius: 16,
+    textAlign: 'center',
+    letterSpacing: 0.2,
+    width: '100%',
+    minWidth: 280,
   },
-  spacer: {
-    flex: 1,
+  charCount: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    paddingRight: 4,
   },
-  buttons: {
-    flexDirection: 'row',
-    gap: 12,
+  charCountText: {
+    ...TYPOGRAPHY.captionSm,
   },
-  backButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+  hint: {
+    marginTop: 12,
     alignItems: 'center',
   },
-  backButtonText: {
-    ...TYPOGRAPHY.h4,
-  },
-  nextButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  nextButtonText: {
-    ...TYPOGRAPHY.h4,
+  hintText: {
+    ...TYPOGRAPHY.captionSm,
   },
 });
+
+import { StyleSheet } from 'react-native';
