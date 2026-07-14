@@ -1,21 +1,10 @@
 import React, { useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { TYPOGRAPHY } from '../../constants/typography';
-import { useTheme } from '../../context/ThemeContext';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Icon } from '../../components/Icons';
-import { LUCIDE_ICONS } from '../../constants/typography';
+import { LUCIDE_ICONS, TYPOGRAPHY } from '../../constants/typography';
+import { useTheme } from '../../context/ThemeContext';
 import { TRACKER_COLORS } from '../tracker/constants';
+import { OnboardingLayout, OnboardingIcon } from './OnboardingComponents';
 
 const TRACKER_GOALS = [
   {
@@ -53,15 +42,19 @@ const TRACKER_GOALS = [
   },
 ];
 
-function GoalSlider({
-  goal,
-  value,
-  onChange,
-}: {
+interface GoalSliderProps {
   goal: typeof TRACKER_GOALS[0];
   value: number;
   onChange: (v: number) => void;
-}) {
+  anim: Animated.Value;
+}
+
+const GoalSlider: React.FC<GoalSliderProps> = ({
+  goal,
+  value,
+  onChange,
+  anim,
+}) => {
   const { theme } = useTheme();
   const tc = theme.colors;
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -80,51 +73,79 @@ function GoalSlider({
     }
   };
 
+  const scale = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.9, 1],
+  });
+  const opacity = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [30, 0],
+  });
+
   return (
-    <View style={[styles.goalCard, { backgroundColor: tc.surface, borderColor: tc.border }]}>
-      <View style={styles.goalHeader}>
-        <View style={[styles.goalIconWrap, { backgroundColor: goal.color + '18' }]}>
-          <Icon name={LUCIDE_ICONS[goal.icon]} size={22} color={goal.color} />
+    <Animated.View
+      style={{
+        transform: [{ scale }, { translateY }],
+        opacity,
+      }}
+    >
+      <View style={[styles.goalCard, { backgroundColor: tc.surface, borderColor: tc.border }]}>
+        <View style={styles.goalHeader}>
+          <OnboardingIcon
+            name={goal.icon}
+            size={22}
+            variant="primary"
+            backgroundColor={goal.color + '18'}
+          />
+          <View style={styles.goalInfo}>
+            <Text style={[styles.goalLabel, { color: tc.text }]}>{goal.label}</Text>
+            <Text style={[styles.goalUnit, { color: tc.textSecondary }]}>{goal.unit}</Text>
+          </View>
         </View>
-        <View style={styles.goalInfo}>
-          <Text style={[styles.goalLabel, { color: tc.text }]}>{goal.label}</Text>
-          <Text style={[styles.goalUnit, { color: tc.textSecondary }]}>{goal.unit}</Text>
+
+        <Animated.View style={{ transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
+          <Text style={[styles.goalValue, { color: goal.color }]}>
+            {goal.key === 'water'
+              ? `${value}`
+              : goal.key === 'sleep'
+              ? value.toFixed(1)
+              : value.toLocaleString()}
+          </Text>
+        </Animated.View>
+
+        <View style={[styles.progressTrack, { backgroundColor: tc.bgSecondary }]}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${Math.min(pctOfDefault, 100)}%`, backgroundColor: goal.color },
+            ]}
+          />
+        </View>
+
+        <View style={styles.adjustRow}>
+          <TouchableOpacity
+            style={[styles.adjustBtn, { backgroundColor: goal.color + '15' }]}
+            onPress={() => adjust(-goal.step)}
+            activeOpacity={0.7}
+          >
+            <Icon name={LUCIDE_ICONS.chevronDown} size={18} color={goal.color} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.adjustBtn, { backgroundColor: goal.color + '15' }]}
+            onPress={() => adjust(goal.step)}
+            activeOpacity={0.7}
+          >
+            <Icon name={LUCIDE_ICONS.chevronUp} size={18} color={goal.color} />
+          </TouchableOpacity>
         </View>
       </View>
-
-      <Animated.View style={{ transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
-        <Text style={[styles.goalValue, { color: goal.color }]}>
-          {goal.key === 'water' ? `${value}` : goal.key === 'sleep' ? value.toFixed(1) : value.toLocaleString()}
-        </Text>
-      </Animated.View>
-
-      {/* Progress bar to default */}
-      <View style={[styles.progressTrack, { backgroundColor: tc.bgSecondary }]}>
-        <View
-          style={[
-            styles.progressFill,
-            { width: `${Math.min(pctOfDefault, 100)}%`, backgroundColor: goal.color },
-          ]}
-        />
-      </View>
-
-      <View style={styles.adjustRow}>
-        <TouchableOpacity
-          style={[styles.adjustBtn, { backgroundColor: goal.color + '15' }]}
-          onPress={() => adjust(-goal.step)}
-        >
-          <Icon name={LUCIDE_ICONS.chevronDown} size={18} color={goal.color} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.adjustBtn, { backgroundColor: goal.color + '15' }]}
-          onPress={() => adjust(goal.step)}
-        >
-          <Icon name={LUCIDE_ICONS.chevronUp} size={18} color={goal.color} />
-        </TouchableOpacity>
-      </View>
-    </View>
+    </Animated.View>
   );
-}
+};
 
 export default function TrackerGoalsScreen({
   onNext,
@@ -141,8 +162,12 @@ export default function TrackerGoalsScreen({
     sleep: 8,
   });
 
+  const [cardAnims] = useState(() =>
+    TRACKER_GOALS.map(() => new Animated.Value(0))
+  );
+
   const updateGoal = (key: string, value: number) => {
-    setGoals(prev => ({ ...prev, [key]: value }));
+    setGoals((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleNext = () => {
@@ -153,135 +178,63 @@ export default function TrackerGoalsScreen({
     });
   };
 
+  React.useEffect(() => {
+    Animated.stagger(100, cardAnims.map((anim) =>
+      Animated.spring(anim, { toValue: 1, useNativeDriver: true, tension: 100, friction: 12 })
+    )).start();
+  }, [cardAnims]);
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardContainer}
-      >
-        <View style={styles.content}>
-          <View style={styles.progressContainer}>
-            <View style={[styles.progressBar, { backgroundColor: tc.accent, width: '100%' }]} />
-          </View>
-
-          <Text style={[styles.title, { color: tc.text }]}>Set your daily targets</Text>
-          <Text style={[styles.subtitle, { color: tc.textSecondary }]}>
-            Customize your tracking goals for each area
-          </Text>
-
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollArea}>
-            {TRACKER_GOALS.map(g => (
-              <GoalSlider
-                key={g.key}
-                goal={g}
-                value={goals[g.key as keyof typeof goals]}
-                onChange={(v) => updateGoal(g.key, v)}
-              />
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.buttons}>
-          <TouchableOpacity
-            style={[styles.backButton, { borderColor: tc.border }]}
-            onPress={onBack}
-          >
-            <Text style={[styles.backButtonText, { color: tc.textSecondary }]}>Back</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.nextButton, { backgroundColor: tc.accent }]}
-            onPress={handleNext}
-          >
-            <Text style={[styles.nextButtonText, { color: '#fff' }]}>Continue</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <OnboardingLayout
+      step={4}
+      totalSteps={6}
+      title="Set your daily targets"
+      subtitle="Customize your tracking goals for each area"
+      nextLabel="Continue"
+      onNext={handleNext}
+      onBack={onBack}
+      scrollable
+    >
+      {TRACKER_GOALS.map((g, i) => (
+        <GoalSlider
+          key={g.key}
+          goal={g}
+          value={goals[g.key as keyof typeof goals]}
+          onChange={(v) => updateGoal(g.key, v)}
+          anim={cardAnims[i]}
+        />
+      ))}
+    </OnboardingLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-  },
-  keyboardContainer: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-  progressContainer: {
-    height: 4,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 2,
-    marginBottom: 32,
-    alignSelf: 'flex-start',
-    width: '100%',
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 24,
-  },
-  scrollArea: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  scrollArea: { flex: 1 },
+  scrollContent: { paddingBottom: 20, paddingHorizontal: 24 },
   goalCard: {
     borderRadius: 16,
     borderWidth: 1,
-    padding: 18,
-    marginBottom: 14,
-    gap: 12,
+    padding: 20,
+    marginBottom: 16,
+    gap: 14,
   },
   goalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
-  goalIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  goalInfo: {
-    flex: 1,
-  },
-  goalLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  goalUnit: {
-    fontSize: 13,
-    marginTop: 1,
-  },
-  goalValue: {
-    fontSize: 32,
-    fontWeight: '700',
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
+  goalInfo: { flex: 1 },
+  goalLabel: { fontSize: 17, fontWeight: '600' },
+  goalUnit: { fontSize: 13, marginTop: 2 },
+  goalValue: { fontSize: 36, fontWeight: '700' },
+  progressTrack: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 4 },
+  progressFill: { height: '100%', borderRadius: 3 },
   adjustRow: {
     flexDirection: 'row',
     gap: 10,
     justifyContent: 'center',
+    marginTop: 4,
   },
   adjustBtn: {
     width: 44,
@@ -289,28 +242,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  buttons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  backButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  backButtonText: {
-    ...TYPOGRAPHY.h4,
-  },
-  nextButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  nextButtonText: {
-    ...TYPOGRAPHY.h4,
   },
 });

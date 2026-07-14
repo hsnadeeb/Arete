@@ -1,24 +1,129 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from "react-native";
 import { Icon } from "../../components/Icons";
 import { LUCIDE_ICONS, TYPOGRAPHY } from "../../constants/typography";
 import { useTheme } from "../../context/ThemeContext";
+import { OnboardingLayout, OnboardingIcon } from "./OnboardingComponents";
 
 const GOALS = [
-  { id: "fitness", label: "Fitness & Health", iconKey: "activity" as const },
-  { id: "productivity", label: "Productivity", iconKey: "clock" as const },
-  { id: "mindfulness", label: "Mindfulness", iconKey: "moon" as const },
-  { id: "learning", label: "Learning", iconKey: "book" as const },
-  { id: "finance", label: "Finance", iconKey: "dollarSign" as const },
-  { id: "social", label: "Social", iconKey: "users" as const },
+  {
+    id: "fitness",
+    label: "Fitness & Health",
+    iconKey: "activity" as const,
+    color: "#10b981",
+  },
+  {
+    id: "productivity",
+    label: "Productivity",
+    iconKey: "clock" as const,
+    color: "#6366f1",
+  },
+  {
+    id: "mindfulness",
+    label: "Mindfulness",
+    iconKey: "moon" as const,
+    color: "#8b5cf6",
+  },
+  {
+    id: "learning",
+    label: "Learning",
+    iconKey: "book" as const,
+    color: "#f59e0b",
+  },
+  {
+    id: "finance",
+    label: "Finance",
+    iconKey: "dollarSign" as const,
+    color: "#0ea5e9",
+  },
+  {
+    id: "social",
+    label: "Social",
+    iconKey: "users" as const,
+    color: "#ec4899",
+  },
 ];
+
+interface GoalCardProps {
+  goal: (typeof GOALS)[0];
+  selected: boolean;
+  index: number;
+  onPress: () => void;
+  anim: Animated.Value;
+}
+
+const GoalCard: React.FC<GoalCardProps> = ({
+  goal,
+  selected,
+  index,
+  onPress,
+  anim,
+}) => {
+  const { theme } = useTheme();
+  const tc = theme.colors;
+
+  const scaleAnim = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.92, 1],
+  });
+  const opacityAnim = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.7, 1],
+  });
+  const translateYAnim = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [25, 0],
+  });
+
+  const borderColor = selected ? goal.color : tc.border;
+  const bgColor = selected ? goal.color + "15" : tc.surface;
+  const textColor = selected ? goal.color : tc.text;
+  const iconBgColor = selected
+    ? goal.color + "20"
+    : tc.bgSecondary || "#f1f5f9";
+
+  return (
+    <Animated.View
+      style={{
+        transform: [{ scale: scaleAnim }, { translateY: translateYAnim }],
+        opacity: opacityAnim,
+      }}
+    >
+      <TouchableOpacity
+        style={[
+          styles.goalCard,
+          {
+            backgroundColor: bgColor,
+            borderColor,
+            borderWidth: selected ? 2 : 1,
+          },
+        ]}
+        onPress={onPress}
+        activeOpacity={0.9}
+      >
+        <View style={styles.goalContent}>
+          <View style={[styles.goalIconWrap, { backgroundColor: iconBgColor }]}>
+            <Icon
+              name={LUCIDE_ICONS[goal.iconKey]}
+              size={26}
+              color={textColor}
+            />
+          </View>
+
+          <Text style={[styles.goalLabel, { color: textColor }]}>
+            {goal.label}
+          </Text>
+        </View>
+
+        {selected && (
+          <View style={[styles.checkBadge, { backgroundColor: goal.color }]}>
+            <Icon name={LUCIDE_ICONS.check} size={16} color="#fff" />
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 export default function GoalsScreen({
   onNext,
@@ -28,8 +133,8 @@ export default function GoalsScreen({
   onBack: () => void;
 }) {
   const { theme } = useTheme();
-  const tc = theme.colors;
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [cardAnims] = useState(() => GOALS.map(() => new Animated.Value(0)));
 
   const toggleGoal = (goalId: string) => {
     setSelectedGoals((prev) =>
@@ -45,160 +150,86 @@ export default function GoalsScreen({
     }
   };
 
+  useEffect(() => {
+    Animated.stagger(
+      80,
+      cardAnims.map((anim) =>
+        Animated.spring(anim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 80,
+          friction: 10,
+        }),
+      ),
+    ).start();
+  }, [cardAnims]);
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}>
-      <View style={styles.content}>
-        <View style={styles.progressContainer}>
-          <View
-            style={[
-              styles.progressBar,
-              { backgroundColor: tc.accent, width: "40%" },
-            ]}
-          />
-        </View>
-
-        <Text style={[styles.title, { color: tc.text }]}>
-          What are your goals?
-        </Text>
-        <Text style={[styles.subtitle, { color: tc.textSecondary }]}>
-          Select areas you want to focus on (choose at least one)
-        </Text>
-
-        <ScrollView
-          style={styles.goalsContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {GOALS.map((goal) => (
-            <TouchableOpacity
-              key={goal.id}
-              style={[
-                styles.goalCard,
-                {
-                  backgroundColor: selectedGoals.includes(goal.id)
-                    ? tc.accentBg
-                    : tc.surface,
-                  borderColor: selectedGoals.includes(goal.id)
-                    ? tc.accent
-                    : tc.border,
-                },
-              ]}
-              onPress={() => toggleGoal(goal.id)}
-            >
-              <Icon
-                name={LUCIDE_ICONS[goal.iconKey]}
-                size={24}
-                color={tc.text}
-              />
-              <Text style={[styles.goalLabel, { color: tc.text }]}>
-                {"   "}
-                {goal.label}
-              </Text>
-              {selectedGoals.includes(goal.id) && (
-                <Icon
-                  name={LUCIDE_ICONS.checkCircle}
-                  size={24}
-                  color={tc.accent}
-                />
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.buttons}>
-        <TouchableOpacity
-          style={[styles.backButton, { borderColor: tc.border }]}
-          onPress={onBack}
-        >
-          <Text style={[styles.backButtonText, { color: tc.textSecondary }]}>
-            Back
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            {
-              backgroundColor: tc.accent,
-              opacity: selectedGoals.length > 0 ? 1 : 0.5,
-            },
-          ]}
-          onPress={handleNext}
-          disabled={selectedGoals.length === 0}
-        >
-          <Text style={[styles.nextButtonText, { color: "#fff" }]}>Next</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    <OnboardingLayout
+      step={2}
+      totalSteps={6}
+      title="What are your goals?"
+      subtitle="Select areas you want to focus on (choose at least one)"
+      nextLabel="Continue"
+      onNext={handleNext}
+      onBack={onBack}
+      nextDisabled={selectedGoals.length === 0}
+      scrollable
+    >
+      {GOALS.map((goal, index) => (
+        <GoalCard
+          key={goal.id}
+          goal={goal}
+          selected={selectedGoals.includes(goal.id)}
+          index={index}
+          onPress={() => toggleGoal(goal.id)}
+          anim={cardAnims[index]}
+        />
+      ))}
+    </OnboardingLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-  },
-  content: {
-    flex: 1,
-  },
-  progressContainer: {
-    height: 4,
-    backgroundColor: "#e0e0e0",
-    borderRadius: 2,
-    marginBottom: 32,
-    alignSelf: "flex-start",
-    width: "100%",
-  },
-  progressBar: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 24,
-  },
-  goalsContainer: {
-    flex: 1,
-    marginBottom: 16,
-  },
   goalCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
+    paddingVertical: 10,
+    margin: 10,
+    borderRadius: 16,
+    marginBottom: 6,
+    // minHeight: 78,
+  },
+  goalContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 16,
+  },
+  goalIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    marginLeft: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   goalLabel: {
+    fontSize: 17,
+    fontWeight: "600",
     flex: 1,
-    fontSize: 16,
-    fontWeight: "500",
+    letterSpacing: -0.2,
   },
-  buttons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  backButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+  checkBadge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
-  },
-  backButtonText: {
-    ...TYPOGRAPHY.h4,
-  },
-  nextButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  nextButtonText: {
-    ...TYPOGRAPHY.h4,
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
 });
