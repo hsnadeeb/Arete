@@ -66,6 +66,8 @@ export default function JournalScreen() {
   const [generatingType, setGeneratingType] = useState<ProgramType | null>(
     null,
   );
+  const [gymInstructions, setGymInstructions] = useState("");
+  const [foodInstructions, setFoodInstructions] = useState("");
 
   // Editing state
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
@@ -96,7 +98,8 @@ export default function JournalScreen() {
   const handleGenerateProgram = async (type: ProgramType) => {
     setGeneratingType(type);
     try {
-      await generateAiProgram(type);
+      const prefs = type === "gym" ? gymInstructions : foodInstructions;
+      await generateAiProgram(type, prefs.trim() || undefined);
       await refreshPrograms();
     } catch (e: any) {
       Alert.alert("Generation Failed", e.message);
@@ -230,29 +233,49 @@ export default function JournalScreen() {
 
           {(tab === "gym" || tab === "food") && (
             <>
-              {/* Generate / Regenerate Button */}
-              {!currentProgram && (
-                <Card style={{ backgroundColor: colors.surface, margin: 12 }}>
-                  <TouchableOpacity
-                    style={[
-                      styles.primaryBtn,
-                      { backgroundColor: colors.accent },
-                    ]}
-                    onPress={() => handleGenerateProgram(tab as ProgramType)}
-                    disabled={generatingType !== null}
-                  >
-                    {generatingType ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={{ color: "#fff", fontWeight: "700" }}>
-                        Generate {tab === "gym" ? "Workout" : "Meal"} Plan
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </Card>
-              )}
+              {/* Generate / Regenerate + Custom Instructions */}
+              <Card style={{ backgroundColor: colors.surface, margin: 12 }}>
+                <TextInput
+                  style={[
+                    styles.inp,
+                    {
+                      color: colors.text,
+                      borderColor: colors.border,
+                      backgroundColor: colors.bg,
+                      marginBottom: 10,
+                    },
+                  ]}
+                  value={tab === "gym" ? gymInstructions : foodInstructions}
+                  onChangeText={
+                    tab === "gym" ? setGymInstructions : setFoodInstructions
+                  }
+                  placeholder={`Add custom instructions for ${tab === "gym" ? "workout" : "meal"} plan...`}
+                  placeholderTextColor={colors.placeholder}
+                  multiline
+                  numberOfLines={2}
+                  textAlignVertical="top"
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.primaryBtn,
+                    { backgroundColor: colors.accent },
+                  ]}
+                  onPress={() => handleGenerateProgram(tab as ProgramType)}
+                  disabled={generatingType !== null}
+                >
+                  {generatingType === tab ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={{ color: "#fff", fontWeight: "700" }}>
+                      {currentProgram
+                        ? `Regenerate ${tab === "gym" ? "Workout" : "Meal"} Plan`
+                        : `Generate ${tab === "gym" ? "Workout" : "Meal"} Plan`}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </Card>
 
-              {/* Selected Day Tasks - Notion Style TODO List */}
+              {/* Selected Day Tasks */}
               {currentProgram && (
                 <View style={{ paddingHorizontal: 12 }}>
                   <AiPlanCard

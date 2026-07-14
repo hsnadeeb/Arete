@@ -678,10 +678,10 @@ async function seedDashboardWidgets(
 async function seedAiPrograms(
   dbInstance: SQLiteDatabase,
   force: boolean
-): Promise<{ programs: number; items: number }> {
+): Promise<{ programs: number; items: number; details: number }> {
   if (!force) {
     const existing = await dbInstance.getFirstAsync<any>('SELECT id FROM ai_programs LIMIT 1');
-    if (existing) return { programs: 0, items: 0 };
+    if (existing) return { programs: 0, items: 0, details: 0 };
   }
 
   const now = new Date();
@@ -690,10 +690,10 @@ async function seedAiPrograms(
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
   const ws = weekStart.toISOString().split('T')[0];
-  const we = weekEnd.toISOString().split('T')[0];
 
   let programsInserted = 0;
   let itemsInserted = 0;
+  let detailsInserted = 0;
 
   // Deactivate existing programs first if force
   if (force) {
@@ -711,7 +711,7 @@ async function seedAiPrograms(
       program.type,
       program.title,
       ws,
-      we,
+      ws,
       '',
       '',
       1
@@ -721,22 +721,44 @@ async function seedAiPrograms(
 
     for (let day = 0; day < 7; day++) {
       const details = program.details[day % program.details.length];
-      await dbInstance.runAsync(
+      const itemResult = await dbInstance.runAsync(
         `INSERT INTO ai_program_items (program_id, day_index, day_label, title, description, details_json, sort_order, is_completed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         programId,
         day,
         DAY_LABELS[day],
         program.type === 'gym' ? `Day ${day + 1} — ${['Push', 'Pull', 'Legs', 'Upper', 'Lower', 'Cardio', 'Recovery'][day]}` : `${DAY_LABELS[day]} Meals`,
         program.type === 'gym' ? `${details.length} exercises for today` : `${details.length} meals planned`,
-        JSON.stringify(details.map((d) => ({ type: program.type === 'gym' ? 'exercise' : 'meal', ...d }))),
+        '[]',
         day,
-        Math.random() < 0.3 ? 1 : 0
+        0
       );
+      const itemId = itemResult.lastInsertRowId;
       itemsInserted++;
+
+      for (let i = 0; i < details.length; i++) {
+        const d = details[i];
+        const metadata: Record<string, any> = {};
+        for (const key of Object.keys(d)) {
+          if (key !== 'type' && key !== 'name') {
+            metadata[key] = (d as any)[key];
+          }
+        }
+        await dbInstance.runAsync(
+          `INSERT INTO ai_program_item_details (program_id, item_id, type, name, metadata_json, sort_order, is_completed) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          programId,
+          itemId,
+          program.type === 'gym' ? 'exercise' : 'meal',
+          d.name,
+          JSON.stringify(metadata),
+          i,
+          Math.random() < 0.3 ? 1 : 0
+        );
+        detailsInserted++;
+      }
     }
   }
 
-  return { programs: programsInserted, items: itemsInserted };
+  return { programs: programsInserted, items: itemsInserted, details: detailsInserted };
 }
 
 // ─── Force-clear ───────────────────────────────────────────────────────────
@@ -776,7 +798,7 @@ export async function wipeAllData(): Promise<{ preserved: string[]; wiped: strin
 
   // Children first (FK targets), parents last.
   const tables = [
-    'habit_logs', 'ai_program_items', 'habits', 'timetable',
+    'habit_logs', 'ai_program_item_details', 'ai_program_items', 'habits', 'timetable',
     'budget_categories', 'goals', 'journal_entries', 'transactions',
     'nutrition_logs', 'gym_logs', 'prayer_logs', 'daily_logs',
     'daily_affirmations', 'prayer_timings', 'focus_sessions', 'ai_programs',
@@ -876,6 +898,7 @@ export async function seedAllTables(opts: SeedOptions = {}): Promise<SeedResult>
   const aiResult = await seedAiPrograms(dbInstance, force);
   counts.ai_programs = aiResult.programs;
   counts.ai_program_items = aiResult.items;
+  counts.ai_program_item_details = aiResult.details;
 
   return {
     days,
@@ -917,8 +940,9 @@ export async function verifySeedData(): Promise<Record<string, number>> {
     'budget_categories',
     'daily_affirmations',
     'dashboard_widgets',
-    'ai_programs',
+    'ai_program_item_details',
     'ai_program_items',
+    'ai_programs',
     'user_profile',
   ];
 

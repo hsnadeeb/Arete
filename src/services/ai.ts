@@ -394,8 +394,8 @@ export async function generateAiProgram(
     day_label: string;
     title: string;
     description: string;
-    details_json: string;
     sort_order: number;
+    details: db.AiProgramDetail[];
   }[];
 }> {
   const provider = await db.getActiveAiProvider();
@@ -506,6 +506,33 @@ Rules:
   const ws = weekStart.toISOString().split("T")[0];
   const we = weekEnd.toISOString().split("T")[0];
 
+  const items = parsed.items.map((item: any) => {
+    const detailType = type === "gym" ? "exercise" : "meal";
+    const rawDetails = Array.isArray(item.details) ? item.details : [];
+    const details: db.AiProgramDetail[] = rawDetails.map((d: any) => {
+      const metadata: Record<string, any> = {};
+      for (const key of Object.keys(d)) {
+        if (key !== "type" && key !== "name") {
+          metadata[key] = d[key];
+        }
+      }
+      return {
+        type: d.type || detailType,
+        name: d.name || (type === "gym" ? "Exercise" : "Meal"),
+        metadata,
+      };
+    });
+
+    return {
+      day_index: item.day_index,
+      day_label: item.day_label || dayLabels[item.day_index],
+      title: item.title,
+      description: item.description,
+      sort_order: item.sort_order ?? item.day_index,
+      details,
+    };
+  });
+
   const programId = await db.saveAiProgram({
     type,
     title:
@@ -514,14 +541,7 @@ Rules:
     week_end: we,
     context_snapshot: contextStr,
     raw_response: rawResponse,
-    items: parsed.items.map((item: any) => ({
-      day_index: item.day_index,
-      day_label: item.day_label || dayLabels[item.day_index],
-      title: item.title,
-      description: item.description,
-      details_json: item.details ? JSON.stringify(item.details) : "[]",
-      sort_order: item.sort_order ?? item.day_index,
-    })),
+    items,
   });
 
   const full = await db.getAiProgramWithItems(Number(programId));

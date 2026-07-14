@@ -3,32 +3,27 @@ import {
   View,
   Text,
   StyleSheet,
-  ViewStyle,
   TouchableOpacity,
   TextInput,
   ScrollView,
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { Icon } from "./Icons";
-import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
+import { LUCIDE_ICONS } from "../constants/typography";
 import { Card } from "./Card";
 import * as db from "../db/service";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-interface Detail {
+interface DetailRow {
+  id: number;
+  program_id: number;
+  item_id: number;
   type: string;
   name: string;
-  sets?: number;
-  reps?: number;
-  rest_seconds?: number;
-  weight?: string;
-  notes?: string;
-  calories?: number;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
-  portion?: string;
+  metadata_json: string;
+  is_completed: number;
+  sort_order: number;
 }
 
 interface AiProgramItem {
@@ -38,7 +33,6 @@ interface AiProgramItem {
   day_label: string;
   title: string;
   description: string | null;
-  details_json: string;
   is_completed: number;
   sort_order: number;
 }
@@ -49,68 +43,97 @@ interface Props {
     type: string;
     title: string;
     items: AiProgramItem[];
+    details: DetailRow[];
   };
   onRefresh: () => void;
+}
+
+function parseMetadata(detail: DetailRow): Record<string, any> {
+  try {
+    return JSON.parse(detail.metadata_json || "{}");
+  } catch {
+    return {};
+  }
 }
 
 export function AiPlanCard({ program, onRefresh }: Props) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const [selectedDay, setSelectedDay] = useState(new Date().getDay());
-  const [editingItemId, setEditingItemId] = useState<number | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editDesc, setEditDesc] = useState("");
+  const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editMeta, setEditMeta] = useState("");
 
-  const handleToggle = async (itemId: number, current: number) => {
-    await db.toggleAiProgramItem(itemId, current ? 0 : 1);
+  const detailsByItem = (itemId: number) =>
+    program.details.filter((d) => d.item_id === itemId).sort((a, b) => a.sort_order - b.sort_order);
+
+  const handleToggleDetail = async (detail: DetailRow) => {
+    await db.toggleAiProgramItemDetail(detail.id, detail.is_completed ? 0 : 1);
     onRefresh();
   };
 
-  const handleToggleDetail = async (
-    itemId: number,
-    detailIdx: number,
-    currentCompletion: number,
-  ) => {
-    // When a sub-detail is toggled, we update the parent item's completion
-    // If all details are done, mark the item complete
-    const item = program.items.find((i) => i.id === itemId);
-    if (!item) return;
-    const details = parseDetails(item);
-    const allDone = details.every(
-      (_, i) =>
-        i === detailIdx
-          ? !currentCompletion
-          : true, /* toggle the current one in opposite state */
-    );
-    // For simplicity, toggle parent item
-    await db.toggleAiProgramItem(itemId, currentCompletion ? 0 : 1);
-    onRefresh();
-  };
-
-  const parseDetails = (item: AiProgramItem): Detail[] => {
-    try {
-      const d = JSON.parse(item.details_json || "[]");
-      return Array.isArray(d) ? d : [];
-    } catch {
-      return [];
+  const handleToggleItem = async (item: AiProgramItem) => {
+    const ds = detailsByItem(item.id);
+    const allDone = ds.every((d) => d.is_completed === 1);
+    const newState = allDone ? 0 : 1;
+    for (const d of ds) {
+      await db.toggleAiProgramItemDetail(d.id, newState);
     }
+    onRefresh();
+  };
+
+  const startEditingDetail = (detail: DetailRow) => {
+    setEditingDetailId(detail.id);
+    setEditName(detail.name);
+    setEditMeta(JSON.stringify(parseMetadata(detail), null, 2));
+  };
+
+  const saveEditingDetail = async () => {
+    if (editingDetailId === null) return;
+    try {
+      const metadata = JSON.parse(editMeta);
+      await db.updateAiProgramItemDetail(editingDetailId, {
+        name: editName.trim(),
+        metadata,
+      });
+    } catch {
+      // invalid JSON; keep as string metadata
+      await db.updateAiProgramItemDetail(editingDetailId, {
+        name: editName.trim(),
+        metadata: { raw: editMeta },
+      });
+    }
+    setEditingDetailId(null);
+    onRefresh();
   };
 
   const dayItems = program.items.filter((i) => i.day_index === selectedDay);
-  const completedCount = dayItems.filter((i) => i.is_completed).length;
-  const totalCount = dayItems.length;
+  const dayDetails = dayItems.flatMap((i) => detailsByItem(i.id));
+  const completedCount = dayDetails.filter((d) => d.is_completed).length;
+  const totalCount = dayDetails.length;
+
+  const formatDetailSubtitle = (detail: DetailRow) => {
+    const m = parseMetadata(detail);
+    if (detail.type === "exercise") {
+      return `${m.sets ?? "—"} × ${m.reps ?? "—"} @ ${m.weight || "—"}${m.rest_seconds ? ` · rest ${m.rest_seconds}s` : ""}`;
+    }
+    if (detail.type === "meal") {
+      return `${m.calories ?? "—"} cal · P:${m.protein ?? "—"} · C:${m.carbs ?? "—"} · F:${m.fat ?? "—"}${m.portion ? ` · ${m.portion}` : ""}`;
+    }
+    return "";
+  };
 
   return (
     <View>
-      {/* Day Selector */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={{ marginBottom: 12, paddingHorizontal: 4 }}
       >
         {DAY_NAMES.map((dayName, idx) => {
-          const dayItems = program.items.filter((i) => i.day_index === idx);
-          const completed = dayItems.filter((i) => i.is_completed).length;
+          const items = program.items.filter((i) => i.day_index === idx);
+          const details = items.flatMap((i) => detailsByItem(i.id));
+          const completed = details.filter((d) => d.is_completed).length;
           const isSelected = idx === selectedDay;
           return (
             <TouchableOpacity
@@ -119,241 +142,143 @@ export function AiPlanCard({ program, onRefresh }: Props) {
               style={[
                 styles.dayTab,
                 {
-                  backgroundColor: isSelected
-                    ? colors.accent
-                    : colors.surface,
+                  backgroundColor: isSelected ? colors.accent : colors.surface,
                   borderColor: colors.border,
                 },
               ]}
             >
-              <Text
-                style={[
-                  styles.dayInitial,
-                  { color: isSelected ? "#fff" : colors.textTertiary },
-                ]}
-              >
+              <Text style={[styles.dayInitial, { color: isSelected ? "#fff" : colors.textTertiary }]}>
                 {dayName.slice(0, 3)}
               </Text>
-              {dayItems.length > 0 && (
-                <View
-                  style={[
-                    styles.dayProgress,
-                    {
-                      backgroundColor: isSelected
-                        ? "rgba(255,255,255,0.3)"
-                        : colors.bgSecondary,
-                    },
-                  ]}
-                >
+              {details.length > 0 && (
+                <View style={[styles.dayProgress, { backgroundColor: isSelected ? "rgba(255,255,255,0.3)" : colors.bgSecondary }]}>
                   <View
                     style={[
                       styles.dayProgressFill,
-                      {
-                        width: `${(completed / dayItems.length) * 100}%`,
-                        backgroundColor: colors.success,
-                      },
+                      { width: `${(completed / details.length) * 100}%`, backgroundColor: colors.success },
                     ]}
                   />
                 </View>
               )}
-              <Text
-                style={[
-                  styles.dayCount,
-                  { color: isSelected ? "#fff" : colors.text },
-                ]}
-              >
-                {completed}/{dayItems.length}
+              <Text style={[styles.dayCount, { color: isSelected ? "#fff" : colors.text }]}>
+                {completed}/{details.length}
               </Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
 
-      {/* Progress Header */}
-      <View
-        style={[
-          styles.progressHeader,
-          { backgroundColor: colors.surface, borderColor: colors.border },
-        ]}
-      >
-        <Text style={[styles.progressTitle, { color: colors.text }]}>
-          {program.title}
-        </Text>
+      <View style={[styles.progressHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.progressTitle, { color: colors.text }]}>{program.title}</Text>
         <Text style={{ color: colors.textTertiary, fontSize: 12 }}>
-          Day {selectedDay + 1} — {completedCount}/{totalCount} done
+          {DAY_NAMES[selectedDay]} · {completedCount}/{totalCount} done
         </Text>
-        <View
-          style={[
-            styles.bar,
-            { backgroundColor: colors.bgSecondary },
-          ]}
-        >
+        <View style={[styles.bar, { backgroundColor: colors.bgSecondary }]}>
           <View
             style={[
               styles.barFill,
-              {
-                width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%`,
-                backgroundColor: colors.success,
-              },
+              { width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%`, backgroundColor: colors.success },
             ]}
           />
         </View>
       </View>
 
-      {/* Day Items */}
+      {dayItems.length === 0 && (
+        <Text style={{ color: colors.textTertiary, textAlign: "center", padding: 20 }}>
+          No tasks for this day.
+        </Text>
+      )}
+
       {dayItems.map((item) => {
-        const details = parseDetails(item);
-        const isEditing = editingItemId === item.id;
+        const details = detailsByItem(item.id);
+        const itemDone = details.length > 0 && details.every((d) => d.is_completed === 1);
         return (
           <Card
             key={item.id}
-            style={{ ...styles.itemCard, ...(item.is_completed ? { borderColor: colors.success + "44" } : {}) } as any}
+            style={{ ...styles.itemCard, backgroundColor: colors.surface, borderColor: itemDone ? colors.success + "44" : colors.border } as any}
           >
-            {/* Title row */}
             <View style={styles.itemHeader}>
               <TouchableOpacity
-                onPress={() => handleToggle(item.id, item.is_completed)}
-                style={[styles.checkbox, item.is_completed ? styles.checked : undefined]}
+                onPress={() => handleToggleItem(item)}
+                style={[styles.checkbox, itemDone ? { backgroundColor: colors.success, borderColor: colors.success } : { borderColor: colors.textTertiary }]}
               >
-                {item.is_completed ? (
-                  <Icon name={LUCIDE_ICONS.check} size={14} color="#fff" />
-                ) : null}
+                {itemDone && <Icon name={LUCIDE_ICONS.check} size={14} color="#fff" />}
               </TouchableOpacity>
-              <View style={{ flex: 1 }}>
-                {isEditing ? (
-                  <TextInput
-                    style={[styles.editInput, { color: colors.text }]}
-                    value={editTitle}
-                    onChangeText={setEditTitle}
-                    autoFocus
-                    onBlur={async () => {
-                      if (editingItemId !== null) {
-                        await db.updateAiProgramItem(editingItemId, {
-                          title: editTitle.trim(),
-                          description: editDesc.trim(),
-                        });
-                        setEditingItemId(null);
-                        onRefresh();
-                      }
-                    }}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setEditingItemId(item.id);
-                      setEditTitle(item.title);
-                      setEditDesc(item.description || "");
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.itemTitle,
-                        {
-                          color: colors.text,
-                          textDecorationLine: item.is_completed
-                            ? "line-through"
-                            : "none",
-                        },
-                      ]}
-                    >
-                      {item.title}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              <TouchableOpacity
-                onPress={() => {
-                  setEditingItemId(item.id);
-                  setEditTitle(item.title);
-                  setEditDesc(item.description || "");
-                }}
-                style={styles.editBtn}
-              >
-                <Icon name={LUCIDE_ICONS.edit} size={16} color={colors.textTertiary} />
-              </TouchableOpacity>
+              <Text style={[styles.itemTitle, { color: colors.text }]}>{item.title}</Text>
             </View>
 
-            {/* Description */}
             {item.description ? (
-              <Text
-                style={[
-                  styles.itemDesc,
-                  { color: colors.textSecondary },
-                  item.is_completed ? { textDecorationLine: "line-through" } : undefined,
-                ]}
-              >
-                {item.description}
-              </Text>
+              <Text style={[styles.itemDesc, { color: colors.textSecondary }]}>{item.description}</Text>
             ) : null}
 
-            {/* Structured Details */}
-            {details.length > 0 && (
-              <View
-                style={[
-                  styles.detailsSection,
-                  { borderTopColor: colors.border },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.detailsLabel,
-                    { color: colors.textTertiary },
-                  ]}
-                >
-                  {details[0].type === "exercise" ? "EXERCISES" : "MEALS"}
-                </Text>
-                {details.map((d, i) => (
-                  <View key={i} style={styles.detailRow}>
-                    <View
+            <View style={[styles.detailsSection, { borderTopColor: colors.border }]}>
+              <Text style={[styles.detailsLabel, { color: colors.textTertiary }]}>
+                {program.type === "gym" ? "EXERCISES" : "MEALS"}
+              </Text>
+              {details.map((detail) => {
+                const isEditing = editingDetailId === detail.id;
+                return (
+                  <View key={detail.id} style={styles.detailRow}>
+                    <TouchableOpacity
+                      onPress={() => handleToggleDetail(detail)}
                       style={[
-                        styles.detailDot,
-                        { backgroundColor: colors.accent },
+                        styles.detailCheckbox,
+                        { borderColor: colors.textTertiary },
+                        detail.is_completed === 1 ? { backgroundColor: colors.success, borderColor: colors.success } : undefined,
                       ]}
-                    />
+                    >
+                      {detail.is_completed === 1 && <Icon name={LUCIDE_ICONS.check} size={12} color="#fff" />}
+                    </TouchableOpacity>
                     <View style={{ flex: 1 }}>
-                      <Text
-                        style={[
-                          styles.detailName,
-                          { color: colors.text },
-                          item.is_completed
-                            ? { textDecorationLine: "line-through", color: colors.textTertiary }
-                            : undefined,
-                        ]}
-                      >
-                        {d.name}
-                      </Text>
-                      {d.type === "exercise" && d.sets ? (
-                        <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                          {d.sets} × {d.reps} @ {d.weight || "—"}  ·  rest {d.rest_seconds || 60}s
-                        </Text>
-                      ) : null}
-                      {d.type === "meal" && d.calories ? (
-                        <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                          {d.calories} cal · P:{d.protein || "—"}g · C:{d.carbs || "—"}g · F:{d.fat || "—"}g
-                        </Text>
-                      ) : null}
-                      {d.notes ? (
-                        <Text style={{ color: colors.textTertiary, fontSize: 11, marginTop: 2 }}>
-                          {d.notes}
-                        </Text>
-                      ) : null}
+                      {isEditing ? (
+                        <>
+                          <TextInput
+                            style={[styles.editInput, { color: colors.text }]}
+                            value={editName}
+                            onChangeText={setEditName}
+                            autoFocus
+                          />
+                          <TextInput
+                            style={[styles.editMeta, { color: colors.text }]}
+                            value={editMeta}
+                            onChangeText={setEditMeta}
+                            multiline
+                            numberOfLines={2}
+                          />
+                          <TouchableOpacity
+                            onPress={saveEditingDetail}
+                            style={{ marginTop: 4, alignSelf: "flex-start" }}
+                          >
+                            <Text style={{ color: colors.accent, fontWeight: "600", fontSize: 12 }}>Save</Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : (
+                        <TouchableOpacity onPress={() => startEditingDetail(detail)}>
+                          <Text
+                            style={[
+                              styles.detailName,
+                              { color: detail.is_completed ? colors.textTertiary : colors.text },
+                              detail.is_completed ? { textDecorationLine: "line-through" } : undefined,
+                            ]}
+                          >
+                            {detail.name}
+                          </Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{formatDetailSubtitle(detail)}</Text>
+                          {parseMetadata(detail).notes ? (
+                            <Text style={{ color: colors.textTertiary, fontSize: 11, marginTop: 2 }}>
+                              {parseMetadata(detail).notes}
+                            </Text>
+                          ) : null}
+                        </TouchableOpacity>
+                      )}
                     </View>
+                    <TouchableOpacity onPress={() => startEditingDetail(detail)} style={styles.editBtn}>
+                      <Icon name={LUCIDE_ICONS.edit} size={16} color={colors.textTertiary} />
+                    </TouchableOpacity>
                   </View>
-                ))}
-              </View>
-            )}
-
-            {/* Inline editing for description */}
-            {isEditing && (
-              <TextInput
-                style={[styles.editDesc, { color: colors.text }]}
-                value={editDesc}
-                onChangeText={setEditDesc}
-                multiline
-                placeholder="Add details..."
-                placeholderTextColor={colors.placeholder}
-              />
-            )}
+                );
+              })}
+            </View>
           </Card>
         );
       })}
@@ -427,35 +352,16 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: "#999",
     alignItems: "center",
     justifyContent: "center",
-  },
-  checked: {
-    backgroundColor: "#22c55e",
-    borderColor: "#22c55e",
   },
   itemTitle: {
     fontSize: 16,
     fontWeight: "600",
     lineHeight: 22,
   },
-  editBtn: {
-    padding: 6,
-  },
-  editInput: {
-    fontSize: 16,
-    fontWeight: "600",
-    padding: 0,
-  },
   itemDesc: {
     fontSize: 13,
-    marginTop: 4,
-    color: "#666",
-  },
-  editDesc: {
-    fontSize: 13,
-    paddingVertical: 4,
     marginTop: 4,
   },
   detailsSection: {
@@ -472,17 +378,35 @@ const styles = StyleSheet.create({
   detailRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 8,
-    paddingVertical: 4,
+    gap: 10,
+    paddingVertical: 6,
   },
-  detailDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginTop: 5,
+  detailCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
   },
   detailName: {
     fontSize: 14,
     fontWeight: "500",
+    lineHeight: 20,
+  },
+  editBtn: {
+    padding: 6,
+  },
+  editInput: {
+    fontSize: 14,
+    fontWeight: "500",
+    padding: 0,
+  },
+  editMeta: {
+    fontSize: 11,
+    padding: 0,
+    marginTop: 2,
+    fontFamily: "monospace",
   },
 });

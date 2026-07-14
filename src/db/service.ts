@@ -1037,6 +1037,12 @@ export async function deleteAiProvider(provider: string) {
 
 // ─── AI Programs ───
 
+export interface AiProgramDetail {
+  type: string;
+  name: string;
+  metadata: Record<string, any>;
+}
+
 export async function getActiveAiProgram(type: string) {
   const now = new Date();
   const weekStart = new Date(now);
@@ -1063,7 +1069,11 @@ export async function getAiProgramWithItems(programId: number) {
     "SELECT * FROM ai_program_items WHERE program_id = ? ORDER BY day_index, sort_order",
     programId,
   );
-  return { ...program, items };
+  const details = await getDb().getAllAsync<any>(
+    "SELECT * FROM ai_program_item_details WHERE program_id = ? ORDER BY sort_order",
+    programId,
+  );
+  return { ...program, items, details };
 }
 
 export async function saveAiProgram(program: {
@@ -1078,8 +1088,8 @@ export async function saveAiProgram(program: {
     day_label: string;
     title: string;
     description?: string;
-    details_json?: string;
     sort_order?: number;
+    details?: AiProgramDetail[];
   }[];
 }) {
   // Deactivate any existing active program of this type for this week
@@ -1101,18 +1111,39 @@ export async function saveAiProgram(program: {
   const programId = result.lastInsertRowId;
 
   for (const item of program.items) {
-    await getDb().runAsync(
+    const itemResult = await getDb().runAsync(
       "INSERT INTO ai_program_items (program_id, day_index, day_label, title, description, details_json, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
       programId,
       item.day_index,
       item.day_label,
       item.title,
       item.description || "",
-      item.details_json || "[]",
-      item.sort_order || 0,
+      "[]",
+      item.sort_order ?? item.day_index,
     );
+    const itemId = itemResult.lastInsertRowId;
+
+    const details = item.details || [];
+    for (let i = 0; i < details.length; i++) {
+      const d = details[i];
+      await getDb().runAsync(
+        "INSERT INTO ai_program_item_details (program_id, item_id, type, name, metadata_json, sort_order) VALUES (?, ?, ?, ?, ?, ?)",
+        programId,
+        itemId,
+        d.type,
+        d.name,
+        JSON.stringify(d.metadata || {}),
+        i,
+      );
+    }
   }
   return programId;
+}
+
+export async function getAllAiPrograms() {
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM ai_programs ORDER BY created_at DESC",
+  );
 }
 
 export async function toggleAiProgramItem(itemId: number, isCompleted: number) {
@@ -1120,12 +1151,6 @@ export async function toggleAiProgramItem(itemId: number, isCompleted: number) {
     "UPDATE ai_program_items SET is_completed = ? WHERE id = ?",
     isCompleted,
     itemId,
-  );
-}
-
-export async function getAllAiPrograms() {
-  return await getDb().getAllAsync<any>(
-    "SELECT * FROM ai_programs ORDER BY created_at DESC",
   );
 }
 
@@ -1700,6 +1725,10 @@ export async function resetAiProgramCompletions(programId: number) {
     "UPDATE ai_program_items SET is_completed = 0 WHERE program_id = ?",
     programId,
   );
+  await getDb().runAsync(
+    "UPDATE ai_program_item_details SET is_completed = 0 WHERE program_id = ?",
+    programId,
+  );
 }
 
 // Optional: Get a single AI program item
@@ -1707,6 +1736,77 @@ export async function getAiProgramItem(itemId: number) {
   return await getDb().getFirstAsync<any>(
     "SELECT * FROM ai_program_items WHERE id = ?",
     itemId,
+  );
+}
+
+// ─── AI Program Item Details ───
+
+export async function getAiProgramItemDetails(itemId: number) {
+  return await getDb().getAllAsync<any>(
+    "SELECT * FROM ai_program_item_details WHERE item_id = ? ORDER BY sort_order",
+    itemId,
+  );
+}
+
+export async function getAiProgramItemDetail(detailId: number) {
+  return await getDb().getFirstAsync<any>(
+    "SELECT * FROM ai_program_item_details WHERE id = ?",
+    detailId,
+  );
+}
+
+export async function toggleAiProgramItemDetail(
+  detailId: number,
+  isCompleted: number,
+) {
+  await getDb().runAsync(
+    "UPDATE ai_program_item_details SET is_completed = ? WHERE id = ?",
+    isCompleted,
+    detailId,
+  );
+
+  // Update parent item completion based on all details
+  const detail = await getAiProgramItemDetail(detailId);
+  if (detail) {
+    const siblings = await getAiProgramItemDetails(detail.item_id);
+    const allDone = siblings.every((s: any) => s.is_completed === 1);
+    await getDb().runAsync(
+      "UPDATE ai_program_items SET is_completed = ? WHERE id = ?",
+      allDone ? 1 : 0,
+      detail.item_id,
+    );
+  }
+}
+
+export async function updateAiProgramItemDetail(
+  detailId: number,
+  updates: { name?: string; metadata?: Record<string, any> },
+) {
+  const sets: string[] = [];
+  const vals: any[] = [];
+
+  if (updates.name !== undefined) {
+    sets.push("name = ?");
+    vals.push(updates.name);
+  }
+  if (updates.metadata !== undefined) {
+    sets.push("metadata_json = ?");
+    vals.push(JSON.stringify(updates.metadata));
+  }
+
+  if (sets.length === 0) return;
+
+  await getDb().runAsync(
+    `UPDATE ai_program_item_details SET ${sets.join(", ")} WHERE id = ?`,
+    ...vals,
+    detailId,
+  );
+}
+
+export async function deleteAiProgramItemDetail(detailId: number) {
+  await getDb().runAsync(
+    "DELETE FROM ai_program_item_details WHERE id = ?",
+    detailId,
   );
 }
 

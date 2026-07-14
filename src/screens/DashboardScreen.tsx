@@ -834,11 +834,21 @@ function AiPlanWidget() {
   }, [refreshTick]);
 
   const todayIdx = new Date().getDay();
-  const todayGym = gymProg?.items?.filter((i: any) => i.day_index === todayIdx) || [];
-  const todayMeal = mealProg?.items?.filter((i: any) => i.day_index === todayIdx) || [];
 
-  const handleToggle = async (itemId: number, current: number) => {
-    await db.toggleAiProgramItem(itemId, current ? 0 : 1);
+  const detailsForProgram = (prog: any) => {
+    const items = prog?.items?.filter((i: any) => i.day_index === todayIdx) || [];
+    return items.flatMap((item: any) =>
+      (prog?.details || [])
+        .filter((d: any) => d.item_id === item.id)
+        .sort((a: any, b: any) => a.sort_order - b.sort_order)
+    );
+  };
+
+  const gymDetails = gymProg ? detailsForProgram(gymProg) : [];
+  const mealDetails = mealProg ? detailsForProgram(mealProg) : [];
+
+  const handleToggle = async (detailId: number, current: number) => {
+    await db.toggleAiProgramItemDetail(detailId, current ? 0 : 1);
     setRefreshTick((t) => t + 1);
   };
 
@@ -854,6 +864,18 @@ function AiPlanWidget() {
   const handleReset = async (programId: number) => {
     await db.resetAiProgramCompletions(programId);
     setRefreshTick((t) => t + 1);
+  };
+
+  const formatSubtitle = (detail: any) => {
+    try {
+      const m = JSON.parse(detail.metadata_json || "{}");
+      if (detail.type === "exercise") {
+        return `${m.sets ?? "—"}×${m.reps ?? "—"} @ ${m.weight || "—"}`;
+      }
+      return `${m.calories ?? "—"} cal · P:${m.protein ?? "—"}`;
+    } catch {
+      return "";
+    }
   };
 
   if (loading) {
@@ -890,38 +912,40 @@ function AiPlanWidget() {
                 <Icon name={LUCIDE_ICONS.refresh} size={14} color={tc.accent} />
               </TouchableOpacity>
             </View>
-            {todayGym.slice(0, 3).map((item: any) => (
-              <View key={item.id} style={[s.planMiniRow, { borderBottomColor: tc.divider }]}>
+            {gymDetails.slice(0, 5).map((detail: any) => (
+              <View key={detail.id} style={[s.planMiniRow, { borderBottomColor: tc.divider }]}>
                 <TouchableOpacity
-                  onPress={() => handleToggle(item.id, item.is_completed)}
+                  onPress={() => handleToggle(detail.id, detail.is_completed)}
                   style={[
                     s.miniCheckbox,
                     { borderColor: tc.border },
-                    item.is_completed === 1 ? { backgroundColor: tc.success, borderColor: tc.success } : undefined,
+                    detail.is_completed === 1 ? { backgroundColor: tc.success, borderColor: tc.success } : undefined,
                   ]}
                 >
-                  {item.is_completed === 1 && <Icon name={LUCIDE_ICONS.check} size={10} color="#fff" />}
+                  {detail.is_completed === 1 && <Icon name={LUCIDE_ICONS.check} size={10} color="#fff" />}
                 </TouchableOpacity>
-                <Text
-                  style={{
-                    flex: 1,
-                    fontSize: 13,
-                    color: item.is_completed ? tc.textTertiary : tc.text,
-                    textDecorationLine: item.is_completed ? "line-through" : "none",
-                  }}
-                >
-                  {item.title}
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: detail.is_completed ? tc.textTertiary : tc.text,
+                      textDecorationLine: detail.is_completed ? "line-through" : "none",
+                    }}
+                  >
+                    {detail.name}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: tc.textTertiary }}>{formatSubtitle(detail)}</Text>
+                </View>
               </View>
             ))}
-            {todayGym.length > 3 && (
+            {gymDetails.length > 5 && (
               <Text style={{ fontSize: 11, color: tc.textTertiary, paddingLeft: 26 }}>
-                +{todayGym.length - 3} more
+                +{gymDetails.length - 5} more
               </Text>
             )}
             <TouchableOpacity onPress={() => handleReset(gymProg.id)} style={{ paddingHorizontal: 4, paddingTop: 2 }}>
               <Text style={{ fontSize: 11, color: tc.textTertiary }}>
-                {todayGym.filter((i: any) => i.is_completed).length}/{todayGym.length} done
+                {gymDetails.filter((d: any) => d.is_completed).length}/{gymDetails.length} done
               </Text>
             </TouchableOpacity>
           </View>
@@ -937,38 +961,40 @@ function AiPlanWidget() {
                 <Icon name={LUCIDE_ICONS.refresh} size={14} color={tc.accent} />
               </TouchableOpacity>
             </View>
-            {todayMeal.slice(0, 3).map((item: any) => (
-              <View key={item.id} style={[s.planMiniRow, { borderBottomColor: tc.divider }]}>
+            {mealDetails.slice(0, 5).map((detail: any) => (
+              <View key={detail.id} style={[s.planMiniRow, { borderBottomColor: tc.divider }]}>
                 <TouchableOpacity
-                  onPress={() => handleToggle(item.id, item.is_completed)}
+                  onPress={() => handleToggle(detail.id, detail.is_completed)}
                   style={[
                     s.miniCheckbox,
                     { borderColor: tc.border },
-                    item.is_completed === 1 ? { backgroundColor: tc.success, borderColor: tc.success } : undefined,
+                    detail.is_completed === 1 ? { backgroundColor: tc.success, borderColor: tc.success } : undefined,
                   ]}
                 >
-                  {item.is_completed === 1 && <Icon name={LUCIDE_ICONS.check} size={10} color="#fff" />}
+                  {detail.is_completed === 1 && <Icon name={LUCIDE_ICONS.check} size={10} color="#fff" />}
                 </TouchableOpacity>
-                <Text
-                  style={{
-                    flex: 1,
-                    fontSize: 13,
-                    color: item.is_completed ? tc.textTertiary : tc.text,
-                    textDecorationLine: item.is_completed ? "line-through" : "none",
-                  }}
-                >
-                  {item.title}
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: detail.is_completed ? tc.textTertiary : tc.text,
+                      textDecorationLine: detail.is_completed ? "line-through" : "none",
+                    }}
+                  >
+                    {detail.name}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: tc.textTertiary }}>{formatSubtitle(detail)}</Text>
+                </View>
               </View>
             ))}
-            {todayMeal.length > 3 && (
+            {mealDetails.length > 5 && (
               <Text style={{ fontSize: 11, color: tc.textTertiary, paddingLeft: 26 }}>
-                +{todayMeal.length - 3} more
+                +{mealDetails.length - 5} more
               </Text>
             )}
             <TouchableOpacity onPress={() => handleReset(mealProg.id)} style={{ paddingHorizontal: 4, paddingTop: 2 }}>
               <Text style={{ fontSize: 11, color: tc.textTertiary }}>
-                {todayMeal.filter((i: any) => i.is_completed).length}/{todayMeal.length} done
+                {mealDetails.filter((d: any) => d.is_completed).length}/{mealDetails.length} done
               </Text>
             </TouchableOpacity>
           </View>
