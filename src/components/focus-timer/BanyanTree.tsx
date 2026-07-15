@@ -35,7 +35,7 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
   const trunkColor = isDark ? BRN_L : BRN;
 
   // Scale the tree from tiny to full size
-  const treeScale = 0.15 + t * 0.85;
+  const treeScale = 0.25 + Math.pow(t, 0.6) * 0.75;
 
   // Trunk dimensions
   const trunkBot = 42;
