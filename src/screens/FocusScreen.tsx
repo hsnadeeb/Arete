@@ -419,9 +419,10 @@ const s = StyleSheet.create({
   },
   treeStage: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-end",
     alignItems: "center",
     width: "100%",
     position: "relative",
+    paddingBottom: 8,
   },
 });

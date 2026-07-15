@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, TouchableWithoutFeedback, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TYPOGRAPHY } from "../../constants/typography";
-import { GrowingTree } from "./GrowingTree";
+import { BanyanTree } from "./BanyanTree";
 
 interface ScreensaverViewProps {
   min: number;
@@ -34,7 +34,7 @@ export function ScreensaverView({
             {String(min).padStart(2, "0")}:{String(sec).padStart(2, "0")}
           </Text>
           <View style={styles.saverTree}>
-            <GrowingTree pct={progress} isDark={true} running={running} />
+            <BanyanTree pct={progress} isDark={true} running={running} />
           </View>
           <Text style={styles.saverHint}>Double-tap to exit</Text>
         </View>

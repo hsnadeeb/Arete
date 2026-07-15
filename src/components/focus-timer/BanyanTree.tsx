@@ -123,22 +123,23 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
       const startX = cx + r.dx * canopyR;
       const startY = canopyCenterY - r.dy * canopyR;
       const maxDrop = (startY - trunkBot - 10) * r.maxLen;
-      const currentLen = maxDrop * local * treeScale;
+      const currentLen = maxDrop * local;
       if (currentLen < 3) return null;
+      const rootThick = Math.max(1.5, r.thickness * treeScale);
       return {
         key: i,
-        left: startX - r.thickness / 2,
-        top: startY,
-        width: r.thickness * local,
+        left: startX - rootThick / 2,
+        bottom: startY - currentLen,
+        width: rootThick * local,
         height: currentLen,
         color: isDark ? BRN_L : BRN,
         opacity: 0.2 + local * 0.6,
-        tipSize: r.thickness * local * 0.5,
+        tipSize: Math.max(1, rootThick * local * 0.5),
       };
     }).filter(Boolean) as {
       key: number;
       left: number;
-      top: number;
+      bottom: number;
       width: number;
       height: number;
       color: string;
@@ -159,24 +160,27 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
       const groundX = cx + pr.dx * pr.spread * canopyR;
       const dx = groundX - startX;
       const dy = trunkBot - startY;
-      const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-      const len = Math.sqrt(dx * dx + dy * dy) * local * treeScale;
+      const angleDeg =
+        (Math.atan2(startY - trunkBot, groundX - startX) * 180) / Math.PI;
+      const len = Math.sqrt(dx * dx + dy * dy) * local;
       if (len < 5) return null;
-      const thick = pr.thickness * local * treeScale;
+      const thick = Math.max(2, pr.thickness * local * treeScale);
+      const midX = (startX + groundX) / 2;
+      const midY = (startY + trunkBot) / 2;
       return {
         key: i,
-        left: startX - (dx > 0 ? 0 : len),
-        top: startY,
+        left: midX - len / 2,
+        bottom: midY - thick / 2,
         width: len,
         height: thick,
-        angle,
+        angle: angleDeg,
         color: isDark ? BRN_L : BRN,
         opacity: 0.15 + local * 0.55,
       };
     }).filter(Boolean) as {
       key: number;
       left: number;
-      top: number;
+      bottom: number;
       width: number;
       height: number;
       angle: number;
@@ -504,7 +508,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
               s.propRoot,
               {
                 left: pr.left,
-                bottom: pr.top,
+                bottom: pr.bottom,
                 width: pr.width,
                 height: pr.height,
                 opacity: pr.opacity,
@@ -567,35 +571,35 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
         {/* Aerial roots (in front of trunk and canopy) */}
         {aerialRoots.map((ar) => (
           <React.Fragment key={`aerial-${ar.key}`}>
-            <View
-              style={[
-                s.aerialRoot,
-                {
-                  left: ar.left,
-                  bottom: ar.top,
-                  width: ar.width,
-                  height: ar.height,
-                  opacity: ar.opacity,
-                  backgroundColor: ar.color,
-                },
-              ]}
-            />
-            {ar.tipSize > 1.5 && (
               <View
                 style={[
-                  s.aerialRootTip,
+                  s.aerialRoot,
                   {
-                    left: ar.left + ar.width / 2 - ar.tipSize / 2,
-                    bottom: ar.top + ar.height - 1,
-                    width: ar.tipSize,
-                    height: ar.tipSize,
-                    borderRadius: ar.tipSize / 2,
-                    opacity: ar.opacity * 0.8,
+                    left: ar.left,
+                    bottom: ar.bottom,
+                    width: ar.width,
+                    height: ar.height,
+                    opacity: ar.opacity,
                     backgroundColor: ar.color,
                   },
                 ]}
               />
-            )}
+              {ar.tipSize > 1.5 && (
+                <View
+                  style={[
+                    s.aerialRootTip,
+                    {
+                      left: ar.left + ar.width / 2 - ar.tipSize / 2,
+                      bottom: ar.bottom - 1,
+                      width: ar.tipSize,
+                      height: ar.tipSize,
+                      borderRadius: ar.tipSize / 2,
+                      opacity: ar.opacity * 0.8,
+                      backgroundColor: ar.color,
+                    },
+                  ]}
+                />
+              )}
           </React.Fragment>
         ))}
 
