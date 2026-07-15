@@ -45,8 +45,6 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
   const canopyCenterY = trunkTop;
   const maturity = Math.min(4, Math.floor(t * 5));
 
-
-
   // ── Canopy blobs ──
   const canopy = useMemo(() => {
     return BANYAN_CANOPY.map((b, i) => {
@@ -72,25 +70,27 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
 
   // ── Blossom decorations (for Banyan, these are small accent flowers) ──
   const decorations = useMemo(() => {
-    return BANYAN_FIGS.slice(0, 4).map((f, i) => {
-      const local = smoothstep((t - f.growAt) / Math.max(0.001, 1 - f.growAt));
-      return {
-        key: i,
-        lx: cx + f.dx * canopyR,
-        by: canopyCenterY - f.dy * canopyR,
-        size: (3.5 + hash(i, 0.2) * 2) * local,
-        color: FLW[i % FLW.length],
-        opacity: local,
-      };
-    }).filter((d) => d.size > 0.6);
+    return BANYAN_FIGS.slice(0, 4)
+      .map((f, i) => {
+        const local = smoothstep(
+          (t - f.growAt) / Math.max(0.001, 1 - f.growAt),
+        );
+        return {
+          key: i,
+          lx: cx + f.dx * canopyR,
+          by: canopyCenterY - f.dy * canopyR,
+          size: (3.5 + hash(i, 0.2) * 2) * local,
+          color: FLW[i % FLW.length],
+          opacity: local,
+        };
+      })
+      .filter((d) => d.size > 0.6);
   }, [t, canopyR, canopyCenterY]);
 
   // ── Figs ──
   const figs = useMemo(() => {
     return BANYAN_FIGS.map((f, i) => {
-      const local = smoothstep(
-        (t - f.growAt) / Math.max(0.001, 1 - f.growAt),
-      );
+      const local = smoothstep((t - f.growAt) / Math.max(0.001, 1 - f.growAt));
       const size = f.size * local * treeScale;
       if (size < 1) return null;
       return {
@@ -116,9 +116,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
   // ── Aerial roots ──
   const aerialRoots = useMemo(() => {
     return BANYAN_AERIAL_ROOTS.map((r, i) => {
-      const local = smoothstep(
-        (t - r.growAt) / Math.max(0.001, 1 - r.growAt),
-      );
+      const local = smoothstep((t - r.growAt) / Math.max(0.001, 1 - r.growAt));
       if (local < 0.01) return null;
       const startX = cx + r.dx * canopyR;
       const startY = canopyCenterY - r.dy * canopyR;
@@ -202,9 +200,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
       { side: 1, yRatio: 0.82, angle: 10, length: 8, growAt: 0.62 },
     ];
     return BRANCH_CONFIG.map((b, i) => {
-      const local = smoothstep(
-        (t - b.growAt) / Math.max(0.001, 1 - b.growAt),
-      );
+      const local = smoothstep((t - b.growAt) / Math.max(0.001, 1 - b.growAt));
       const currentLen = b.length * local * treeScale;
       if (currentLen < 3) return null;
       const junctionY = trunkBot + trunkH * b.yRatio;
@@ -456,14 +452,16 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
         />
       </View>
 
-      <Animated.View style={[s.treeWrap, { transform: [{ scale: 1.2 }] }]}>
+      <Animated.View
+        style={[s.treeWrap, { top: -15, transform: [{ scale: 1.2 }] }]}
+      >
         {/* Ground shadow */}
         <View
           style={[
             s.groundShadow,
             {
               left: cx - Math.max(35, 18 + trunkW * 1.5),
-              bottom: trunkBot - 6,
+              bottom: trunkBot - 4,
               width: Math.max(70, (18 + trunkW * 1.5) * 2),
               opacity: isDark ? 0.35 : 0.2,
             },
@@ -478,7 +476,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
               backgroundColor: trunkColor,
               borderColor: trunkColor,
               left: cx - 28,
-              bottom: trunkBot - 22,
+              bottom: trunkBot - 32,
               shadowColor: glowColor,
               shadowOpacity: potGlow,
               shadowRadius: running ? 8 : 2,
@@ -538,16 +536,87 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
           ]}
         >
           {/* Bark texture */}
-          <View style={[s.barkLine, { left: "22%", height: "75%", bottom: 0, backgroundColor: isDark ? "#00000028" : "#0000001a" }]} />
-          <View style={[s.barkLine, { left: "44%", height: "60%", bottom: 0, backgroundColor: isDark ? "#00000022" : "#00000014" }]} />
-          <View style={[s.barkLine, { left: "63%", height: "68%", bottom: 0, backgroundColor: isDark ? "#00000024" : "#00000016" }]} />
-          <View style={[s.barkLine, { left: "80%", height: "45%", bottom: "8%", backgroundColor: isDark ? "#00000020" : "#00000012" }]} />
-          <View style={[s.barkLine, { left: "92%", height: "30%", bottom: "15%", backgroundColor: isDark ? "#00000018" : "#0000000c" }]} />
-          {/* Bark knot */}
-          <View style={[s.barkKnot, { left: "55%", top: "30%", backgroundColor: isDark ? "#00000030" : "#0000001e" }]} />
-          <View style={[s.barkKnot, { left: "30%", top: "55%", backgroundColor: isDark ? "#00000028" : "#00000018" }]} />
           <View
-            style={[s.trunkShade, { backgroundColor: isDark ? "#00000035" : "#00000022" }]}
+            style={[
+              s.barkLine,
+              {
+                left: "22%",
+                height: "75%",
+                bottom: 0,
+                backgroundColor: isDark ? "#00000028" : "#0000001a",
+              },
+            ]}
+          />
+          <View
+            style={[
+              s.barkLine,
+              {
+                left: "44%",
+                height: "60%",
+                bottom: 0,
+                backgroundColor: isDark ? "#00000022" : "#00000014",
+              },
+            ]}
+          />
+          <View
+            style={[
+              s.barkLine,
+              {
+                left: "63%",
+                height: "68%",
+                bottom: 0,
+                backgroundColor: isDark ? "#00000024" : "#00000016",
+              },
+            ]}
+          />
+          <View
+            style={[
+              s.barkLine,
+              {
+                left: "80%",
+                height: "45%",
+                bottom: "8%",
+                backgroundColor: isDark ? "#00000020" : "#00000012",
+              },
+            ]}
+          />
+          <View
+            style={[
+              s.barkLine,
+              {
+                left: "92%",
+                height: "30%",
+                bottom: "15%",
+                backgroundColor: isDark ? "#00000018" : "#0000000c",
+              },
+            ]}
+          />
+          {/* Bark knot */}
+          <View
+            style={[
+              s.barkKnot,
+              {
+                left: "55%",
+                top: "30%",
+                backgroundColor: isDark ? "#00000030" : "#0000001e",
+              },
+            ]}
+          />
+          <View
+            style={[
+              s.barkKnot,
+              {
+                left: "30%",
+                top: "55%",
+                backgroundColor: isDark ? "#00000028" : "#00000018",
+              },
+            ]}
+          />
+          <View
+            style={[
+              s.trunkShade,
+              { backgroundColor: isDark ? "#00000035" : "#00000022" },
+            ]}
           />
         </Animated.View>
 
@@ -573,35 +642,35 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
         {/* Aerial roots (in front of trunk and canopy) */}
         {aerialRoots.map((ar) => (
           <React.Fragment key={`aerial-${ar.key}`}>
+            <View
+              style={[
+                s.aerialRoot,
+                {
+                  left: ar.left,
+                  bottom: ar.bottom,
+                  width: ar.width,
+                  height: ar.height,
+                  opacity: ar.opacity,
+                  backgroundColor: ar.color,
+                },
+              ]}
+            />
+            {ar.tipSize > 1.5 && (
               <View
                 style={[
-                  s.aerialRoot,
+                  s.aerialRootTip,
                   {
-                    left: ar.left,
-                    bottom: ar.bottom,
-                    width: ar.width,
-                    height: ar.height,
-                    opacity: ar.opacity,
+                    left: ar.left + ar.width / 2 - ar.tipSize / 2,
+                    bottom: ar.bottom - 1,
+                    width: ar.tipSize,
+                    height: ar.tipSize,
+                    borderRadius: ar.tipSize / 2,
+                    opacity: ar.opacity * 0.8,
                     backgroundColor: ar.color,
                   },
                 ]}
               />
-              {ar.tipSize > 1.5 && (
-                <View
-                  style={[
-                    s.aerialRootTip,
-                    {
-                      left: ar.left + ar.width / 2 - ar.tipSize / 2,
-                      bottom: ar.bottom - 1,
-                      width: ar.tipSize,
-                      height: ar.tipSize,
-                      borderRadius: ar.tipSize / 2,
-                      opacity: ar.opacity * 0.8,
-                      backgroundColor: ar.color,
-                    },
-                  ]}
-                />
-              )}
+            )}
           </React.Fragment>
         ))}
 
@@ -661,22 +730,24 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
               ]}
             />
           ))}
-          {figs.filter((f) => f.highlight).map((f) => (
-            <View
-              key={`fig-hl-${f.key}`}
-              style={[
-                s.figHighlight,
-                {
-                  left: f.lx - f.size * 0.15,
-                  bottom: f.by + f.size * 0.15,
-                  width: f.size * 0.3,
-                  height: f.size * 0.3,
-                  borderRadius: f.size * 0.15,
-                  opacity: f.opacity * 0.6,
-                },
-              ]}
-            />
-          ))}
+          {figs
+            .filter((f) => f.highlight)
+            .map((f) => (
+              <View
+                key={`fig-hl-${f.key}`}
+                style={[
+                  s.figHighlight,
+                  {
+                    left: f.lx - f.size * 0.15,
+                    bottom: f.by + f.size * 0.15,
+                    width: f.size * 0.3,
+                    height: f.size * 0.3,
+                    borderRadius: f.size * 0.15,
+                    opacity: f.opacity * 0.6,
+                  },
+                ]}
+              />
+            ))}
 
           {/* Accent flowers (early stage small blossoms) */}
           {decorations.map((d) => (
