@@ -463,6 +463,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
             s.groundShadow,
             {
               left: cx - Math.max(35, 18 + trunkW * 1.5),
+              bottom: trunkBot - 6,
               width: Math.max(70, (18 + trunkW * 1.5) * 2),
               opacity: isDark ? 0.35 : 0.2,
             },
@@ -477,6 +478,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
               backgroundColor: trunkColor,
               borderColor: trunkColor,
               left: cx - 28,
+              bottom: trunkBot - 22,
               shadowColor: glowColor,
               shadowOpacity: potGlow,
               shadowRadius: running ? 8 : 2,
