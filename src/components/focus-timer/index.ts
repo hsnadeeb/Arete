@@ -6,7 +6,7 @@ export { CelebrationBurst } from "./CelebrationBurst";
 export { ConfettiField } from "./ConfettiField";
 export { GrowingTree } from "./GrowingTree";
 export { BanyanTree } from "./BanyanTree";
-export { LevelUpBanner } from "./LevelUpBanner";
+export { StageUnlockBanner } from "./LevelUpBanner";
 export { DurationPicker } from "./DurationPicker";
 export { TimerDisplay } from "./TimerDisplay";
 export { StatsRow } from "./StatsRow";
@@ -24,25 +24,26 @@ export {
   SPARK,
   CONFETTI,
   SKY_STOPS,
-  LEVELS,
   CANOPY_BLOBS,
   BLOSSOM_SPOTS,
   SIDE_TUFTS,
   ROOTS,
   LEAF_FALL_COLORS,
   SPARKLE_COLORS,
-  BANYAN_STAGES,
   BANYAN_CANOPY,
   BANYAN_AERIAL_ROOTS,
   BANYAN_PROP_ROOTS,
   BANYAN_FIGS,
   FIG_COLORS,
+  MAX_POMODOROS,
+  MAX_AGE,
+  YEARS_PER_POMODORO,
+  TREE_STAGES,
   hash,
   lerpColor,
   skyColorAt,
-  getLevel,
-  nextLevelTrees,
   smoothstep,
-  getBanyanStage,
+  treeAge,
+  getTreeStage,
 } from "./constants";
-export type { LevelInfo, BanyanStage } from "./constants";
+export type { TreeStage } from "./constants";

@@ -1,7 +1,7 @@
 import React from "react";
 import { Text, Animated, StyleSheet } from "react-native";
 import { TYPOGRAPHY } from "../../constants/typography";
-import { getBanyanStage, BANYAN_STAGES } from "./constants";
+import { TREE_STAGES, treeAge, MAX_AGE } from "./constants";
 
 interface MilestoneToastProps {
   milestone: number | null;
@@ -11,16 +11,18 @@ interface MilestoneToastProps {
 export function MilestoneToast({ milestone, animValue }: MilestoneToastProps) {
   if (milestone === null) return null;
 
-  const stage = getBanyanStage(milestone);
+  const stage = TREE_STAGES[milestone];
+  if (!stage) return null;
 
-  let message = "";
-  if (milestone === 100) {
-    message = `${stage.emoji} Ancient Banyan \u2014 Session Complete!`;
-  } else {
-    const prevStageIdx = Math.max(0, stage.index - 1);
-    const nextStage = BANYAN_STAGES[Math.min(stage.index + 1, BANYAN_STAGES.length - 1)];
-    message = `${stage.emoji} ${stage.name} \u2014 ${milestone}%`;
-  }
+  const isLastStage = milestone === TREE_STAGES.length - 1;
+  const age = treeAge(stage.minPomodoros);
+  const nextStage = isLastStage
+    ? null
+    : TREE_STAGES[Math.min(milestone + 1, TREE_STAGES.length - 1)];
+
+  const message = isLastStage
+    ? `${stage.emoji} ${stage.name} \u2014 ${Math.floor(age)}+ Years!`
+    : `${stage.emoji} ${stage.name} \u2014 ${stage.minPomodoros} / ${nextStage ? nextStage.minPomodoros : MAX_AGE} pomodoros`;
 
   return (
     <Animated.View

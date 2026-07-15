@@ -1,13 +1,11 @@
 import React from "react";
 import { View, Text, Animated, StyleSheet } from "react-native";
 import { TYPOGRAPHY } from "../../constants/typography";
-import { GREEN } from "./constants";
+import { GREEN, MAX_POMODOROS, treeAge } from "./constants";
 
 interface StatsRowProps {
   streak: number;
-  totalTrees: number;
-  treesThisSession: number;
-  progress: number;
+  totalPomodoros: number;
   streakPulse: Animated.Value;
   colors: {
     warning: string;
@@ -19,12 +17,12 @@ interface StatsRowProps {
 
 export function StatsRow({
   streak,
-  totalTrees,
-  treesThisSession,
-  progress,
+  totalPomodoros,
   streakPulse,
   colors,
 }: StatsRowProps) {
+  const age = treeAge(totalPomodoros);
+
   return (
     <View style={[styles.forestStats, { borderColor: colors.borderLight }]}>
       <View style={styles.statItem}>
@@ -41,16 +39,18 @@ export function StatsRow({
       <View style={[styles.statDiv, { backgroundColor: colors.borderLight }]} />
       <View style={styles.statItem}>
         <Text style={[styles.statVal, { color: colors.accent }]}>
-          {totalTrees + treesThisSession}
+          {totalPomodoros}
         </Text>
-        <Text style={[styles.statLbl, { color: colors.textTertiary }]}>Trees</Text>
+        <Text style={[styles.statLbl, { color: colors.textTertiary }]}>
+          / {MAX_POMODOROS} poms
+        </Text>
       </View>
       <View style={[styles.statDiv, { backgroundColor: colors.borderLight }]} />
       <View style={styles.statItem}>
         <Text style={[styles.statVal, { color: GREEN[3] }]}>
-          {Math.floor(progress)}%
+          {age.toFixed(1)}
         </Text>
-        <Text style={[styles.statLbl, { color: colors.textTertiary }]}>Growth</Text>
+        <Text style={[styles.statLbl, { color: colors.textTertiary }]}>Years</Text>
       </View>
     </View>
   );

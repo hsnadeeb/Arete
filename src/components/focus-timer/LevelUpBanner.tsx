@@ -1,15 +1,18 @@
 import React, { useEffect, useRef } from "react";
 import { Text, Animated, StyleSheet } from "react-native";
-import { Icon } from "../Icons";
 import { TYPOGRAPHY } from "../../constants/typography";
 
-interface LevelUpBannerProps {
+interface StageUnlockBannerProps {
   visible: boolean;
-  title: string;
-  iconKey: string;
+  stageEmoji: string;
+  stageName: string;
 }
 
-export function LevelUpBanner({ visible, title, iconKey }: LevelUpBannerProps) {
+export function StageUnlockBanner({
+  visible,
+  stageEmoji,
+  stageName,
+}: StageUnlockBannerProps) {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (visible) {
@@ -38,19 +41,19 @@ export function LevelUpBanner({ visible, title, iconKey }: LevelUpBannerProps) {
   return (
     <Animated.View
       pointerEvents="none"
-      style={[s.levelUpWrap, { opacity: anim, transform: [{ scale }] }]}
+      style={[s.wrap, { opacity: anim, transform: [{ scale }] }]}
     >
-      <Animated.View style={s.levelUpCard}>
-        <Icon name={iconKey as any} size={22} color="#ffd54f" />
-        <Text style={s.levelUpTitle}>Level Up!</Text>
-        <Text style={s.levelUpSub}>{title}</Text>
+      <Animated.View style={s.card}>
+        <Text style={s.emoji}>{stageEmoji}</Text>
+        <Text style={s.title}>Stage Unlocked!</Text>
+        <Text style={s.sub}>{stageName}</Text>
       </Animated.View>
     </Animated.View>
   );
 }
 
 const s = StyleSheet.create({
-  levelUpWrap: {
+  wrap: {
     position: "absolute",
     top: 130,
     left: 0,
@@ -58,7 +61,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     zIndex: 110,
   },
-  levelUpCard: {
+  card: {
     backgroundColor: "rgba(20,20,20,0.9)",
     borderRadius: 20,
     paddingHorizontal: 24,
@@ -68,11 +71,12 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,213,79,0.4)",
   },
-  levelUpTitle: {
+  emoji: { fontSize: 28 },
+  title: {
     color: "#ffd54f",
     fontWeight: "800",
     fontSize: 16,
     letterSpacing: 0.5,
   },
-  levelUpSub: { color: "#fff", fontWeight: "600", fontSize: 13, opacity: 0.9 },
+  sub: { color: "#fff", fontWeight: "600", fontSize: 13, opacity: 0.9 },
 });

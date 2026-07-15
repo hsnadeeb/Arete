@@ -9,7 +9,7 @@ interface FocusControlsProps {
   onStart: () => void;
   onPause: () => void;
   onReset: () => void;
-  onAddTime?: () => void;
+  onAddYears?: () => void;
   colors: {
     bgSecondary: string;
     textTertiary: string;
@@ -29,7 +29,7 @@ export function FocusControls({
   onStart,
   onPause,
   onReset,
-  onAddTime,
+  onAddYears,
   colors,
   doneGlow,
 }: FocusControlsProps) {
@@ -81,14 +81,14 @@ export function FocusControls({
           </Animated.View>
         </TouchableOpacity>
       )}
-      {onAddTime ? (
+      {onAddYears ? (
         <TouchableOpacity
-          onPress={onAddTime}
+          onPress={onAddYears}
           style={[styles.ctrlBtn, { backgroundColor: colors.bgSecondary }]}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text style={[styles.addLabel, { color: colors.textTertiary }]}>
-            +5m
+            +5yr
           </Text>
         </TouchableOpacity>
       ) : (

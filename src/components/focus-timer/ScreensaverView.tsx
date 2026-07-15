@@ -10,6 +10,8 @@ interface ScreensaverViewProps {
   done: boolean;
   progress: number;
   running: boolean;
+  completedPomodoros?: number;
+  sessionProgress?: number;
   onDoubleTap: () => void;
 }
 
@@ -19,6 +21,8 @@ export function ScreensaverView({
   done,
   progress,
   running,
+  completedPomodoros = 0,
+  sessionProgress = 0,
   onDoubleTap,
 }: ScreensaverViewProps) {
   return (
@@ -34,7 +38,13 @@ export function ScreensaverView({
             {String(min).padStart(2, "0")}:{String(sec).padStart(2, "0")}
           </Text>
           <View style={styles.saverTree}>
-            <BanyanTree pct={progress} isDark={true} running={running} />
+            <BanyanTree
+              pct={progress}
+              isDark={true}
+              running={running}
+              completedPomodoros={completedPomodoros}
+              sessionProgress={sessionProgress}
+            />
           </View>
           <Text style={styles.saverHint}>Double-tap to exit</Text>
         </View>

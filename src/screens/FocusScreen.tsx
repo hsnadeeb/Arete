@@ -3,7 +3,6 @@ import React, {
   useEffect,
   useRef,
   useCallback,
-  useMemo,
 } from "react";
 import {
   View,
@@ -22,9 +21,11 @@ import * as db from "../db/service";
 import {
   DURATIONS,
   SPARK,
-  getLevel,
-  nextLevelTrees,
-  getBanyanStage,
+  MAX_POMODOROS,
+  MAX_AGE,
+  getTreeStage,
+  TREE_STAGES,
+
   DurationPicker,
   TimerDisplay,
   StatsRow,
@@ -32,7 +33,7 @@ import {
   BanyanTree,
   CelebrationBurst,
   ConfettiField,
-  LevelUpBanner,
+  StageUnlockBanner,
   MilestoneToast,
   LevelBadge,
   ScreensaverView,
@@ -59,13 +60,18 @@ export default function FocusScreen() {
   const [screensaver, setScreensaver] = useState(false);
   const [burstTrigger, setBurstTrigger] = useState(0);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
-  const [levelUpVisible, setLevelUpVisible] = useState(false);
+  const [stageUnlockVisible, setStageUnlockVisible] = useState(false);
+  const [unlockedStageName, setUnlockedStageName] = useState("");
+  const [unlockedStageEmoji, setUnlockedStageEmoji] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [unlockedStageIndices, setUnlockedStageIndices] = useState<number[]>(
+    [],
+  );
+  const [bonusPomodoros, setBonusPomodoros] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const animMilestone = useRef(new Animated.Value(0)).current;
   const lastActivityRef = useRef(Date.now());
   const lastTapRef = useRef(0);
-  const prevLevelTitleRef = useRef<string | null>(null);
   const prevStageIdxRef = useRef(0);
   const streakPulse = useRef(new Animated.Value(1)).current;
   const doneGlow = useRef(new Animated.Value(0)).current;
@@ -74,15 +80,20 @@ export default function FocusScreen() {
   const remaining = duration - elapsed;
   const min = Math.floor(remaining / 60);
   const sec = remaining % 60;
-  const treesThisSession = Math.floor(elapsed / 300);
-  const level = useMemo(() => getLevel(stats.totalTrees), [stats.totalTrees]);
-  const toNext = useMemo(
-    () => nextLevelTrees(stats.totalTrees),
-    [stats.totalTrees],
-  );
+  const completedPomodoros = stats.totalSessions + bonusPomodoros;
+  const sessionProgress = duration > 0 ? elapsed / duration : 0;
 
   useEffect(() => {
-    db.getFocusStats().then(setStats);
+    db.getFocusStats().then((s) => {
+      setStats(s);
+      const currentStage = getTreeStage(s.totalSessions);
+      prevStageIdxRef.current = currentStage.index;
+      setUnlockedStageIndices(
+        TREE_STAGES.filter((_, i) => i <= currentStage.index).map(
+          (_, i) => i,
+        ),
+      );
+    });
   }, []);
 
   useEffect(() => {
@@ -91,20 +102,30 @@ export default function FocusScreen() {
     }
   }, [done]);
 
-  useEffect(() => {
-    if (prevLevelTitleRef.current === null) {
-      prevLevelTitleRef.current = level.title;
-      return;
-    }
-    if (level.title !== prevLevelTitleRef.current) {
-      prevLevelTitleRef.current = level.title;
-      setLevelUpVisible(true);
-      setBurstTrigger((v) => v + 1);
-      Vibration.vibrate([0, 60, 60, 120]);
-      const timer = setTimeout(() => setLevelUpVisible(false), 1800);
-      return () => clearTimeout(timer);
-    }
-  }, [level.title]);
+  function showStageUnlock(index: number) {
+    const st = TREE_STAGES[index];
+    if (!st) return;
+    setUnlockedStageEmoji(st.emoji);
+    setUnlockedStageName(st.name);
+    setStageUnlockVisible(true);
+    setBurstTrigger((v) => v + 1);
+    Vibration.vibrate([0, 60, 60, 120]);
+    setTimeout(() => setStageUnlockVisible(false), 1800);
+  }
+
+  const handleAddYears = useCallback(() => {
+    const pomsPer5Years = Math.round(5 / (MAX_AGE / MAX_POMODOROS));
+    setBonusPomodoros((p) => {
+      const newTotal = stats.totalSessions + p + pomsPer5Years;
+      const currentStage = getTreeStage(stats.totalSessions + p);
+      const nextStage = getTreeStage(stats.totalSessions + p + pomsPer5Years);
+      if (nextStage.index > currentStage.index) {
+        prevStageIdxRef.current = nextStage.index;
+        showStageUnlock(nextStage.index);
+      }
+      return p + pomsPer5Years;
+    });
+  }, [stats.totalSessions]);
 
   useEffect(() => {
     if (stats.streak > 0) {
@@ -142,9 +163,19 @@ export default function FocusScreen() {
               if (id) db.completeFocusSession(id, duration);
               return null;
             });
-            setMilestone(100);
+            const prevStage = getTreeStage(stats.totalSessions);
+            const nextStage = getTreeStage(stats.totalSessions + 1);
+            if (nextStage.index > prevStage.index) {
+              prevStageIdxRef.current = nextStage.index;
+              setMilestone(nextStage.index);
+              setUnlockedStageIndices((prev) =>
+                prev.includes(nextStage.index)
+                  ? prev
+                  : [...prev, nextStage.index],
+              );
+              showStageUnlock(nextStage.index);
+            }
             setConfettiTrigger((v) => v + 1);
-            setBurstTrigger((v) => v + 1);
             Animated.sequence([
               Animated.timing(doneGlow, {
                 toValue: 1,
@@ -159,12 +190,16 @@ export default function FocusScreen() {
             ]).start();
             return duration;
           }
-          const newStage = getBanyanStage((next / duration) * 100);
+          const totalPoms = stats.totalSessions + next / duration;
+          const newStage = getTreeStage(Math.floor(totalPoms));
           if (newStage.index > prevStageIdxRef.current && next < duration) {
             prevStageIdxRef.current = newStage.index;
-            const stagePct = Math.round(newStage.at);
-            setMilestone(stagePct === 100 ? 100 : stagePct);
+            setMilestone(newStage.index);
             Vibration.vibrate(80);
+            setUnlockedStageIndices((prev) =>
+              prev.includes(newStage.index) ? prev : [...prev, newStage.index],
+            );
+            showStageUnlock(newStage.index);
           }
           if (
             Math.floor(prev / 300) < Math.floor(next / 300) &&
@@ -228,10 +263,6 @@ export default function FocusScreen() {
     lastActivityRef.current = Date.now();
   }, [elapsed]);
 
-  const handleAddTime = useCallback(() => {
-    setElapsed((prev) => Math.min(prev + 300, duration));
-  }, [duration]);
-
   const handleDuration = useCallback((d: number) => {
     setRunning(false);
     setSessionId((id) => {
@@ -274,6 +305,8 @@ export default function FocusScreen() {
         done={done}
         progress={progress}
         running={running}
+        completedPomodoros={completedPomodoros}
+        sessionProgress={sessionProgress}
         onDoubleTap={handleScreenTap}
       />
     );
@@ -325,22 +358,26 @@ export default function FocusScreen() {
 
       <MilestoneToast milestone={milestone} animValue={animMilestone} />
 
-      <LevelUpBanner
-        visible={levelUpVisible}
-        title={level.title}
-        iconKey={level.iconKey}
+      <StageUnlockBanner
+        visible={stageUnlockVisible}
+        stageEmoji={unlockedStageEmoji}
+        stageName={unlockedStageName}
       />
 
       <View style={s.body}>
         <LevelBadge
-          level={level}
-          totalTrees={stats.totalTrees}
-          toNext={toNext}
+          totalPomodoros={stats.totalSessions}
           colors={tc}
         />
 
         <View style={s.treeStage}>
-          <BanyanTree pct={progress} isDark={isDark} running={running} />
+          <BanyanTree
+            pct={progress}
+            isDark={isDark}
+            running={running}
+            completedPomodoros={completedPomodoros}
+            sessionProgress={sessionProgress}
+          />
           <CelebrationBurst
             trigger={burstTrigger}
             colorSet={SPARK}
@@ -361,9 +398,7 @@ export default function FocusScreen() {
 
         <StatsRow
           streak={stats.streak}
-          totalTrees={stats.totalTrees}
-          treesThisSession={treesThisSession}
-          progress={progress}
+          totalPomodoros={stats.totalSessions}
           streakPulse={streakPulse}
           colors={tc}
         />
@@ -374,7 +409,7 @@ export default function FocusScreen() {
           onStart={handleStart}
           onPause={handlePause}
           onReset={handleReset}
-          onAddTime={handleAddTime}
+          onAddYears={handleAddYears}
           colors={tc}
           doneGlow={doneGlow}
         />

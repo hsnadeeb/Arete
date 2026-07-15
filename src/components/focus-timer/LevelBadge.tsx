@@ -1,13 +1,10 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Icon } from "../Icons";
 import { TYPOGRAPHY } from "../../constants/typography";
-import type { LevelInfo } from "./constants";
+import { getTreeStage, TREE_STAGES, treeAge, MAX_POMODOROS } from "./constants";
 
 interface LevelBadgeProps {
-  level: LevelInfo;
-  totalTrees: number;
-  toNext: number;
+  totalPomodoros: number;
   colors: {
     bgSecondary: string;
     borderLight: string;
@@ -16,7 +13,13 @@ interface LevelBadgeProps {
   };
 }
 
-export function LevelBadge({ level, totalTrees, toNext, colors }: LevelBadgeProps) {
+export function LevelBadge({ totalPomodoros, colors }: LevelBadgeProps) {
+  const { stage, index } = getTreeStage(totalPomodoros);
+  const nextStage = TREE_STAGES[Math.min(index + 1, TREE_STAGES.length - 1)];
+  const nextMin = nextStage?.minPomodoros ?? MAX_POMODOROS;
+  const pomsToNext = nextMin - totalPomodoros;
+  const age = treeAge(totalPomodoros);
+
   return (
     <View
       style={[
@@ -24,13 +27,13 @@ export function LevelBadge({ level, totalTrees, toNext, colors }: LevelBadgeProp
         { backgroundColor: colors.bgSecondary, borderColor: colors.borderLight },
       ]}
     >
-      <Icon name={level.iconKey} size={18} color={colors.text} />
+      <Text style={styles.emoji}>{stage.emoji}</Text>
       <Text style={[TYPOGRAPHY.bodySm, { fontWeight: "700", color: colors.text }]}>
-        {level.title}
+        {stage.name}
       </Text>
       <Text style={[TYPOGRAPHY.captionSm, { color: colors.textTertiary }]}>
-        {totalTrees} trees ·{" "}
-        {toNext > 0 ? `${toNext} to next` : "Max level"}
+        {Math.floor(age)} yrs · {totalPomodoros}/{MAX_POMODOROS} poms
+        {pomsToNext > 0 ? ` · ${pomsToNext} to next` : ""}
       </Text>
     </View>
   );
@@ -47,4 +50,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 8,
   },
+  emoji: { fontSize: 16 },
 });

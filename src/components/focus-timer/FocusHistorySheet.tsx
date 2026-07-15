@@ -10,10 +10,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
-import { Icon } from "../Icons";
 import { TYPOGRAPHY } from "../../constants/typography";
 import * as db from "../../db/service";
-import { LEVELS } from "./constants";
+import { TREE_STAGES, MAX_POMODOROS } from "./constants";
 
 interface Session {
   id: number;
@@ -62,7 +61,7 @@ export function FocusHistorySheet({ visible, onClose }: FocusHistorySheetProps) 
 
   const completed = sessions.filter((s) => s.status === "completed");
   const totalFocus = completed.reduce((sum, s) => sum + s.elapsed, 0);
-  const totalTrees = completed.reduce((sum, s) => sum + Math.floor(s.elapsed / 300), 0);
+  const totalSessions = sessions.length;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -94,24 +93,24 @@ export function FocusHistorySheet({ visible, onClose }: FocusHistorySheetProps) 
               <Text style={[s.summaryLbl, { color: tc.textTertiary }]}>Focus Time</Text>
             </View>
             <View style={[s.summaryCard, { backgroundColor: tc.surface, borderColor: tc.border }]}>
-              <Text style={[s.summaryVal, { color: "#22c55e" }]}>{totalTrees}</Text>
-              <Text style={[s.summaryLbl, { color: tc.textTertiary }]}>Trees</Text>
+              <Text style={[s.summaryVal, { color: "#22c55e" }]}>{totalSessions}</Text>
+              <Text style={[s.summaryLbl, { color: tc.textTertiary }]}>Pomodoros</Text>
             </View>
           </View>
 
-          {/* Achievements */}
-          <Text style={[s.sectionTitle, { color: tc.heading }]}>Achievements</Text>
+          {/* Tree Stages */}
+          <Text style={[s.sectionTitle, { color: tc.heading }]}>Tree Stages</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.achScroll}>
-            {LEVELS.map((lvl, i) => {
-              const unlocked = totalTrees >= lvl.minTrees;
-              const next = LEVELS[i + 1];
+            {TREE_STAGES.map((st, i) => {
+              const unlocked = totalSessions >= st.minPomodoros;
+              const next = TREE_STAGES[i + 1];
               const progress =
                 next && !unlocked
-                  ? (totalTrees - lvl.minTrees) / (next.minTrees - lvl.minTrees)
+                  ? (totalSessions - st.minPomodoros) / (next.minPomodoros - st.minPomodoros)
                   : 1;
               return (
                 <View
-                  key={lvl.title}
+                  key={st.name}
                   style={[
                     s.achCard,
                     {
@@ -121,33 +120,20 @@ export function FocusHistorySheet({ visible, onClose }: FocusHistorySheetProps) 
                     },
                   ]}
                 >
-                  <View
-                    style={[
-                      s.achIconWrap,
-                      {
-                        backgroundColor: unlocked ? "#22c55e18" : tc.divider,
-                      },
-                    ]}
-                  >
-                    <Icon
-                      name={lvl.iconKey as any}
-                      size={20}
-                      color={unlocked ? "#22c55e" : tc.textTertiary}
-                    />
-                  </View>
+                  <Text style={{ fontSize: 28 }}>{st.emoji}</Text>
                   <Text
                     style={[
                       s.achTitle,
                       { color: unlocked ? tc.text : tc.textTertiary },
                     ]}
-                    numberOfLines={1}
+                    numberOfLines={2}
                   >
-                    {lvl.title}
+                    {st.name}
                   </Text>
                   <Text style={[s.achReq, { color: tc.textTertiary }]}>
-                    {lvl.minTrees === 0
+                    {st.minPomodoros === 0
                       ? "Start"
-                      : `${lvl.minTrees} trees`}
+                      : `${st.minPomodoros} poms`}
                   </Text>
                   {unlocked ? (
                     <Text style={[s.achUnlocked, { color: "#22c55e" }]}>
@@ -174,8 +160,8 @@ export function FocusHistorySheet({ visible, onClose }: FocusHistorySheetProps) 
                         </View>
                       </View>
                       <Text style={[s.achToUnlock, { color: tc.textTertiary }]}>
-                        {lvl.minTrees - totalTrees > 0
-                          ? `${lvl.minTrees - totalTrees} to unlock`
+                        {st.minPomodoros - totalSessions > 0
+                          ? `${st.minPomodoros - totalSessions} to unlock`
                           : "Locked"}
                       </Text>
                     </>

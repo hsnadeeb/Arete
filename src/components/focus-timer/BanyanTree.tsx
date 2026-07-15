@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo } from "react";
 import { View, Text, Animated, Easing, StyleSheet } from "react-native";
 import { TYPOGRAPHY } from "../../constants/typography";
 import {
+  MAX_POMODOROS,
   BANYAN_CANOPY,
   BANYAN_AERIAL_ROOTS,
   BANYAN_PROP_ROOTS,
@@ -23,10 +24,12 @@ interface BanyanTreeProps {
   pct: number;
   isDark: boolean;
   running: boolean;
+  completedPomodoros?: number;
+  sessionProgress?: number;
 }
 
-export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
-  const t = Math.min(pct / 100, 1);
+export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessionProgress = 0 }: BanyanTreeProps) {
+  const t = Math.min((completedPomodoros + sessionProgress) / MAX_POMODOROS, 1);
 
   const cx = 130;
   const trunkColor = isDark ? BRN_L : BRN;
@@ -258,25 +261,6 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
   }, []);
 
   // ── Continuous smooth animations (no loop-reset jerks) ──
-
-  const breath = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.timing(breath, {
-        toValue: 1,
-        duration: 7000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, []);
-
-  const breathScale = breath.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 1.025, 1],
-  });
 
   const growPulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -696,7 +680,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
             bottom: 0,
             zIndex: 5,
             transform: [
-              { scale: Animated.multiply(breathScale, growPulse) },
+              { scale: growPulse },
               { rotate: canopySway },
             ],
             opacity: canopyOpacity,
