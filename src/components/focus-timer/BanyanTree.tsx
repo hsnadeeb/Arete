@@ -45,8 +45,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
   const canopyCenterY = trunkTop;
   const maturity = Math.min(4, Math.floor(t * 5));
 
-  // Host branch visibility (fades out as tree grows)
-  const hostBranchOpacity = Math.max(0, 1 - t / 0.2);
+
 
   // ── Canopy blobs ──
   const canopy = useMemo(() => {
@@ -388,7 +387,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
             width: canopyR * 2.6,
             height: canopyR * 2.6,
             borderRadius: canopyR * 1.3,
-            top: canopyCenterY - canopyR * 1.3,
+            bottom: canopyCenterY - canopyR * 1.3,
             left: cx - canopyR * 1.3,
             backgroundColor: glowColor,
             opacity: haloOpacity,
@@ -406,7 +405,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
             width: canopyR * 1.8,
             height: canopyR * 1.8,
             borderRadius: canopyR * 0.9,
-            top: canopyCenterY - canopyR * 0.9,
+            bottom: canopyCenterY - canopyR * 0.9,
             left: cx - canopyR * 0.9,
             backgroundColor: glowColor,
             opacity: haloOpacity2,
@@ -505,7 +504,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
               s.propRoot,
               {
                 left: pr.left,
-                top: pr.top,
+                bottom: pr.top,
                 width: pr.width,
                 height: pr.height,
                 opacity: pr.opacity,
@@ -554,7 +553,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
               s.branch,
               {
                 left: b.left,
-                top: b.top,
+                bottom: b.top,
                 width: b.width,
                 height: b.height,
                 opacity: b.opacity,
@@ -565,44 +564,6 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
           />
         ))}
 
-        {/* Host branch (early stage only) */}
-        {hostBranchOpacity > 0.01 && (
-          <View
-            pointerEvents="none"
-            style={[
-              s.hostBranch,
-              {
-                left: cx - 40,
-                bottom: canopyCenterY + 10,
-                opacity: hostBranchOpacity,
-              },
-            ]}
-          >
-            <View
-              style={[
-                s.hostBranchLine,
-                {
-                  backgroundColor: isDark ? BRN_L : BRN,
-                  opacity: hostBranchOpacity,
-                },
-              ]}
-            />
-            {t < 0.15 && (
-              <View
-                style={[
-                  s.sproutCurl,
-                  {
-                    left: cx - 1.5,
-                    bottom: canopyCenterY + 14,
-                    opacity: Math.max(0, 1 - t / 0.15),
-                    borderLeftColor: GREEN[3],
-                  },
-                ]}
-              />
-            )}
-          </View>
-        )}
-
         {/* Aerial roots (in front of trunk and canopy) */}
         {aerialRoots.map((ar) => (
           <React.Fragment key={`aerial-${ar.key}`}>
@@ -611,7 +572,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
                 s.aerialRoot,
                 {
                   left: ar.left,
-                  top: ar.top,
+                  bottom: ar.top,
                   width: ar.width,
                   height: ar.height,
                   opacity: ar.opacity,
@@ -625,7 +586,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
                   s.aerialRootTip,
                   {
                     left: ar.left + ar.width / 2 - ar.tipSize / 2,
-                    top: ar.top + ar.height - 1,
+                    bottom: ar.top + ar.height - 1,
                     width: ar.tipSize,
                     height: ar.tipSize,
                     borderRadius: ar.tipSize / 2,
@@ -823,23 +784,6 @@ const s = StyleSheet.create({
   propRoot: {
     position: "absolute",
     zIndex: 2,
-    borderRadius: 2,
-  },
-  hostBranch: {
-    position: "absolute",
-    zIndex: 1,
-    alignItems: "center",
-  },
-  hostBranchLine: {
-    width: 80,
-    height: 4,
-    borderRadius: 2,
-  },
-  sproutCurl: {
-    position: "absolute",
-    width: 3,
-    height: 10,
-    borderLeftWidth: 2.5,
     borderRadius: 2,
   },
   aerialRoot: {

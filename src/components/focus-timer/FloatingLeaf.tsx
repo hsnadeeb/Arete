@@ -109,7 +109,7 @@ export function FloatingLeaf({
       style={{
         position: "absolute",
         left: startX,
-        top: startY,
+        bottom: startY,
         width: size,
         height: size * 1.4,
         borderRadius: size * 0.2,

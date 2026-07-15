@@ -82,7 +82,7 @@ function Sparkle({
       style={{
         position: "absolute",
         left: startX,
-        top: startY,
+        bottom: startY,
         width: size,
         height: size,
         borderRadius: size / 2,
