@@ -204,22 +204,29 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
       const currentLen = b.length * local * treeScale;
       if (currentLen < 3) return null;
       const junctionY = trunkBot + trunkH * b.yRatio;
-      const side = b.side;
-      const branchAngle = side * b.angle;
+      const startX = cx + b.side * (trunkW / 2);
+      const startY = junctionY;
+      const tiltRad = (Math.abs(b.angle) * Math.PI) / 180;
+      const endX = startX + b.side * currentLen * Math.cos(tiltRad);
+      const endY = startY + currentLen * Math.sin(tiltRad);
+      const midX = (startX + endX) / 2;
+      const midY = (startY + endY) / 2;
+      const thick = 3 * local;
       return {
         key: i,
-        left: cx + side * (trunkW / 2) - (side > 0 ? 0 : currentLen),
-        top: junctionY - 1.5,
+        left: midX - currentLen / 2,
+        bottom: midY - thick / 2,
         width: currentLen,
-        height: 3 * local,
-        angle: branchAngle,
+        height: thick,
+        angle:
+          (Math.atan2(-(endY - startY), endX - startX) * 180) / Math.PI,
         color: isDark ? BRN_L : BRN,
         opacity: 0.3 + local * 0.6,
       };
     }).filter(Boolean) as {
       key: number;
       left: number;
-      top: number;
+      bottom: number;
       width: number;
       height: number;
       angle: number;
@@ -628,7 +635,7 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
               s.branch,
               {
                 left: b.left,
-                bottom: b.top,
+                bottom: b.bottom,
                 width: b.width,
                 height: b.height,
                 opacity: b.opacity,

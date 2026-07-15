@@ -179,26 +179,48 @@ export function getBanyanStage(pct: number): {
 }
 
 export const BANYAN_CANOPY = [
+  // Core mass (layer 0)
   { dx: 0, dy: -0.15, r: 1.0, layer: 0, growAt: 0.1 },
   { dx: -0.45, dy: -0.18, r: 0.88, layer: 0, growAt: 0.14 },
   { dx: 0.45, dy: -0.18, r: 0.88, layer: 0, growAt: 0.17 },
+  { dx: -0.15, dy: -0.35, r: 0.6, layer: 0, growAt: 0.21 },
+  { dx: 0.15, dy: -0.35, r: 0.6, layer: 0, growAt: 0.23 },
+  // Mid canopy (layer 1)
   { dx: -0.75, dy: -0.32, r: 0.72, layer: 1, growAt: 0.25 },
   { dx: 0.75, dy: -0.32, r: 0.72, layer: 1, growAt: 0.28 },
   { dx: -0.3, dy: -0.52, r: 0.68, layer: 1, growAt: 0.34 },
   { dx: 0.3, dy: -0.52, r: 0.68, layer: 1, growAt: 0.37 },
+  { dx: -0.6, dy: -0.4, r: 0.5, layer: 1, growAt: 0.3 },
+  { dx: 0.6, dy: -0.4, r: 0.5, layer: 1, growAt: 0.32 },
+  { dx: -0.25, dy: -0.65, r: 0.42, layer: 1, growAt: 0.42 },
+  { dx: 0.25, dy: -0.65, r: 0.42, layer: 1, growAt: 0.44 },
+  // Upper canopy (layer 2)
   { dx: -1.05, dy: -0.22, r: 0.58, layer: 2, growAt: 0.44 },
   { dx: 1.05, dy: -0.22, r: 0.58, layer: 2, growAt: 0.47 },
   { dx: -0.85, dy: -0.55, r: 0.52, layer: 2, growAt: 0.54 },
   { dx: 0.85, dy: -0.55, r: 0.52, layer: 2, growAt: 0.57 },
+  { dx: -0.7, dy: -0.5, r: 0.4, layer: 2, growAt: 0.5 },
+  { dx: 0.7, dy: -0.5, r: 0.4, layer: 2, growAt: 0.52 },
+  { dx: -0.5, dy: -0.78, r: 0.42, layer: 2, growAt: 0.5 },
+  { dx: 0.5, dy: -0.78, r: 0.42, layer: 2, growAt: 0.52 },
+  // Far canopy (layer 3)
   { dx: -1.25, dy: -0.12, r: 0.42, layer: 3, growAt: 0.64 },
   { dx: 1.25, dy: -0.12, r: 0.42, layer: 3, growAt: 0.67 },
   { dx: -0.95, dy: -0.65, r: 0.4, layer: 3, growAt: 0.71 },
   { dx: 0.95, dy: -0.65, r: 0.4, layer: 3, growAt: 0.74 },
-  { dx: 0, dy: -0.82, r: 0.52, layer: 1, growAt: 0.4 },
-  { dx: -0.5, dy: -0.78, r: 0.42, layer: 2, growAt: 0.5 },
-  { dx: 0.5, dy: -0.78, r: 0.42, layer: 2, growAt: 0.52 },
   { dx: -1.15, dy: -0.42, r: 0.36, layer: 3, growAt: 0.78 },
   { dx: 1.15, dy: -0.42, r: 0.36, layer: 3, growAt: 0.8 },
+  { dx: -0.3, dy: -0.85, r: 0.3, layer: 3, growAt: 0.65 },
+  { dx: 0.3, dy: -0.85, r: 0.3, layer: 3, growAt: 0.67 },
+  // Top (layer 1, grows early for a rounded apex)
+  { dx: 0, dy: -0.82, r: 0.55, layer: 1, growAt: 0.4 },
+  { dx: -0.2, dy: -0.88, r: 0.38, layer: 1, growAt: 0.5 },
+  { dx: 0.2, dy: -0.88, r: 0.38, layer: 1, growAt: 0.52 },
+  { dx: -0.35, dy: -0.82, r: 0.28, layer: 2, growAt: 0.55 },
+  { dx: 0.35, dy: -0.82, r: 0.28, layer: 2, growAt: 0.57 },
+  { dx: 0, dy: -0.95, r: 0.32, layer: 1, growAt: 0.6 },
+  { dx: -0.12, dy: -0.92, r: 0.22, layer: 2, growAt: 0.62 },
+  { dx: 0.12, dy: -0.92, r: 0.22, layer: 2, growAt: 0.64 },
 ];
 
 export const BANYAN_AERIAL_ROOTS = [
