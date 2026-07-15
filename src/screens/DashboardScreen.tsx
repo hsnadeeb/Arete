@@ -125,6 +125,16 @@ function AtAGlanceWidget() {
   const refreshPrayerTimings = useApp((s) => s.refreshPrayerTimings);
   const prayers = useApp((s) => s.prayers);
   const togglePrayer = useApp((s) => s.togglePrayer);
+  const timetable = useApp((s) => s.timetable);
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    tick();
+    const id = setInterval(tick, 10000);
+    return () => clearInterval(id);
+  }, []);
+
   const nextPrayer = useMemo(() => {
     if (!prayerTimings) return null;
     return getNextPrayer({
@@ -135,6 +145,38 @@ function AtAGlanceWidget() {
       isha: prayerTimings.isha,
     });
   }, [prayerTimings]);
+
+  const nextCalendarItem = useMemo(() => {
+    const day = now.getDay();
+    const currentTime = now.toTimeString().slice(0, 5);
+
+    const todayItems = timetable
+      .filter((t: any) => {
+        if (t.repeat_type === "once") {
+          const ds = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+          return t.specific_date === ds;
+        }
+        if (t.repeat_type === "daily") return true;
+        return t.day_of_week === day;
+      })
+      .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time));
+
+    const nowActive = todayItems.find(
+      (t: any) =>
+        t.start_time <= currentTime &&
+        t.end_time &&
+        t.end_time !== "" &&
+        t.end_time >= currentTime,
+    );
+    if (nowActive) return { ...nowActive, _state: "now" };
+
+    const upcoming = todayItems.find((t: any) => t.start_time > currentTime);
+    if (upcoming) return { ...upcoming, _state: "upcoming" };
+
+    if (todayItems.length > 0) return { ...todayItems[0], _state: "wrap" };
+
+    return null;
+  }, [timetable, now]);
 
   const allDone = useMemo(
     () => prayers.length >= 5 && prayers.every((p: any) => p.on_time === 1),
@@ -177,6 +219,35 @@ function AtAGlanceWidget() {
               All prayers completed
             </Text>
           </View>
+        </View>
+      ) : nextCalendarItem ? (
+        <View
+          style={[
+            s.nextPrayerBox,
+            { backgroundColor: tc.accentBg, borderColor: tc.accent + "33" },
+          ]}
+        >
+          <Text style={[s.npLabel, { color: tc.accent }]}>
+            {nextCalendarItem._state === "now"
+              ? "Now"
+              : nextCalendarItem._state === "wrap"
+                ? "First Up"
+                : "Up Next"}
+          </Text>
+          <View style={s.npMainRow}>
+            <Text style={[s.npName, { color: tc.heading }]}>
+              {nextCalendarItem.activity}
+            </Text>
+            <View style={[s.npBadge, { backgroundColor: tc.accent }]}>
+              <Text style={s.npBadgeText}>
+                {nextCalendarItem._state === "now" ? "LIVE" : "NEXT"}
+              </Text>
+            </View>
+          </View>
+          <Text style={[s.npTime, { color: tc.textSecondary }]}>
+            {nextCalendarItem.start_time}
+            {nextCalendarItem.end_time ? ` - ${nextCalendarItem.end_time}` : ""}
+          </Text>
         </View>
       ) : nextPrayer ? (
         <View
@@ -1798,6 +1869,12 @@ const s = StyleSheet.create({
     marginTop: SPACE.sm,
   },
   npName: { fontSize: 17, fontWeight: "800" },
+  npBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: RADIUS.pill,
+  },
+  npBadgeText: { fontSize: 11, fontWeight: "800", color: "#fff" },
   npTime: { fontSize: 12, marginTop: 2, fontWeight: "500" },
   qadaChip: {
     paddingHorizontal: 8,
@@ -2008,6 +2085,45 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   todoText: { flex: 1, fontSize: 14, fontWeight: "500" },
+
+  prayerStrip: {
+    flexDirection: "row",
+    gap: SPACE.sm,
+  },
+  pStripItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: SPACE.sm + 2,
+    paddingHorizontal: SPACE.xs,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    minWidth: 58,
+  },
+  pStripLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+    textAlign: "center",
+  },
+  pStripTime: {
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 2,
+    textAlign: "center",
+  },
+  qadaBadge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qadaBadgeText: { fontSize: 10, fontWeight: "800", color: "#fff" },
 
   swipeBg: {
     position: "absolute",

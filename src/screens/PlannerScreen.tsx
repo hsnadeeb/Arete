@@ -83,6 +83,57 @@ function getYTDates(): string[] {
   ];
 }
 
+function timeToMinutes(s: string): number {
+  const [h, m] = s.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function buildOverlapLayout(
+  items: any[],
+  colWidth: number,
+  gap = 6,
+): Map<number, { left: number; width: number; borderColor: string }> {
+  const events = items
+    .map((item) => {
+      const start = timeToMinutes(item.start_time);
+      const end = item.end_time
+        ? timeToMinutes(item.end_time)
+        : start + 60;
+      return { ...item, start, end };
+    })
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+
+  const layout = new Map<number, { left: number; width: number; borderColor: string }>();
+
+  const clusters: any[][] = [];
+  events.forEach((event) => {
+    let placed = false;
+    for (const cluster of clusters) {
+      if (cluster.some((e) => event.start < e.end && event.end > e.start)) {
+        cluster.push(event);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) clusters.push([event]);
+  });
+
+  clusters.forEach((cluster) => {
+    if (cluster.length <= 1) return;
+    const size = cluster.length;
+    const slotWidth = (colWidth - gap) / size;
+    cluster.forEach((event, index) => {
+      layout.set(event.id, {
+        left: gap / 2 + index * slotWidth,
+        width: slotWidth - gap / 2,
+        borderColor: "rgba(255,255,255,0.55)",
+      });
+    });
+  });
+
+  return layout;
+}
+
 export default function PlannerScreen() {
   const { setSidebarOpen } = useApp();
   const { theme, isDark } = useTheme();
@@ -103,6 +154,14 @@ export default function PlannerScreen() {
   const [itemColor, setItemColor] = useState(COLORS[0]);
   const [repeatType, setRepeatType] = useState("weekly");
   const [specificDate, setSpecificDate] = useState("");
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const tick = () => setCurrentTime(new Date());
+    tick();
+    const id = setInterval(tick, 60000);
+    return () => clearInterval(id);
+  }, []);
 
   const headerScrollRef = useRef<ScrollView>(null);
   const gridScrollRef = useRef<ScrollView>(null);
@@ -581,41 +640,70 @@ export default function PlannerScreen() {
                         />
                       ))}
 
+                      {/* Current time indicator */}
+                      <View
+                        style={[
+                          styles.calCurrentTimeLine,
+                          {
+                            top:
+                              (currentTime.getHours() +
+                                currentTime.getMinutes() / 60) *
+                              HOUR_HEIGHT,
+                            borderTopColor: c.error || "#ef4444",
+                          },
+                        ]}
+                      />
+
                       {/* Events */}
-                      {schedule.map((item: any) => {
-                        const startF = parseHour(item.start_time);
-                        const endF = item.end_time
-                          ? parseHour(item.end_time)
-                          : startF + 1;
-                        return (
-                          <TouchableOpacity
-                            key={item.id}
-                            style={[
-                              styles.calEvent,
-                              {
-                                top: startF * HOUR_HEIGHT,
-                                height: Math.max(
-                                  (endF - startF) * HOUR_HEIGHT,
-                                  24,
-                                ),
-                                backgroundColor: item.color || "#6366f1",
-                              },
-                            ]}
-                            onPress={() => openEdit(item)}
-                            activeOpacity={0.8}
-                          >
-                            <Text style={styles.calEventTime}>
-                              {item.start_time}
-                            </Text>
-                            <Text
-                              style={styles.calEventTitle}
-                              numberOfLines={2}
-                            >
-                              {item.activity}
-                            </Text>
-                          </TouchableOpacity>
+                      {(() => {
+                        const overlapLayout = buildOverlapLayout(
+                          schedule,
+                          180,
                         );
-                      })}
+                        return schedule.map((item: any) => {
+                          const startF = parseHour(item.start_time);
+                          const endF = item.end_time
+                            ? parseHour(item.end_time)
+                            : startF + 1;
+                          const layout = overlapLayout.get(item.id);
+                          const isOverlapping = layout !== undefined;
+                          return (
+                            <TouchableOpacity
+                              key={item.id}
+                              style={[
+                                styles.calEvent,
+                                isOverlapping && {
+                                  left: layout!.left,
+                                  right: undefined,
+                                  width: layout!.width,
+                                  borderWidth: 1,
+                                  borderColor: layout!.borderColor,
+                                },
+                                {
+                                  top: startF * HOUR_HEIGHT,
+                                  height: Math.max(
+                                    (endF - startF) * HOUR_HEIGHT,
+                                    24,
+                                  ),
+                                  backgroundColor: item.color || "#6366f1",
+                                },
+                              ]}
+                              onPress={() => openEdit(item)}
+                              activeOpacity={0.8}
+                            >
+                              <Text style={styles.calEventTime}>
+                                {item.start_time}
+                              </Text>
+                              <Text
+                                style={styles.calEventTitle}
+                                numberOfLines={2}
+                              >
+                                {item.activity}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        });
+                      })()}
 
                       {/* Empty state */}
                       {schedule.length === 0 && (
@@ -954,6 +1042,15 @@ const styles = StyleSheet.create({
   calHourSlot: {
     height: HOUR_HEIGHT,
     borderTopWidth: 1,
+  },
+  calCurrentTimeLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 0,
+    borderTopWidth: 1.5,
+    borderStyle: "dashed",
+    zIndex: 20,
   },
   calEvent: {
     position: "absolute",

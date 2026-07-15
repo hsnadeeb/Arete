@@ -19,7 +19,7 @@ import { getTimetableRepo } from '../db/repositories/timetable';
 import { getTransactionRepo } from '../db/repositories/transaction';
 import { getWidgetRepo } from '../db/repositories/widget';
 import { getStatsRepo } from '../db/repositories/stats';
-import { initDatabase, deleteTransactionById, savePrayerTimings, getDb, seedWidgetLayouts, getUserProfile, updateUserProfile, getTrackerTargets, setTrackerTargets } from '../db/service';
+import { initDatabase, deleteTransactionById, savePrayerTimings, syncPrayersToTimetable, getDb, seedWidgetLayouts, getUserProfile, updateUserProfile, getTrackerTargets, setTrackerTargets } from '../db/service';
 import * as todosDb from '../db/service';
 import { runSeed as runSeedData, wipeAllData, type SeedOptions, type SeedResult } from '../data/seedData';
 import { fetchPrayerTimings, extractTimings, getIslamicDateInfo } from '../services/prayerApi';
@@ -289,6 +289,11 @@ export const useStore = create<AppStore>()((set, get) => ({
         hijri_year: dateInfo.hijriYear,
         gregorian_date: dateInfo.gregorianDate,
       });
+
+      // Sync fetched timings into the timetable as 10-min prayer blocks
+      await syncPrayersToTimetable(timings, today);
+      const updatedTimetable = await getTimetableRepo().getAll();
+
       set({
         prayerTimings: {
           id: 0,
@@ -307,6 +312,7 @@ export const useStore = create<AppStore>()((set, get) => ({
           gregorian_date: timings.gregorian_date,
         },
         islamicDate: dateInfo,
+        timetable: updatedTimetable,
         timingsLoading: false,
       });
     } catch (e) {
@@ -428,11 +434,10 @@ export const useStore = create<AppStore>()((set, get) => ({
       await seedWidgetLayouts();
 
       // Fetch all initial data in parallel
-      const [dailyLog, prayers, txns, timetable, widgets, stats, todayTimings, profile, todos] = await Promise.allSettled([
+      const [dailyLog, prayers, txns, widgets, stats, todayTimings, profile, todos] = await Promise.allSettled([
         getDailyLogRepo().getByDate(today),
         getPrayerRepo().getByDate(today),
         getTransactionRepo().getByMonth(month),
-        getTimetableRepo().getAll(),
         getWidgetRepo().getAll(),
         getStatsRepo().getMonthly(month),
         // Check if today's prayer timings exist in DB
@@ -447,16 +452,39 @@ export const useStore = create<AppStore>()((set, get) => ({
       const todayTxns = (txns.status === 'fulfilled' ? txns.value : [])
         .filter((t: any) => t.date === today);
 
+      const loadedTimings = todayTimings.status === 'fulfilled' ? todayTimings.value : null;
+
+      // If today's timings exist but haven't been synced yet, create timetable blocks
+      if (loadedTimings) {
+        try {
+          await syncPrayersToTimetable(
+            {
+              fajr: loadedTimings.fajr,
+              sunrise: loadedTimings.sunrise,
+              dhuhr: loadedTimings.dhuhr,
+              asr: loadedTimings.asr,
+              maghrib: loadedTimings.maghrib,
+              isha: loadedTimings.isha,
+            },
+            today,
+          );
+        } catch (syncErr) {
+          console.error('Failed to sync existing prayer timings:', syncErr);
+        }
+      }
+
+      const syncedTimetable = await getTimetableRepo().getAll();
+
       set({
         dailyLog: dailyLog.status === 'fulfilled' ? dailyLog.value : null,
         prayers: prayers.status === 'fulfilled' ? prayers.value : [],
         transactions: txns.status === 'fulfilled' ? txns.value : [],
         todayTransactions: todayTxns,
-        timetable: timetable.status === 'fulfilled' ? timetable.value : [],
+        timetable: syncedTimetable,
         widgetLayouts: widgets.status === 'fulfilled' ? widgets.value : [],
         monthlyStats: stats.status === 'fulfilled' ? stats.value[0] || null : null,
         // If timings exist in DB, use them; otherwise show empty
-        prayerTimings: todayTimings.status === 'fulfilled' ? todayTimings.value : null,
+        prayerTimings: loadedTimings,
         timingsLoading: false,
         userProfile: profile.status === 'fulfilled' ? profile.value : null,
         todos: todos.status === 'fulfilled' ? todos.value : [],

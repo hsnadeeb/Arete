@@ -86,9 +86,20 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     await db.execAsync(
       "ALTER TABLE daily_logs ADD COLUMN weight_target REAL DEFAULT 75.0",
     );
-  } catch (_) {}
-  return db;
-}
+   } catch (_) {}
+   // Migrate: journal_entries - add is_pinned and color columns
+   try {
+     await db.execAsync(
+       "ALTER TABLE journal_entries ADD COLUMN is_pinned INTEGER DEFAULT 0",
+     );
+   } catch (_) {}
+   try {
+     await db.execAsync(
+       "ALTER TABLE journal_entries ADD COLUMN color TEXT DEFAULT ''",
+     );
+   } catch (_) {}
+   return db;
+ }
 
 export function resetDb() {
   db = null;
@@ -377,13 +388,39 @@ export async function addJournalEntry(e: {
   title?: string;
   content: string;
   type?: string;
+  is_pinned?: number;
+  color?: string;
 }) {
   return await getDb().runAsync(
-    "INSERT INTO journal_entries (date, title, content, type) VALUES (?, ?, ?, ?)",
+    "INSERT INTO journal_entries (date, title, content, type, is_pinned, color) VALUES (?, ?, ?, ?, ?, ?)",
     e.date,
     e.title || "",
     e.content,
     e.type || "general",
+    e.is_pinned ?? 0,
+    e.color ?? "",
+  );
+}
+
+export async function updateJournalEntry(id: number, e: {
+  title?: string;
+  content?: string;
+  type?: string;
+  is_pinned?: number;
+  color?: string;
+}) {
+  const fields: string[] = [];
+  const vals: any[] = [];
+  if (e.title !== undefined) { fields.push("title = ?"); vals.push(e.title); }
+  if (e.content !== undefined) { fields.push("content = ?"); vals.push(e.content); }
+  if (e.type !== undefined) { fields.push("type = ?"); vals.push(e.type); }
+  if (e.is_pinned !== undefined) { fields.push("is_pinned = ?"); vals.push(e.is_pinned); }
+  if (e.color !== undefined) { fields.push("color = ?"); vals.push(e.color); }
+  if (fields.length === 0) return;
+  vals.push(id);
+  await getDb().runAsync(
+    `UPDATE journal_entries SET ${fields.join(", ")} WHERE id = ?`,
+    ...vals,
   );
 }
 
@@ -640,6 +677,15 @@ export async function savePrayerTimings(t: {
   );
 }
 
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return time;
+  const total = h * 60 + m + minutes;
+  const nh = Math.floor(total / 60) % 24;
+  const nm = total % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
+
 export async function syncPrayersToTimetable(
   timings: {
     fajr: string;
@@ -663,32 +709,29 @@ export async function syncPrayersToTimetable(
 
   for (const prayer of prayerItems) {
     if (!prayer.time) continue;
-    // Check if prayer block already exists for this day
-    const existing = await getDb().getFirstAsync<any>(
-      "SELECT id FROM timetable WHERE day_of_week = ? AND activity = ? AND repeat_type = ? AND specific_date = ?",
+    const activity = `🕌 ${prayer.name}`;
+    const endTime = addMinutes(prayer.time, 10);
+
+    // Remove stale auto-synced prayer entries for this day and prayer
+    await getDb().runAsync(
+      "DELETE FROM timetable WHERE day_of_week = ? AND activity = ? AND repeat_type = ? AND specific_date = ?",
       dayOfWeek,
-      `🕌 ${prayer.name} - ${prayer.time}`,
+      activity,
       "weekly",
       date,
     );
-    if (!existing) {
-      // Delete old prayer entries for this day
-      await getDb().runAsync(
-        "DELETE FROM timetable WHERE day_of_week = ? AND activity LIKE ? AND repeat_type = ?",
-        dayOfWeek,
-        `🕌 ${prayer.name}%`,
-        "weekly",
-      );
-      await getDb().runAsync(
-        "INSERT INTO timetable (day_of_week, start_time, activity, color, repeat_type, specific_date) VALUES (?, ?, ?, ?, ?, ?)",
-        dayOfWeek,
-        prayer.time,
-        `🕌 ${prayer.name}`,
-        prayer.color,
-        "weekly",
-        date,
-      );
-    }
+
+    // Insert a 10-minute prayer block
+    await getDb().runAsync(
+      "INSERT INTO timetable (day_of_week, start_time, end_time, activity, color, repeat_type, specific_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      dayOfWeek,
+      prayer.time,
+      endTime,
+      activity,
+      prayer.color,
+      "weekly",
+      date,
+    );
   }
 }
 
