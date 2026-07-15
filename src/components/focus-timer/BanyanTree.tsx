@@ -257,65 +257,41 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
     }).start();
   }, []);
 
+  // ── Continuous smooth animations (no loop-reset jerks) ──
+
   const breath = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(breath, {
-          toValue: 1,
-          duration: 3500,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(breath, {
-          toValue: -1,
-          duration: 3500,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
+      Animated.timing(breath, {
+        toValue: 1,
+        duration: 7000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
     );
     loop.start();
     return () => loop.stop();
   }, []);
 
   const breathScale = breath.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: [0.975, 1, 1.025],
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 1.025, 1],
   });
 
   const growPulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    Animated.sequence([
-      Animated.spring(growPulse, {
-        toValue: 1.05,
-        friction: 4,
-        tension: 140,
-        useNativeDriver: true,
-      }),
-      Animated.spring(growPulse, {
-        toValue: 1,
-        friction: 5,
-        tension: 90,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [Math.floor(t * 25)]);
-
-  const sway = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(sway, {
-          toValue: 1,
-          duration: 2800,
-          easing: Easing.inOut(Easing.sin),
+        Animated.spring(growPulse, {
+          toValue: 1.03,
+          friction: 4,
+          tension: 80,
           useNativeDriver: true,
         }),
-        Animated.timing(sway, {
-          toValue: -1,
-          duration: 2800,
-          easing: Easing.inOut(Easing.sin),
+        Animated.spring(growPulse, {
+          toValue: 1,
+          friction: 5,
+          tension: 80,
           useNativeDriver: true,
         }),
       ]),
@@ -324,14 +300,43 @@ export function BanyanTree({ pct, isDark, running }: BanyanTreeProps) {
     return () => loop.stop();
   }, []);
 
+  const sway = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(sway, {
+        toValue: 1,
+        duration: 5600,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  const SIN_SWAY = [
+    { i: 0, o: "0deg" },
+    { i: 0.125, o: "2.12deg" },
+    { i: 0.25, o: "3deg" },
+    { i: 0.375, o: "2.12deg" },
+    { i: 0.5, o: "0deg" },
+    { i: 0.625, o: "-2.12deg" },
+    { i: 0.75, o: "-3deg" },
+    { i: 0.875, o: "-2.12deg" },
+    { i: 1, o: "0deg" },
+  ] as const;
+
   const canopySway = sway.interpolate({
-    inputRange: [-1, 1],
-    outputRange: ["-3deg", "3deg"],
+    inputRange: SIN_SWAY.map((s) => s.i),
+    outputRange: SIN_SWAY.map((s) => s.o),
   });
 
   const trunkSway = sway.interpolate({
-    inputRange: [-1, 1],
-    outputRange: ["-0.6deg", "0.6deg"],
+    inputRange: SIN_SWAY.map((s) => s.i),
+    outputRange: SIN_SWAY.map((s) => {
+      const deg = parseFloat(s.o);
+      return `${deg * 0.2}deg`;
+    }),
   });
 
   const glow = useRef(new Animated.Value(0.35)).current;
