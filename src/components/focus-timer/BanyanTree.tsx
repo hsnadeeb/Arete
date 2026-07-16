@@ -7,14 +7,18 @@ import {
   BANYAN_PROP_ROOTS,
   BANYAN_FIGS,
   FIG_COLORS,
-  GREEN,
   BRN,
   BRN_L,
   FLW,
   smoothstep,
   skyColorAt,
   hash,
+  getSeason,
+  SEASON_CANOPY,
+  SEASON_ACCENT,
+  SEASON_CANOPY_MOD,
 } from "./constants";
+import type { Season } from "./constants";
 import { Firefly } from "./Firefly";
 import { FloatingLeaf } from "./FloatingLeaf";
 import { SparkleField } from "./SparkleField";
@@ -25,32 +29,42 @@ interface BanyanTreeProps {
   running: boolean;
   completedPomodoros?: number;
   sessionProgress?: number;
+  season?: Season;
 }
 
-export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessionProgress = 0 }: BanyanTreeProps) {
+export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessionProgress = 0, season }: BanyanTreeProps) {
   const t = Math.min((completedPomodoros + sessionProgress) / MAX_POMODOROS, 1);
+  const curSeason = season ?? getSeason(t);
 
   const cx = 130;
   const trunkColor = isDark ? BRN_L : BRN;
 
-  // Scale the tree from tiny to full size
-  const treeScale = 0.25 + Math.pow(t, 0.6) * 0.75;
+  // ── Camera "follow" zoom: tree starts small & zoomed-in so it's clearly
+  // visible from frame 1, then zooms out as the tree matures to stay framed.
+  const viewScale = 1.6 - Math.min(0.6, t * 0.7);
+
+  // Scale the tree from a clear sapling to full size
+  const treeScale = 0.5 + Math.pow(t, 0.5) * 0.5;
 
   // Trunk dimensions
   const trunkBot = 42;
-  const trunkH = (28 + t * 72) * treeScale;
-  const trunkW = (8 + t * 24) * treeScale;
+  const trunkH = (40 + t * 65) * treeScale;
+  const trunkW = (9 + t * 23) * treeScale;
   const trunkTop = trunkBot + trunkH;
 
   // Canopy
-  const canopyR = (28 + t * 78) * treeScale;
+  const canopyR = (40 + t * 70) * treeScale;
   const canopyCenterY = trunkTop;
   const maturity = Math.min(4, Math.floor(t * 5));
+
+  const seasonMod = SEASON_CANOPY_MOD[curSeason];
 
   // ── Canopy blobs ──
   const canopy = useMemo(() => {
     return BANYAN_CANOPY.map((b, i) => {
       const local = smoothstep((t - b.growAt) / Math.max(0.001, 1 - b.growAt));
+      // Guarantee the first canopy blob (seedling core) is always visible
+      const effLocal = i === 0 ? Math.max(local, 0.4) : local;
       const colorIdx =
         b.layer === 0
           ? Math.min(4, maturity + 1)
@@ -58,17 +72,58 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
             ? maturity
             : Math.max(0, maturity - 1);
       const hueShift = i % 2 === 0 ? 0 : -1;
-      const color = GREEN[Math.max(0, Math.min(4, colorIdx + hueShift))];
+      const seasonColors = SEASON_CANOPY[curSeason];
+      const color = seasonColors[Math.max(0, Math.min(seasonColors.length - 1, colorIdx + hueShift))];
+
+      // Distance from canopy center (0–1) for peripheral effects
+      const dist = Math.sqrt(b.dx * b.dx + b.dy * b.dy) / 1.3;
+      const peripheralScale = 1 - (1 - seasonMod.peripheralShrink) * Math.pow(dist, 1.5);
+
+      const r = b.r * canopyR * 0.55 * (0.35 + 0.65 * effLocal) * seasonMod.scale * peripheralScale;
+      const op = 0.5 + local * 0.4;
       return {
         key: i,
         lx: cx + b.dx * canopyR,
         by: canopyCenterY - b.dy * canopyR,
-        r: b.r * canopyR * 0.55 * (0.35 + 0.65 * local),
+        r,
         color,
-        opacity: 0.5 + local * 0.4,
+        opacity: curSeason === "winter" ? Math.min(op, 0.6) : op,
+        layer: b.layer,
+        dist,
       };
     }).filter((c) => c.r > 2);
-  }, [t, canopyR, maturity, canopyCenterY]);
+  }, [t, canopyR, maturity, canopyCenterY, curSeason, seasonMod]);
+
+  // ── Spring blossom dots (scattered across canopy) ──
+  const blossomDots = useMemo(() => {
+    if (curSeason !== "spring") return [];
+    return canopy
+      .filter((c) => c.r > 6 && c.opacity > 0.6)
+      .flatMap((c) =>
+        Array.from({ length: Math.max(2, Math.floor(c.r / 5)) }, (_, i) => ({
+          key: `blossom-${c.key}-${i}`,
+          x: c.lx + (hash(c.key * 7 + i, 0.1) - 0.5) * c.r * 1.4,
+          y: c.by + (hash(c.key * 13 + i, 0.2) - 0.5) * c.r * 1.4,
+          r: 1.5 + hash(c.key * 17 + i, 0.3) * 1.5,
+          color: FLW[i % FLW.length],
+          opacity: 0.5 + hash(c.key * 23 + i, 0.4) * 0.4,
+        })),
+      );
+  }, [canopy, curSeason]);
+
+  // ── Winter snow caps on canopy blobs ──
+  const snowCaps = useMemo(() => {
+    if (curSeason !== "winter") return [];
+    return canopy
+      .filter((c) => c.r > 4)
+      .map((c) => ({
+        key: `snow-${c.key}`,
+        x: c.lx,
+        y: c.by - c.r * 0.55,
+        r: c.r * (0.25 + hash(c.key, 0.5) * 0.15),
+        opacity: 0.6 + hash(c.key, 0.3) * 0.3,
+      }));
+  }, [canopy, curSeason]);
 
   // ── Blossom decorations (for Banyan, these are small accent flowers) ──
   const decorations = useMemo(() => {
@@ -82,7 +137,7 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
           lx: cx + f.dx * canopyR,
           by: canopyCenterY - f.dy * canopyR,
           size: (3.5 + hash(i, 0.2) * 2) * local,
-          color: FLW[i % FLW.length],
+          color: curSeason === "spring" ? FLW[i % FLW.length] : SEASON_ACCENT[curSeason],
           opacity: local,
         };
       })
@@ -239,16 +294,6 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
 
   // ── Animations ──
 
-  const animScale = useRef(new Animated.Value(0.01)).current;
-  useEffect(() => {
-    Animated.spring(animScale, {
-      toValue: 1,
-      friction: 6,
-      tension: 60,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
   const trunkEntry = useRef(new Animated.Value(20)).current;
   useEffect(() => {
     Animated.spring(trunkEntry, {
@@ -259,69 +304,43 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
     }).start();
   }, []);
 
-  // ── Continuous smooth animations (no loop-reset jerks) ──
+  // ── Continuous sway (0→1→0 oscillation, no instant reset jerk) ──
 
-  const growPulse = useRef(new Animated.Value(1)).current;
+  const sway = useRef(new Animated.Value(0)).current;
+  const swayDuration = seasonMod.swayDuration;
+  const swayAmp = seasonMod.swayAmp;
+
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.spring(growPulse, {
-          toValue: 1.03,
-          friction: 4,
-          tension: 80,
+        Animated.timing(sway, {
+          toValue: 1,
+          duration: swayDuration / 2,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
-        Animated.spring(growPulse, {
-          toValue: 1,
-          friction: 5,
-          tension: 80,
+        Animated.timing(sway, {
+          toValue: 0,
+          duration: swayDuration / 2,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
       ]),
     );
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [swayDuration]);
 
-  const sway = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.timing(sway, {
-        toValue: 1,
-        duration: 9000,
-        easing: Easing.inOut(Easing.sin),
-        useNativeDriver: true,
-      }),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, []);
-
-  const SIN_SWAY = [
-    { i: 0, o: "0deg" },
-    { i: 0.1, o: "1.5deg" },
-    { i: 0.2, o: "2.5deg" },
-    { i: 0.3, o: "1.8deg" },
-    { i: 0.4, o: "0.5deg" },
-    { i: 0.5, o: "0deg" },
-    { i: 0.6, o: "-1.2deg" },
-    { i: 0.7, o: "-2.8deg" },
-    { i: 0.8, o: "-2deg" },
-    { i: 0.9, o: "-0.8deg" },
-    { i: 1, o: "0deg" },
-  ] as const;
+  const baseAmp = 2.5 * swayAmp;
 
   const canopySway = sway.interpolate({
-    inputRange: SIN_SWAY.map((s) => s.i),
-    outputRange: SIN_SWAY.map((s) => s.o),
+    inputRange: [0, 0.5, 1],
+    outputRange: [`${-baseAmp}deg`, `${baseAmp}deg`, `${-baseAmp}deg`],
   });
 
   const trunkSway = sway.interpolate({
-    inputRange: SIN_SWAY.map((s) => s.i),
-    outputRange: SIN_SWAY.map((s) => {
-      const deg = parseFloat(s.o);
-      return `${deg * 0.2}deg`;
-    }),
+    inputRange: [0, 0.5, 1],
+    outputRange: [`${-baseAmp * 0.2}deg`, `${baseAmp * 0.2}deg`, `${-baseAmp * 0.2}deg`],
   });
 
   const glow = useRef(new Animated.Value(0.35)).current;
@@ -358,10 +377,21 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
     inputRange: [0.35, 1],
     outputRange: [0.88, 1],
   });
-  const ffCount = Math.max(4, Math.min(14, Math.floor(3 + t * 11)));
+  const ffCount = curSeason === "winter" ? 0 : Math.max(2, Math.min(12, Math.floor({
+    spring: 2, summer: 4, autumn: 1,
+  }[curSeason]! + t * 8)));
 
   return (
     <View style={s.treeArea}>
+      <Animated.View
+        style={[
+          s.treeScaled,
+          {
+            transform: [{ scale: viewScale }],
+            transformOrigin: "50% 86%",
+          },
+        ]}
+      >
       {/* Particle layers */}
       <View pointerEvents="none" style={s.particleLayer}>
         {Array.from({ length: ffCount }, (_, i) => (
@@ -377,7 +407,7 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
       </View>
 
       <View pointerEvents="none" style={s.particleLayer}>
-        {Array.from({ length: 10 }, (_, i) => (
+        {Array.from({ length: { spring: 4, summer: 2, autumn: 12, winter: 0 }[curSeason] ?? 4 }, (_, i) => (
           <FloatingLeaf
             key={i}
             seed={i}
@@ -397,12 +427,12 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
           originY={canopyCenterY}
           spread={canopyR}
           maturity={t}
-          count={12}
+          count={{ spring: 8, summer: 14, autumn: 6, winter: 0 }[curSeason] ?? 8}
         />
       </View>
 
       <Animated.View
-        style={[s.treeWrap, { top: -15, transform: [{ scale: 1.2 }] }]}
+        style={[s.treeWrap, { top: -15 }]}
       >
         {/* Ground shadow */}
         <View
@@ -426,7 +456,12 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
             width: trunkW * 3.2,
             height: trunkW * 0.6,
             borderRadius: trunkW * 0.3,
-            backgroundColor: isDark ? '#1a2a1a' : '#3a5a3a',
+            backgroundColor: {
+              spring: isDark ? '#1a3a1a' : '#3a6a3a',
+              summer: isDark ? '#0d2d0d' : '#2a5a2a',
+              autumn: isDark ? '#2a1a0d' : '#5a3a1a',
+              winter: isDark ? '#2a3038' : '#4a5560',
+            }[curSeason],
             opacity: 0.4,
           }}
         />
@@ -628,7 +663,6 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
             bottom: 0,
             zIndex: 5,
             transform: [
-              { scale: growPulse },
               { rotate: canopySway },
             ],
             opacity: canopyOpacity,
@@ -711,7 +745,48 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
               ]}
             />
           ))}
+
+          {/* Spring blossom dots */}
+          {blossomDots.map((b) => (
+            <View
+              key={b.key}
+              style={{
+                position: 'absolute',
+                left: b.x - b.r,
+                bottom: b.y - b.r,
+                width: b.r * 2,
+                height: b.r * 2,
+                borderRadius: b.r,
+                backgroundColor: b.color,
+                opacity: b.opacity,
+                zIndex: 8,
+              }}
+            />
+          ))}
+
+          {/* Winter snow caps */}
+          {snowCaps.map((s) => (
+            <View
+              key={s.key}
+              style={{
+                position: 'absolute',
+                left: s.x - s.r,
+                bottom: s.y - s.r,
+                width: s.r * 2,
+                height: s.r * 2,
+                borderRadius: s.r,
+                backgroundColor: '#e8f0f8',
+                opacity: s.opacity,
+                shadowColor: '#ffffff',
+                shadowOpacity: 0.3,
+                shadowRadius: s.r * 0.5,
+                shadowOffset: { width: 0, height: 0 },
+                zIndex: 9,
+              }}
+            />
+          ))}
         </Animated.View>
+      </Animated.View>
       </Animated.View>
     </View>
   );
@@ -735,6 +810,13 @@ const s = StyleSheet.create({
     pointerEvents: "none",
   },
   treeWrap: { width: 260, height: 300, position: "relative" },
+  treeScaled: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 260,
+    height: 300,
+  },
   groundShadow: {
     position: "absolute",
     bottom: -2,

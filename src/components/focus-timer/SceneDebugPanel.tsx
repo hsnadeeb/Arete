@@ -8,10 +8,19 @@ import {
 } from "react-native";
 import { TYPOGRAPHY } from "../../constants/typography";
 import type { TimeOfDay, WeatherType, SceneConditions } from "../../services/weather";
+import type { Season } from "./constants";
 import { getFallback } from "../../services/weather";
 
 const TIMES: TimeOfDay[] = ["night", "dawn", "morning", "afternoon", "evening"];
 const WEATHERS: WeatherType[] = ["sunny", "cloudy", "rainy", "foggy", "stormy", "snowy"];
+const SEASONS: Season[] = ["spring", "summer", "autumn", "winter"];
+
+const SEASON_LABELS: Record<Season, string> = {
+  spring: "🌸 Spring",
+  summer: "🌻 Summer",
+  autumn: "🍂 Autumn",
+  winter: "❄️ Winter",
+};
 
 const TIME_LABELS: Record<TimeOfDay, string> = {
   night: "🌙 Night",
@@ -53,8 +62,10 @@ interface SceneDebugPanelProps {
   onToggle: () => void;
   selectedTime: TimeOfDay | null;
   selectedWeather: WeatherType | null;
+  selectedSeason: Season | null;
   onSelectTime: (time: TimeOfDay | null) => void;
   onSelectWeather: (weather: WeatherType | null) => void;
+  onSelectSeason: (season: Season | null) => void;
 }
 
 export function SceneDebugPanel({
@@ -62,8 +73,10 @@ export function SceneDebugPanel({
   onToggle,
   selectedTime,
   selectedWeather,
+  selectedSeason,
   onSelectTime,
   onSelectWeather,
+  onSelectSeason,
 }: SceneDebugPanelProps) {
   return (
     <>
@@ -112,11 +125,30 @@ export function SceneDebugPanel({
               ))}
             </View>
 
+            <Text style={s.sectionLabel}>Season</Text>
+            <View style={s.row}>
+              {SEASONS.map((season) => (
+                <TouchableOpacity
+                  key={season}
+                  style={[
+                    s.chip,
+                    selectedSeason === season && s.chipActive,
+                  ]}
+                  onPress={() => onSelectSeason(selectedSeason === season ? null : season)}
+                >
+                  <Text style={[s.chipText, selectedSeason === season && s.chipTextActive]}>
+                    {SEASON_LABELS[season]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <TouchableOpacity
               style={s.resetBtn}
               onPress={() => {
                 onSelectTime(null);
                 onSelectWeather(null);
+                onSelectSeason(null);
               }}
             >
               <Text style={s.resetText}>↺ Auto (real-time)</Text>

@@ -297,3 +297,58 @@ export const BANYAN_FIGS = [
 ];
 
 export const FIG_COLORS = ["#8d6e63", "#6d4c41", "#5d4037", "#4e342e", "#7b1fa2", "#6a1b9a"];
+
+// ── Seasons ──
+
+export type Season = "spring" | "summer" | "autumn" | "winter";
+
+export function getSeason(t: number): Season {
+  if (t < 0.25) return "spring";
+  if (t < 0.50) return "summer";
+  if (t < 0.75) return "autumn";
+  return "winter";
+}
+
+export function getSeasonProgress(t: number): number {
+  return ((t % 0.25) / 0.25) || 0;
+}
+
+export const SEASON_CANOPY: Record<Season, string[]> = {
+  spring: ["#c8e6c9", "#a5d6a7", "#81c784", "#66bb6a", "#4caf50", "#f8bbd0", "#f48fb1"],
+  summer: ["#a5d6a7", "#81c784", "#66bb6a", "#43a047", "#2e7d32", "#388e3c", "#1b5e20"],
+  autumn: ["#ffe0b2", "#ffcc80", "#ffb74d", "#ff8a65", "#a1887f", "#ef5350", "#e53935"],
+  winter: ["#cfd8dc", "#b0bec5", "#90a4ae", "#78909c", "#607d8b", "#546e7a", "#455a64"],
+};
+
+export const SEASON_ACCENT: Record<Season, string> = {
+  spring: "#f8bbd0",
+  summer: "#ffd54f",
+  autumn: "#ff8a65",
+  winter: "#b0bec5",
+};
+
+export const SEASON_CANOPY_MOD: Record<Season, {
+  scale: number;
+  peripheralShrink: number;
+  swayDuration: number;
+  swayAmp: number;
+  snowCaps: boolean;
+  blossom: boolean;
+}> = {
+  spring:  { scale: 0.92, peripheralShrink: 1.0, swayDuration: 8000,  swayAmp: 1.0, snowCaps: false, blossom: true },
+  summer:  { scale: 1.15, peripheralShrink: 1.0, swayDuration: 11000, swayAmp: 0.6, snowCaps: false, blossom: false },
+  autumn:  { scale: 0.80, peripheralShrink: 0.25, swayDuration: 7000, swayAmp: 1.3, snowCaps: false, blossom: false },
+  winter:  { scale: 0.45, peripheralShrink: 0.08, swayDuration: 14000, swayAmp: 0.4, snowCaps: true,  blossom: false },
+};
+
+export const SEASON_GROUND: Record<Season, {
+  ground: string;
+  groundFar: string;
+  mountain: string;
+  mountainFar: string;
+}> = {
+  spring: { ground: "#2d5a2d", groundFar: "#1a3a1a", mountain: "#2a4a3a", mountainFar: "#3a5a4a" },
+  summer: { ground: "#1a4a1a", groundFar: "#0d2d0d", mountain: "#1a3a2a", mountainFar: "#2a4a3a" },
+  autumn: { ground: "#5a4a2a", groundFar: "#3a2a1a", mountain: "#3a2a1a", mountainFar: "#4a3a2a" },
+  winter: { ground: "#4a5a6a", groundFar: "#3a4a5a", mountain: "#4a5a6a", mountainFar: "#606e7c" },
+};

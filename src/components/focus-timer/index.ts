@@ -50,4 +50,5 @@ export {
   treeAge,
   getTreeStage,
 } from "./constants";
-export type { TreeStage } from "./constants";
+export type { TreeStage, Season } from "./constants";
+export { getSeason, getSeasonProgress } from "./constants";

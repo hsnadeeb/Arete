@@ -12,7 +12,8 @@ import Svg, {
   Polygon,
 } from "react-native-svg";
 import AnimatedSvg from "./AnimatedSvgElements";
-import { hash } from "./constants";
+import { hash, getSeason, getSeasonProgress, SEASON_ACCENT, SEASON_GROUND, SEASON_CANOPY_MOD } from "./constants";
+import type { Season } from "./constants";
 import type { SceneConditions } from "../../services/weather";
 
 // ─── Color ───
@@ -729,6 +730,263 @@ function LightningOverlay({ w, h, active }: { w: number; h: number; active: bool
   );
 }
 
+// ─── SEASONAL PARTICLES ───
+
+// Spring: falling cherry blossom petals
+function FallingPetals({ w, h, active }: { w: number; h: number; active: boolean }) {
+  const petals = useMemo(() => {
+    return Array.from({ length: 25 }, (_, i) => ({
+      x: hash(i, 0.1) * w,
+      startY: -(hash(i, 0.2) * h * 0.5 + 10),
+      r: 5 + hash(i, 0.3) * 4,
+      delay: hash(i, 0.8) * 8000,
+      speed: 5000 + hash(i, 0.7) * 4000,
+      drift: 30 + hash(i, 0.4) * 60,
+      dir: hash(i, 0.5) > 0.5 ? 1 : -1,
+      color: ['#f8bbd0', '#f48fb1', '#fce4ec', '#fff0f5', '#e8a0bf'][i % 5],
+      opacity: 0.4 + hash(i, 0.6) * 0.3,
+    }));
+  }, [w, h]);
+
+  const transY = useRef(petals.map(p => new Animated.Value(p.startY))).current;
+  const transX = useRef(petals.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    if (!active) return;
+    const anims = petals.map((p, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(p.delay),
+          Animated.parallel([
+            Animated.timing(transY[i], {
+              toValue: h + 20,
+              duration: p.speed,
+              easing: Easing.linear,
+              useNativeDriver: true,
+            }),
+            Animated.timing(transX[i], {
+              toValue: p.drift * p.dir,
+              duration: p.speed * 0.7,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(transY[i], { toValue: p.startY, duration: 0, useNativeDriver: true }),
+            Animated.timing(transX[i], { toValue: 0, duration: 0, useNativeDriver: true }),
+          ]),
+        ]),
+      ),
+    );
+    anims.forEach(a => a.start());
+    return () => anims.forEach(a => a.stop());
+  }, [active, h]);
+
+  if (!active) return null;
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {petals.map((p, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: p.x,
+            top: 0,
+            width: p.r * 2,
+            height: p.r * 1.4,
+            borderRadius: p.r * 0.6,
+            backgroundColor: p.color,
+            opacity: p.opacity,
+            transform: [
+              { translateY: transY[i] },
+              { translateX: transX[i] },
+              { rotate: `${hash(i, 0.9) * 60 - 30}deg` },
+            ],
+            shadowColor: p.color,
+            shadowOpacity: 0.3,
+            shadowRadius: p.r * 0.5,
+            shadowOffset: { width: 0, height: 0 },
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+// Autumn: falling leaves (larger, warmer colors)
+function FallingLeaves({ w, h, active }: { w: number; h: number; active: boolean }) {
+  const leaves = useMemo(() => {
+    return Array.from({ length: 20 }, (_, i) => ({
+      x: hash(i, 0.1) * w,
+      startY: -(hash(i, 0.2) * h * 0.4 + 10),
+      w: 12 + hash(i, 0.3) * 10,
+      h: 8 + hash(i, 0.4) * 6,
+      delay: hash(i, 0.8) * 10000,
+      speed: 6000 + hash(i, 0.7) * 5000,
+      drift: 40 + hash(i, 0.5) * 80,
+      dir: hash(i, 0.6) > 0.5 ? 1 : -1,
+      color: ['#ff8a65', '#ff7043', '#ffb74d', '#ffa726', '#ef5350', '#e53935', '#8d6e63'][i % 7],
+      opacity: 0.5 + hash(i, 0.9) * 0.3,
+      spin: 0.5 + hash(i, 0.11) * 1.5,
+    }));
+  }, [w, h]);
+
+  const transY = useRef(leaves.map(l => new Animated.Value(l.startY))).current;
+  const transX = useRef(leaves.map(() => new Animated.Value(0))).current;
+  const spinVals = useRef(leaves.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    if (!active) return;
+    const anims = leaves.map((l, i) => {
+      const spinSeq = Animated.sequence(
+        Array.from({ length: 5 }, (_, j) => (
+          Animated.timing(spinVals[i], {
+            toValue: j % 2 === 0 ? l.spin : -l.spin,
+            duration: l.speed / 5,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          })
+        )),
+      );
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(l.delay),
+          Animated.parallel([
+            Animated.timing(transY[i], {
+              toValue: h + 20,
+              duration: l.speed,
+              easing: Easing.linear,
+              useNativeDriver: true,
+            }),
+            Animated.timing(transX[i], {
+              toValue: l.drift * l.dir,
+              duration: l.speed * 0.8,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+            spinSeq,
+          ]),
+          Animated.parallel([
+            Animated.timing(transY[i], { toValue: l.startY, duration: 0, useNativeDriver: true }),
+            Animated.timing(transX[i], { toValue: 0, duration: 0, useNativeDriver: true }),
+            Animated.timing(spinVals[i], { toValue: 0, duration: 0, useNativeDriver: true }),
+          ]),
+        ]),
+      );
+    });
+    anims.forEach(a => a.start());
+    return () => anims.forEach(a => a.stop());
+  }, [active, h]);
+
+  if (!active) return null;
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {leaves.map((l, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: l.x,
+            top: 0,
+            width: l.w,
+            height: l.h,
+            borderRadius: l.w * 0.2,
+            backgroundColor: l.color,
+            opacity: l.opacity,
+            transform: [
+              { translateY: transY[i] },
+              { translateX: transX[i] },
+              { rotate: spinVals[i].interpolate({ inputRange: [-2, 2], outputRange: ['-40deg', '40deg'] }) },
+            ],
+            shadowColor: l.color,
+            shadowOpacity: 0.3,
+            shadowRadius: 3,
+            shadowOffset: { width: 0, height: 0 },
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+// Winter: frost overlay + ground snow accumulation
+function FrostOverlay({ w, h, active }: { w: number; h: number; active: boolean }) {
+  const frostBits = useMemo(() => {
+    return Array.from({ length: 40 }, (_, i) => ({
+      x: hash(i, 0.1) * w,
+      y: h * (0.55 + hash(i, 0.2) * 0.35),
+      r: 1 + hash(i, 0.3) * 3,
+      opacity: 0.15 + hash(i, 0.4) * 0.25,
+      delay: hash(i, 0.5) * 4000,
+      duration: 1500 + hash(i, 0.6) * 2000,
+    }));
+  }, [w, h]);
+
+  const opVals = useRef(frostBits.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    if (!active) return;
+    const anims = frostBits.map((f, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(f.delay),
+          Animated.timing(opVals[i], {
+            toValue: f.opacity,
+            duration: f.duration,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(opVals[i], {
+            toValue: 0,
+            duration: f.duration,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ]),
+      ),
+    );
+    anims.forEach(a => a.start());
+    return () => anims.forEach(a => a.stop());
+  }, [active]);
+
+  if (!active) return null;
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Snow ground strip */}
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: h * 0.34,
+          height: h * 0.02,
+          backgroundColor: '#e8f0f8',
+          opacity: 0.4,
+        }}
+      />
+      {/* Frost twinkles */}
+      {frostBits.map((f, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: f.x,
+            top: f.y,
+            width: f.r * 2,
+            height: f.r * 2,
+            borderRadius: f.r,
+            backgroundColor: '#ffffff',
+            opacity: opVals[i],
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════
 // MAIN SCENE
 // ═══════════════════════════════════════════════════════════
@@ -740,10 +998,23 @@ interface FocusSceneProps {
   height: number;
   conditions?: SceneConditions;
   particlesActive?: boolean;
+  season?: Season;
 }
 
-export function FocusScene({ t, running, width, height, conditions, particlesActive = true }: FocusSceneProps) {
+export function FocusScene({ t, running, width, height, conditions, particlesActive = true, season }: FocusSceneProps) {
   const { colors, sunColor, starOpacity, moonOpacity } = useMemo(() => resolveSky(t, conditions), [t, conditions]);
+  const curSeason = season ?? getSeason(t);
+  const seasonT = getSeasonProgress(t);
+
+  // Override ground/mountain colors per season for dramatic seasonal atmosphere
+  const seasonScene = SEASON_GROUND[curSeason];
+  const seasonColors: SkyColors = useMemo(() => ({
+    ...colors,
+    ground: lerpColor(colors.ground, seasonScene.ground, 0.55),
+    groundFar: lerpColor(colors.groundFar, seasonScene.groundFar, 0.55),
+    mountain: lerpColor(colors.mountain, seasonScene.mountain, 0.45),
+    mountainFar: lerpColor(colors.mountainFar, seasonScene.mountainFar, 0.45),
+  }), [colors, seasonScene]);
 
   const starCount = useMemo(() => Math.floor(starOpacity * 55), [starOpacity]);
   const isMorning = conditions ? conditions.hour >= 5 && conditions.hour < 12 : t > 0.25;
@@ -780,9 +1051,9 @@ export function FocusScene({ t, running, width, height, conditions, particlesAct
         <SunSVG x={sunX} y={sunYval} color={sunColor} visible={showSun} />
         <LightRays w={width} h={height} sunColor={sunColor} sunY={sunYval} visible={showSun} />
         <CloudsSVG w={width} h={height} cloudCover={cc} />
-        <HorizonHaze w={width} h={height} colors={colors} />
-        <MountainRange w={width} h={height} colors={colors} />
-        <GroundSVG w={width} h={height} colors={colors} />
+        <HorizonHaze w={width} h={height} colors={seasonColors} />
+        <MountainRange w={width} h={height} colors={seasonColors} />
+        <GroundSVG w={width} h={height} colors={seasonColors} />
       </Svg>
 
       {/* WEATHER OVERLAYS — Animated.View outside SVG */}
@@ -791,6 +1062,27 @@ export function FocusScene({ t, running, width, height, conditions, particlesAct
       <SnowOverlay w={width} h={height} active={showSnow && particlesActive} />
       <WindOverlay w={width} h={height} t={t} active={particlesActive} />
       <LightningOverlay w={width} h={height} active={showLightning && particlesActive} />
+
+      {/* SEASONAL PARTICLES */}
+      {curSeason === "spring" && <FallingPetals w={width} h={height} active={particlesActive} />}
+      {curSeason === "autumn" && <FallingLeaves w={width} h={height} active={particlesActive} />}
+      {curSeason === "winter" && <FrostOverlay w={width} h={height} active={particlesActive} />}
+
+      {/* SEASONAL TINT — stronger for dramatic atmosphere */}
+      <View
+        style={{
+          position: 'absolute',
+          left: 0, right: 0, top: 0, bottom: 0,
+          backgroundColor: SEASON_ACCENT[curSeason],
+          opacity: {
+            spring: 0.06 + seasonT * 0.06,
+            summer: 0.04 + seasonT * 0.04,
+            autumn: 0.10 + seasonT * 0.06,
+            winter: 0.10 + seasonT * 0.06,
+          }[curSeason] ?? 0.06,
+        }}
+        pointerEvents="none"
+      />
     </View>
   );
 }

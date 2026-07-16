@@ -45,8 +45,10 @@ import {
   FocusScene,
   SceneDebugPanel,
   buildOverrideConditions,
+  getSeason,
 } from "../components/focus-timer";
 import type { TimeOfDay, WeatherType } from "../services/weather";
+import type { Season } from "../components/focus-timer";
 
 export default function FocusScreen() {
   const { theme, isDark } = useTheme();
@@ -58,6 +60,7 @@ export default function FocusScreen() {
   const [conditions, setConditions] = useState<SceneConditions | null>(null);
   const [debugTime, setDebugTime] = useState<TimeOfDay | null>(null);
   const [debugWeather, setDebugWeather] = useState<WeatherType | null>(null);
+  const [debugSeason, setDebugSeason] = useState<Season | null>(null);
   const [debugPanelVisible, setDebugPanelVisible] = useState(false);
   const [duration, setDuration] = useState(25 * 60);
   const [elapsed, setElapsed] = useState(0);
@@ -96,6 +99,8 @@ export default function FocusScreen() {
   const completedPomodoros = stats.totalSessions + bonusPomodoros;
   const sessionProgress = duration > 0 ? elapsed / duration : 0;
   const sceneT = Math.min((completedPomodoros + sessionProgress) / MAX_POMODOROS, 1);
+  const curSeason = getSeason(sceneT);
+  const effectiveSeason = debugSeason ?? curSeason;
 
   const effectiveConditions = useMemo(
     () => buildOverrideConditions(debugTime, debugWeather) ?? conditions,
@@ -103,7 +108,6 @@ export default function FocusScreen() {
   );
 
   const particlesActive = running || debugTime !== null || debugWeather !== null;
-
   const onSceneLayout = useCallback((e: LayoutChangeEvent) => {
     setSceneSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height });
   }, []);
@@ -340,6 +344,10 @@ export default function FocusScreen() {
         completedPomodoros={completedPomodoros}
         sessionProgress={sessionProgress}
         onDoubleTap={handleScreenTap}
+        t={sceneT}
+        season={effectiveSeason}
+        conditions={effectiveConditions ?? undefined}
+        particlesActive={particlesActive}
       />
     );
   }
@@ -403,8 +411,8 @@ export default function FocusScreen() {
         />
 
         <View style={s.treeStage} onLayout={onSceneLayout}>
-          <FocusScene t={sceneT} running={running} width={sceneSize.width} height={sceneSize.height} conditions={effectiveConditions ?? undefined} particlesActive={particlesActive} />
-          <BanyanTree
+          <FocusScene t={sceneT} running={running} width={sceneSize.width} height={sceneSize.height} conditions={effectiveConditions ?? undefined} particlesActive={particlesActive} season={effectiveSeason} />
+          <BanyanTree season={effectiveSeason}
             pct={progress}
             isDark={isDark}
             running={running}
@@ -451,8 +459,10 @@ export default function FocusScreen() {
         onToggle={() => setDebugPanelVisible((v) => !v)}
         selectedTime={debugTime}
         selectedWeather={debugWeather}
+        selectedSeason={debugSeason}
         onSelectTime={setDebugTime}
         onSelectWeather={setDebugWeather}
+        onSelectSeason={setDebugSeason}
       />
     </SafeAreaView>
   );
