@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useMemo } from "react";
-import { View, Text, Animated, Easing, StyleSheet } from "react-native";
-import { TYPOGRAPHY } from "../../constants/typography";
+import { View, Animated, Easing, StyleSheet } from "react-native";
 import {
   MAX_POMODOROS,
   BANYAN_CANOPY,
@@ -289,8 +288,8 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
     const loop = Animated.loop(
       Animated.timing(sway, {
         toValue: 1,
-        duration: 5600,
-        easing: Easing.linear,
+        duration: 9000,
+        easing: Easing.inOut(Easing.sin),
         useNativeDriver: true,
       }),
     );
@@ -300,13 +299,15 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
 
   const SIN_SWAY = [
     { i: 0, o: "0deg" },
-    { i: 0.125, o: "2.12deg" },
-    { i: 0.25, o: "3deg" },
-    { i: 0.375, o: "2.12deg" },
+    { i: 0.1, o: "1.5deg" },
+    { i: 0.2, o: "2.5deg" },
+    { i: 0.3, o: "1.8deg" },
+    { i: 0.4, o: "0.5deg" },
     { i: 0.5, o: "0deg" },
-    { i: 0.625, o: "-2.12deg" },
-    { i: 0.75, o: "-3deg" },
-    { i: 0.875, o: "-2.12deg" },
+    { i: 0.6, o: "-1.2deg" },
+    { i: 0.7, o: "-2.8deg" },
+    { i: 0.8, o: "-2deg" },
+    { i: 0.9, o: "-0.8deg" },
     { i: 1, o: "0deg" },
   ] as const;
 
@@ -357,11 +358,6 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
     inputRange: [0.35, 1],
     outputRange: [0.88, 1],
   });
-  const potGlow = glow.interpolate({
-    inputRange: [0.35, 1],
-    outputRange: [0.15, 0.5],
-  });
-
   const ffCount = Math.max(4, Math.min(14, Math.floor(3 + t * 11)));
 
   return (
@@ -421,24 +417,19 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
           ]}
         />
 
-        {/* Pot */}
-        <Animated.View
-          style={[
-            s.pot,
-            {
-              backgroundColor: trunkColor,
-              borderColor: trunkColor,
-              left: cx - 28,
-              bottom: trunkBot - 32,
-              shadowColor: glowColor,
-              shadowOpacity: potGlow,
-              shadowRadius: running ? 8 : 2,
-              shadowOffset: { width: 0, height: 0 },
-            },
-          ]}
-        >
-          <Text style={s.potText}>{Math.floor(pct)}%</Text>
-        </Animated.View>
+        {/* Ground mound */}
+        <View
+          style={{
+            position: 'absolute',
+            left: cx - trunkW * 1.6,
+            bottom: trunkBot - 6,
+            width: trunkW * 3.2,
+            height: trunkW * 0.6,
+            borderRadius: trunkW * 0.3,
+            backgroundColor: isDark ? '#1a2a1a' : '#3a5a3a',
+            opacity: 0.4,
+          }}
+        />
 
         {/* Root flare */}
         <View
@@ -751,22 +742,6 @@ const s = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#000000",
     zIndex: 1,
-  },
-  pot: {
-    position: "absolute",
-    bottom: 0,
-    width: 56,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 5,
-  },
-  potText: {
-    ...TYPOGRAPHY.captionSm,
-    fontWeight: "700",
-    color: "#fff",
   },
   rootFlare: {
     position: "absolute",

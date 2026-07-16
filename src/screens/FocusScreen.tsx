@@ -26,7 +26,6 @@ import { getCurrentConditions } from "../services/weather";
 import type { SceneConditions } from "../services/weather";
 import {
   DURATIONS,
-  SPARK,
   MAX_POMODOROS,
   MAX_AGE,
   getTreeStage,
@@ -37,7 +36,6 @@ import {
   StatsRow,
   FocusControls,
   BanyanTree,
-  CelebrationBurst,
   ConfettiField,
   StageUnlockBanner,
   MilestoneToast,
@@ -74,7 +72,6 @@ export default function FocusScreen() {
   });
   const [milestone, setMilestone] = useState<number | null>(null);
   const [screensaver, setScreensaver] = useState(false);
-  const [burstTrigger, setBurstTrigger] = useState(0);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [stageUnlockVisible, setStageUnlockVisible] = useState(false);
   const [unlockedStageName, setUnlockedStageName] = useState("");
@@ -145,7 +142,6 @@ export default function FocusScreen() {
     setUnlockedStageEmoji(st.emoji);
     setUnlockedStageName(st.name);
     setStageUnlockVisible(true);
-    setBurstTrigger((v) => v + 1);
     Vibration.vibrate([0, 60, 60, 120]);
     setTimeout(() => setStageUnlockVisible(false), 1800);
   }
@@ -243,7 +239,6 @@ export default function FocusScreen() {
             next % 300 === 0
           ) {
             Vibration.vibrate(80);
-            setBurstTrigger((v) => v + 1);
           }
           return next;
         });
@@ -415,13 +410,6 @@ export default function FocusScreen() {
             running={running}
             completedPomodoros={completedPomodoros}
             sessionProgress={sessionProgress}
-          />
-          <CelebrationBurst
-            trigger={burstTrigger}
-            colorSet={SPARK}
-            count={10}
-            originX={130}
-            originY={130}
           />
           <ConfettiField trigger={confettiTrigger} />
         </View>

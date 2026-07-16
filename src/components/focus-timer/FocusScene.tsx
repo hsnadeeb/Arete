@@ -608,32 +608,48 @@ function WindOverlay({ w, h, t, active }: { w: number; h: number; t: number; act
   );
 }
 
-// ─── FOG (3 drifting layers, native driver) ───
+// ─── FOG (patchy mist patches, independent drift) ───
 
 function FogOverlay({ w, h, opacity: fogOp, active }: { w: number; h: number; opacity: number; active: boolean }) {
-  const layers = useMemo(() => [
-    { y: 0.30, widthMul: 1.5, heightMul: 0.35, speed: 30000, opMul: 0.85, dir: 1 },
-    { y: 0.45, widthMul: 1.3, heightMul: 0.25, speed: 40000, opMul: 0.65, dir: -1 },
-    { y: 0.55, widthMul: 1.1, heightMul: 0.18, speed: 50000, opMul: 0.45, dir: 1 },
-  ], []);
+  const patches = useMemo(() => {
+    const count = 30;
+    return Array.from({ length: count }, (_, i) => {
+      const yBase = 0.48 + hash(i, 0.1) * 0.36;
+      const heightPct = 0.04 + hash(i, 0.2) * 0.10;
+      const widthPct = 0.20 + hash(i, 0.3) * 0.40;
+      return {
+        x: hash(i, 0.4) * w * 1.3 - w * 0.15,
+        y: yBase * h,
+        patchW: w * widthPct,
+        patchH: h * heightPct,
+        speed: 30000 + hash(i, 0.5) * 40000,
+        driftDir: hash(i, 0.6) > 0.5 ? 1 : -1,
+        driftMag: 20 + hash(i, 0.7) * 40,
+        opacity: 0.06 + hash(i, 0.8) * 0.10,
+      };
+    });
+  }, [w, h]);
 
-  const dxVals = useRef(layers.map(() => new Animated.Value(0))).current;
+  const dxVals = useRef(patches.map(p => new Animated.Value(0))).current;
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
   useEffect(() => {
     if (!active) return;
-    const anims = layers.map((l, i) => {
+    const anims = patches.map((p, i) => {
       dxVals[i].setValue(0);
       return Animated.loop(
         Animated.sequence([
+          Animated.delay(hash(i, 0.9) * p.speed),
           Animated.timing(dxVals[i], {
             toValue: 1,
-            duration: l.speed,
+            duration: p.speed,
             easing: Easing.inOut(Easing.sin),
             useNativeDriver: true,
           }),
           Animated.timing(dxVals[i], {
             toValue: 0,
-            duration: l.speed,
+            duration: p.speed,
             easing: Easing.inOut(Easing.sin),
             useNativeDriver: true,
           }),
@@ -646,34 +662,29 @@ function FogOverlay({ w, h, opacity: fogOp, active }: { w: number; h: number; op
 
   if (!active) return null;
 
-  const fogColor = '#b8c8d8';
-
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {layers.map((l, i) => {
-        const rangeStart = l.dir === 1 ? -w * 0.15 : w * 0.15;
-        const rangeEnd = l.dir === 1 ? w * 0.25 : -w * 0.25;
-        return (
-          <Animated.View
-            key={i}
-            style={{
-              position: 'absolute',
-              top: l.y * h,
-              width: w * l.widthMul,
-              height: h * l.heightMul,
-              borderRadius: w * 0.5,
-              backgroundColor: fogColor,
-              opacity: fogOp * l.opMul,
-              transform: [{
-                translateX: dxVals[i].interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [rangeStart, rangeEnd],
-                }),
-              }],
-            }}
-          />
-        );
-      })}
+      {patches.map((p, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: p.x,
+            top: p.y,
+            width: p.patchW,
+            height: p.patchH,
+            borderRadius: p.patchW * 0.5,
+            backgroundColor: '#d0dce8',
+            opacity: fogOp * p.opacity,
+            transform: [{
+              translateX: dxVals[i].interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, p.driftMag * p.driftDir],
+              }),
+            }],
+          }}
+        />
+      ))}
     </View>
   );
 }

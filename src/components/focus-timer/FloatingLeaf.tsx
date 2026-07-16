@@ -25,11 +25,11 @@ export function FloatingLeaf({
 
   const startX = originX + (hash(seed, 0.31) * 2 - 1) * spread * 0.8;
   const startY = originY + hash(seed, 0.72) * spread * 0.3;
-  const size = 3.5 + hash(seed, 0.18) * 3.5;
+  const size = 3 + hash(seed, 0.18) * 3;
   const color = LEAF_FALL_COLORS[seed % LEAF_FALL_COLORS.length];
-  const duration = 6000 + hash(seed, 0.44) * 5000;
-  const delay = hash(seed, 0.55) * 4000;
-  const driftAmount = 15 + hash(seed, 0.66) * 20;
+  const duration = 10000 + hash(seed, 0.44) * 8000;
+  const delay = hash(seed, 0.55) * 6000;
+  const driftAmount = 20 + hash(seed, 0.66) * 25;
   const visible = maturity > 0.25 && active;
 
   useEffect(() => {
@@ -45,20 +45,20 @@ export function FloatingLeaf({
           Animated.timing(fall, {
             toValue: 1,
             duration,
-            easing: Easing.linear,
+            easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
           Animated.loop(
             Animated.sequence([
               Animated.timing(sway, {
                 toValue: 1,
-                duration: 1200,
+                duration: 2800,
                 easing: Easing.inOut(Easing.sin),
                 useNativeDriver: true,
               }),
               Animated.timing(sway, {
                 toValue: -1,
-                duration: 1200,
+                duration: 2800,
                 easing: Easing.inOut(Easing.sin),
                 useNativeDriver: true,
               }),
@@ -68,12 +68,12 @@ export function FloatingLeaf({
             Animated.sequence([
               Animated.timing(spin, {
                 toValue: 1,
-                duration: 3000,
+                duration: 5000,
                 useNativeDriver: true,
               }),
               Animated.timing(spin, {
                 toValue: 0,
-                duration: 3000,
+                duration: 5000,
                 useNativeDriver: true,
               }),
             ]),

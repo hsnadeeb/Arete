@@ -22,9 +22,9 @@ export function Firefly({
   const twinkle = useRef(new Animated.Value(0)).current;
   const startX = originX + (hash(seed, 0.11) * 2 - 1) * (spread * 0.9);
   const baseBottom = originY + (hash(seed, 0.6) * 2 - 1) * (spread * 0.6);
-  const size = 5.0 + hash(seed, 0.77) * 5.0;
-  const duration = 8000 + hash(seed, 0.33) * 6000;
-  const delay = hash(seed, 0.55) * 3000;
+  const size = 4 + hash(seed, 0.77) * 4;
+  const duration = 12000 + hash(seed, 0.33) * 10000;
+  const delay = hash(seed, 0.55) * 5000;
 
   useEffect(() => {
     if (!active) return;
@@ -38,7 +38,7 @@ export function Firefly({
           Animated.timing(rise, {
             toValue: 1,
             duration,
-            easing: Easing.linear,
+            easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
         ]),
@@ -48,30 +48,30 @@ export function Firefly({
             Animated.sequence([
               Animated.timing(drift, {
                 toValue: 1,
-                duration: duration / 3,
+                duration: duration / 2,
                 easing: Easing.inOut(Easing.sin),
                 useNativeDriver: true,
               }),
               Animated.timing(drift, {
                 toValue: -1,
-                duration: duration / 3,
+                duration: duration / 2,
                 easing: Easing.inOut(Easing.sin),
                 useNativeDriver: true,
               }),
             ]),
-            { iterations: 3 },
+            { iterations: 2 },
           ),
         ]),
         Animated.loop(
           Animated.sequence([
             Animated.timing(twinkle, {
               toValue: 1,
-              duration: 700,
+              duration: 1200,
               useNativeDriver: true,
             }),
             Animated.timing(twinkle, {
-              toValue: 0.2,
-              duration: 700,
+              toValue: 0.1,
+              duration: 1200,
               useNativeDriver: true,
             }),
           ]),

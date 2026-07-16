@@ -24,10 +24,10 @@ function Sparkle({
 
   const startX = originX + (hash(seed, 0.41) * 2 - 1) * spread * 0.65;
   const startY = originY - hash(seed, 0.82) * spread * 0.35;
-  const size = 2 + hash(seed, 0.23) * 3;
+  const size = 2 + hash(seed, 0.23) * 2.5;
   const color = SPARKLE_COLORS[seed % SPARKLE_COLORS.length];
-  const duration = 4000 + hash(seed, 0.55) * 4000;
-  const delay = hash(seed, 0.66) * 5000;
+  const duration = 8000 + hash(seed, 0.55) * 8000;
+  const delay = hash(seed, 0.66) * 6000;
   const visible = maturity > 0.3 && active;
 
   useEffect(() => {
@@ -49,12 +49,12 @@ function Sparkle({
             Animated.sequence([
               Animated.timing(twinkle, {
                 toValue: 1,
-                duration: 500 + hash(seed, 0.34) * 400,
+                duration: 1000 + hash(seed, 0.34) * 800,
                 useNativeDriver: true,
               }),
               Animated.timing(twinkle, {
                 toValue: 0.1,
-                duration: 500 + hash(seed, 0.34) * 400,
+                duration: 1000 + hash(seed, 0.34) * 800,
                 useNativeDriver: true,
               }),
             ]),
