@@ -73,7 +73,8 @@ export const LEAF_FALL_COLORS = ["#66bb6a", "#81c784", "#a5d6a7", "#4caf50", "#f
 export const SPARKLE_COLORS = ["#ffd54f", "#fff176", "#ffecb3", "#a5d6a7", "#ffffff"];
 
 export function hash(i: number, t: number): number {
-  return ((i * 16807 + t * 100) % 2147483647) / 2147483647;
+  const x = Math.sin(i * 12.9898 + t * 78.233) * 43758.5453;
+  return x - Math.floor(x);
 }
 
 export function lerpColor(a: string, b: string, t: number): string {

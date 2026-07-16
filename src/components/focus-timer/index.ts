@@ -14,6 +14,10 @@ export { FocusControls } from "./FocusControls";
 export { MilestoneToast } from "./MilestoneToast";
 export { LevelBadge } from "./LevelBadge";
 export { ScreensaverView } from "./ScreensaverView";
+export { FocusScene } from "./FocusScene";
+export { WindStreak } from "./WindStreak";
+export { RainStreak } from "./RainStreak";
+export { SceneDebugPanel, buildOverrideConditions } from "./SceneDebugPanel";
 
 export {
   DURATIONS,

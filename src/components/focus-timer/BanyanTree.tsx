@@ -357,14 +357,6 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
     inputRange: [0.35, 1],
     outputRange: [0.88, 1],
   });
-  const haloOpacity = glow.interpolate({
-    inputRange: [0.35, 1],
-    outputRange: [0.12, 0.35],
-  });
-  const haloOpacity2 = glow.interpolate({
-    inputRange: [0.35, 1],
-    outputRange: [0.06, 0.18],
-  });
   const potGlow = glow.interpolate({
     inputRange: [0.35, 1],
     outputRange: [0.15, 0.5],
@@ -374,41 +366,6 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
 
   return (
     <View style={s.treeArea}>
-      {/* Glow halo */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          s.haloRing,
-          {
-            width: canopyR * 2.6,
-            height: canopyR * 2.6,
-            borderRadius: canopyR * 1.3,
-            bottom: canopyCenterY - canopyR * 1.3,
-            left: cx - canopyR * 1.3,
-            backgroundColor: glowColor,
-            opacity: haloOpacity,
-            shadowColor: glowColor,
-            shadowOpacity: 0.35,
-            shadowRadius: 50,
-          },
-        ]}
-      />
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          s.haloRing2,
-          {
-            width: canopyR * 1.8,
-            height: canopyR * 1.8,
-            borderRadius: canopyR * 0.9,
-            bottom: canopyCenterY - canopyR * 0.9,
-            left: cx - canopyR * 0.9,
-            backgroundColor: glowColor,
-            opacity: haloOpacity2,
-          },
-        ]}
-      />
-
       {/* Particle layers */}
       <View pointerEvents="none" style={s.particleLayer}>
         {Array.from({ length: ffCount }, (_, i) => (
@@ -785,14 +742,6 @@ const s = StyleSheet.create({
     height: 300,
     zIndex: 10,
     pointerEvents: "none",
-  },
-  haloRing: {
-    position: "absolute",
-    zIndex: 0,
-  },
-  haloRing2: {
-    position: "absolute",
-    zIndex: 0,
   },
   treeWrap: { width: 260, height: 300, position: "relative" },
   groundShadow: {

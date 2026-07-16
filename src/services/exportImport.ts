@@ -24,7 +24,7 @@
  *   import { exportToFile, importFromJSON, shareBackup } from '@/services/exportImport';
  */
 
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { initDatabase, getDb } from "../db/service";
 import { getDocumentAsync } from "expo-document-picker";

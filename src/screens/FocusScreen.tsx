@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useRef,
   useCallback,
+  useMemo,
 } from "react";
 import {
   View,
@@ -11,6 +12,9 @@ import {
   Animated,
   Easing,
   Vibration,
+  useWindowDimensions,
+  LayoutChangeEvent,
+  AppState,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "../components/Icons";
@@ -18,6 +22,8 @@ import { LUCIDE_ICONS } from "../constants/typography";
 import { useStore } from "../store";
 import { useTheme } from "../context/ThemeContext";
 import * as db from "../db/service";
+import { getCurrentConditions } from "../services/weather";
+import type { SceneConditions } from "../services/weather";
 import {
   DURATIONS,
   SPARK,
@@ -38,13 +44,23 @@ import {
   LevelBadge,
   ScreensaverView,
   FocusHistorySheet,
+  FocusScene,
+  SceneDebugPanel,
+  buildOverrideConditions,
 } from "../components/focus-timer";
+import type { TimeOfDay, WeatherType } from "../services/weather";
 
 export default function FocusScreen() {
   const { theme, isDark } = useTheme();
   const tc = theme.colors;
   const setCurrentRoute = useStore((s) => s.setCurrentRoute);
+  const { width: winW, height: winH } = useWindowDimensions();
 
+  const [sceneSize, setSceneSize] = useState({ width: winW, height: winH * 0.5 });
+  const [conditions, setConditions] = useState<SceneConditions | null>(null);
+  const [debugTime, setDebugTime] = useState<TimeOfDay | null>(null);
+  const [debugWeather, setDebugWeather] = useState<WeatherType | null>(null);
+  const [debugPanelVisible, setDebugPanelVisible] = useState(false);
   const [duration, setDuration] = useState(25 * 60);
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
@@ -82,6 +98,18 @@ export default function FocusScreen() {
   const sec = remaining % 60;
   const completedPomodoros = stats.totalSessions + bonusPomodoros;
   const sessionProgress = duration > 0 ? elapsed / duration : 0;
+  const sceneT = Math.min((completedPomodoros + sessionProgress) / MAX_POMODOROS, 1);
+
+  const effectiveConditions = useMemo(
+    () => buildOverrideConditions(debugTime, debugWeather) ?? conditions,
+    [debugTime, debugWeather, conditions],
+  );
+
+  const particlesActive = running || debugTime !== null || debugWeather !== null;
+
+  const onSceneLayout = useCallback((e: LayoutChangeEvent) => {
+    setSceneSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height });
+  }, []);
 
   useEffect(() => {
     db.getFocusStats().then((s) => {
@@ -101,6 +129,15 @@ export default function FocusScreen() {
       db.getFocusStats().then(setStats);
     }
   }, [done]);
+
+  useEffect(() => {
+    getCurrentConditions().then(setConditions);
+    const interval = setInterval(() => getCurrentConditions().then(setConditions), 5 * 60 * 1000);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") getCurrentConditions().then(setConditions);
+    });
+    return () => { clearInterval(interval); sub.remove(); };
+  }, []);
 
   function showStageUnlock(index: number) {
     const st = TREE_STAGES[index];
@@ -370,7 +407,8 @@ export default function FocusScreen() {
           colors={tc}
         />
 
-        <View style={s.treeStage}>
+        <View style={s.treeStage} onLayout={onSceneLayout}>
+          <FocusScene t={sceneT} running={running} width={sceneSize.width} height={sceneSize.height} conditions={effectiveConditions ?? undefined} particlesActive={particlesActive} />
           <BanyanTree
             pct={progress}
             isDark={isDark}
@@ -418,6 +456,15 @@ export default function FocusScreen() {
       <FocusHistorySheet
         visible={showHistory}
         onClose={() => setShowHistory(false)}
+      />
+
+      <SceneDebugPanel
+        visible={debugPanelVisible}
+        onToggle={() => setDebugPanelVisible((v) => !v)}
+        selectedTime={debugTime}
+        selectedWeather={debugWeather}
+        onSelectTime={setDebugTime}
+        onSelectWeather={setDebugWeather}
       />
     </SafeAreaView>
   );
