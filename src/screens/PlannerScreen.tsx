@@ -92,18 +92,38 @@ function buildOverlapLayout(
   items: any[],
   colWidth: number,
   gap = 6,
-): Map<number, { left: number; width: number; borderColor: string }> {
+): Map<
+  number,
+  {
+    left: number;
+    width: number;
+    borderColor: string;
+    elevation: number;
+    zIndex: number;
+    shadowOpacity: number;
+    shadowRadius: number;
+  }
+> {
   const events = items
     .map((item) => {
       const start = timeToMinutes(item.start_time);
-      const end = item.end_time
-        ? timeToMinutes(item.end_time)
-        : start + 60;
+      const end = item.end_time ? timeToMinutes(item.end_time) : start + 60;
       return { ...item, start, end };
     })
     .sort((a, b) => a.start - b.start || a.end - b.end);
 
-  const layout = new Map<number, { left: number; width: number; borderColor: string }>();
+  const layout = new Map<
+    number,
+    {
+      left: number;
+      width: number;
+      borderColor: string;
+      elevation: number;
+      zIndex: number;
+      shadowOpacity: number;
+      shadowRadius: number;
+    }
+  >();
 
   const clusters: any[][] = [];
   events.forEach((event) => {
@@ -123,10 +143,15 @@ function buildOverlapLayout(
     const size = cluster.length;
     const slotWidth = (colWidth - gap) / size;
     cluster.forEach((event, index) => {
+      const elevation = 3 + index;
       layout.set(event.id, {
         left: gap / 2 + index * slotWidth,
         width: slotWidth - gap / 2,
         borderColor: "rgba(255,255,255,0.55)",
+        elevation,
+        zIndex: 10 + index,
+        shadowOpacity: 0.18 + index * 0.05,
+        shadowRadius: 3 + index,
       });
     });
   });
@@ -176,12 +201,6 @@ export default function PlannerScreen() {
 
   const sortedDates = useMemo(() => [...selectedDates].sort(), [selectedDates]);
 
-  const timetableDays = useMemo(() => {
-    const set = new Set<number>();
-    timetable.forEach((t: any) => set.add(t.day_of_week));
-    return set;
-  }, [timetable]);
-
   const weeks = useMemo(() => {
     const first = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -222,13 +241,6 @@ export default function PlannerScreen() {
     }
     setMonth(m);
     setYear(y);
-  };
-
-  const goToday = () => {
-    const n = new Date();
-    setYear(n.getFullYear());
-    setMonth(n.getMonth());
-    setSelectedDates(getYTDates());
   };
 
   const toggleDate = (y: number, m: number, d: number) => {
@@ -367,12 +379,6 @@ export default function PlannerScreen() {
         <Text style={[styles.topTitle, { color: T.textPrimary }]}>
           Calendar
         </Text>
-        <TouchableOpacity
-          style={[styles.todayBtn, { backgroundColor: T.borderSoft }]}
-          onPress={goToday}
-        >
-          <Text style={[styles.todayBtnText, { color: T.accent }]}>Today</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -454,7 +460,12 @@ export default function PlannerScreen() {
                           style={[
                             styles.calDayNum,
                             isT && { backgroundColor: T.accent },
-                            isSel && !isT && { backgroundColor: T.accentSoft },
+                            isSel &&
+                              !isT && {
+                                backgroundColor: T.surface,
+                                borderWidth: 1.5,
+                                borderColor: T.accent,
+                              },
                           ]}
                         >
                           <Text
@@ -472,14 +483,12 @@ export default function PlannerScreen() {
                             {cell.day}
                           </Text>
                         </View>
-                        {timetableDays.has(
-                          new Date(cell.year, cell.month, cell.day).getDay(),
-                        ) && (
+                        {isT && (
                           <View style={styles.dotRow}>
                             <View
                               style={[
                                 styles.dot,
-                                { backgroundColor: T.accent },
+                                { backgroundColor: T.textInverse },
                               ]}
                             />
                           </View>
@@ -515,6 +524,10 @@ export default function PlannerScreen() {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled
                 scrollEventThrottle={16}
+                decelerationRate="fast"
+                snapToInterval={180}
+                snapToAlignment="start"
+                overScrollMode="never"
                 onScroll={(e) => {
                   const x = e.nativeEvent.contentOffset.x;
 
@@ -597,6 +610,10 @@ export default function PlannerScreen() {
               showsHorizontalScrollIndicator={false}
               nestedScrollEnabled
               scrollEventThrottle={16}
+              decelerationRate="fast"
+              snapToInterval={180}
+              snapToAlignment="start"
+              overScrollMode="never"
               onScroll={(e) => {
                 const x = e.nativeEvent.contentOffset.x;
                 if (syncScrollRef.current !== "grid") {
@@ -656,10 +673,7 @@ export default function PlannerScreen() {
 
                       {/* Events */}
                       {(() => {
-                        const overlapLayout = buildOverlapLayout(
-                          schedule,
-                          180,
-                        );
+                        const overlapLayout = buildOverlapLayout(schedule, 180);
                         return schedule.map((item: any) => {
                           const startF = parseHour(item.start_time);
                           const endF = item.end_time
@@ -678,6 +692,14 @@ export default function PlannerScreen() {
                                   width: layout!.width,
                                   borderWidth: 1,
                                   borderColor: layout!.borderColor,
+                                  elevation: layout!.elevation,
+                                  zIndex: layout!.zIndex,
+                                  shadowOpacity: layout!.shadowOpacity,
+                                  shadowRadius: layout!.shadowRadius,
+                                  shadowOffset: {
+                                    width: 0,
+                                    height: layout!.elevation * 0.25,
+                                  },
                                 },
                                 {
                                   top: startF * HOUR_HEIGHT,
@@ -1056,11 +1078,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 3,
     right: 3,
+    flexDirection: "row",
+    justifyContent: "space-between",
     borderRadius: 6,
-    paddingHorizontal: 6,
+    paddingHorizontal: 12,
     paddingVertical: 3,
     overflow: "hidden",
-    // elevation: 2,
+    elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,

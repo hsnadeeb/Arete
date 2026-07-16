@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStore } from "../store";
 import { useTheme } from "../context/ThemeContext";
 import { Icon } from "../components/Icons";
+import { Avatar } from "../components/Avatar";
 import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import BottomNavBar from "../components/BottomNavBar";
 
@@ -77,6 +78,7 @@ export default function DrawerNavigator() {
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const { theme, isDark, toggle } = useTheme();
+  const userProfile = useStore((s) => s.userProfile);
 
   useEffect(() => {
     Animated.parallel([
@@ -231,6 +233,34 @@ export default function DrawerNavigator() {
           </View>
         </View>
 
+        {userProfile?.name ? (
+          <View style={[styles.userSection, { borderBottomColor: theme.colors.divider }]}>
+            <TouchableOpacity
+              style={styles.userRow}
+              onPress={() => { setCurrentRoute("Profile"); setSidebarOpen(false); }}
+              activeOpacity={0.7}
+            >
+              <Avatar
+                uri={userProfile?.avatar_uri}
+                name={userProfile?.name}
+                gender={userProfile?.gender}
+                size={36}
+                iconSize={16}
+                textSize={12}
+              />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={[styles.userName, { color: theme.colors.heading }]} numberOfLines={1}>
+                  {userProfile.name}
+                </Text>
+                <Text style={[styles.userMeta, { color: theme.colors.textTertiary }]} numberOfLines={1}>
+                  View profile
+                </Text>
+              </View>
+              <Icon name={LUCIDE_ICONS.chevronRight} size={14} color={theme.colors.border} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {/* Section label */}
         <Text
           style={[
@@ -355,6 +385,24 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   brandSub: {
+    fontSize: 11,
+    fontWeight: "500",
+    marginTop: 1,
+  },
+  userSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  userRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  userName: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  userMeta: {
     fontSize: 11,
     fontWeight: "500",
     marginTop: 1,

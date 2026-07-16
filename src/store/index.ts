@@ -83,7 +83,7 @@ export interface AppStore {
   // ── User Profile ──
   userProfile: UserProfileRow | null;
   refreshProfile: () => Promise<void>;
-  updateProfile: (fields: Partial<Pick<UserProfileRow, 'name' | 'gender' | 'date_of_birth' | 'height_cm' | 'weight_kg' | 'target_weight_kg' | 'activity_level' | 'goals' | 'preferences'>>) => Promise<void>;
+  updateProfile: (fields: Partial<Pick<UserProfileRow, 'name' | 'gender' | 'date_of_birth' | 'height_cm' | 'weight_kg' | 'target_weight_kg' | 'activity_level' | 'goals' | 'preferences' | 'phone' | 'occupation' | 'country' | 'city' | 'timezone' | 'body_fat_percentage' | 'waist_cm' | 'body_goal_type' | 'target_date' | 'bedtime' | 'wake_time' | 'smoking_status' | 'caffeine_intake' | 'dietary_preference' | 'medical_conditions' | 'avatar_uri'>>) => Promise<void>;
 
   // ── Tracker Targets ──
   setTrackerTarget: (fields: { steps_target?: number; water_target?: number; sleep_target?: number; weight_target?: number }) => Promise<void>;

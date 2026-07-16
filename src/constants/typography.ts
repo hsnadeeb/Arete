@@ -180,6 +180,7 @@ export const LUCIDE_ICONS: Record<string, LucideIconName> = {
   // Misc
   grid: 'LayoutGrid',
   noEntry: 'Ban',
+  ban: 'Ban',
   tool: 'Wrench',
   yoga: 'PersonStanding',
   baby: 'Baby',
@@ -191,4 +192,12 @@ export const LUCIDE_ICONS: Record<string, LucideIconName> = {
   apple: 'Apple',
   pin: 'Pin',
   hand: 'Hand',
+  heart: 'Heart',
+  globe: 'Globe',
+  smartphone: 'Smartphone',
+  ruler: 'Ruler',
+  percent: 'Percent',
+  landmark: 'Landmark',
+  bookOpen: 'BookOpen',
+  camera: 'Camera',
 };

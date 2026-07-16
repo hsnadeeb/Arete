@@ -98,6 +98,33 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
        "ALTER TABLE journal_entries ADD COLUMN color TEXT DEFAULT ''",
      );
    } catch (_) {}
+   // Migrate: user_profile - add new lifestyle/health/body columns
+   const newProfileColumns = [
+     "phone TEXT DEFAULT ''",
+     "occupation TEXT DEFAULT ''",
+     "country TEXT DEFAULT ''",
+     "city TEXT DEFAULT ''",
+     "timezone TEXT DEFAULT ''",
+     "body_fat_percentage REAL DEFAULT 0",
+     "waist_cm REAL DEFAULT 0",
+     "body_goal_type TEXT DEFAULT ''",
+     "target_date TEXT DEFAULT ''",
+     "bedtime TEXT DEFAULT ''",
+     "wake_time TEXT DEFAULT ''",
+     "smoking_status TEXT DEFAULT 'non_smoker'",
+     "caffeine_intake INTEGER DEFAULT 0",
+     "dietary_preference TEXT DEFAULT 'no_restriction'",
+     "medical_conditions TEXT DEFAULT '[]'",
+   ];
+   for (const colDef of newProfileColumns) {
+     const colName = colDef.split(" ")[0];
+     try {
+       await db.execAsync(`ALTER TABLE user_profile ADD COLUMN ${colDef}`);
+     } catch (_) {}
+   }
+   try {
+     await db.execAsync("ALTER TABLE user_profile ADD COLUMN avatar_uri TEXT DEFAULT ''");
+   } catch (_) {}
    return db;
  }
 
@@ -619,6 +646,7 @@ export async function seedWidgetLayouts() {
     "expenses",
     "prayer-tracker",
     "monthly-stats",
+    "journal-notes",
   ];
 
   let nextOrder = existing.length;
@@ -1864,6 +1892,22 @@ export async function updateUserProfile(
     activity_level: string;
     goals: string;
     preferences: string;
+    phone: string;
+    occupation: string;
+    country: string;
+    city: string;
+    timezone: string;
+    body_fat_percentage: number;
+    waist_cm: number;
+    body_goal_type: string;
+    target_date: string;
+    bedtime: string;
+    wake_time: string;
+    smoking_status: string;
+    caffeine_intake: number;
+    dietary_preference: string;
+    medical_conditions: string;
+    avatar_uri: string;
   }>,
 ): Promise<void> {
   const keys = Object.keys(fields) as (keyof typeof fields)[];

@@ -24,11 +24,10 @@
  *   import { exportToFile, importFromJSON, shareBackup } from '@/services/exportImport';
  */
 
-import * as FileSystem from "expo-file-system/legacy";
+import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { initDatabase, getDb } from "../db/service";
 import { getDocumentAsync } from "expo-document-picker";
-import { readAsStringAsync, EncodingType } from "expo-file-system/legacy";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -364,8 +363,8 @@ export async function importFromFile(): Promise<ImportResult> {
     }
 
     const file = result.assets[0];
-    const jsonString = await readAsStringAsync(file.uri, {
-      encoding: EncodingType.UTF8,
+    const jsonString = await FileSystem.readAsStringAsync(file.uri, {
+      encoding: FileSystem.EncodingType.UTF8,
     });
 
     return await importFromJSON(jsonString);

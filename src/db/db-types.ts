@@ -124,6 +124,23 @@ export interface UserProfileRow {
   activity_level: string;
   goals: string;
   preferences: string;
+  // New fields
+  phone: string;
+  occupation: string;
+  country: string;
+  city: string;
+  timezone: string;
+  body_fat_percentage: number;
+  waist_cm: number;
+  body_goal_type: string;
+  target_date: string;
+  bedtime: string;
+  wake_time: string;
+  smoking_status: string;
+  caffeine_intake: number;
+  dietary_preference: string;
+  medical_conditions: string;
+  avatar_uri: string;
   created_at?: string;
   updated_at?: string;
 }

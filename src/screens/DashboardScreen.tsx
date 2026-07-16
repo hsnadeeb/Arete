@@ -667,7 +667,7 @@ function SwipeableTodoRow({
           }
         }}
       >
-        <View style={[s.swipeBg, { backgroundColor: tc.error }]}>
+        {/*<View style={[s.swipeBg, { backgroundColor: tc.error }]}>
           <TouchableOpacity
             style={s.swipeBgTouchable}
             onPress={runDelete}
@@ -675,12 +675,12 @@ function SwipeableTodoRow({
           >
             <Icon name={LUCIDE_ICONS.x} size={18} color="#fff" label="delete" />
           </TouchableOpacity>
-        </View>
+        </View>*/}
         <Animated.View
           {...panResponder.panHandlers}
           style={[
             s.todoItem,
-            { borderBottomColor: tc.divider, backgroundColor: tc.surface },
+            { borderBottomColor: tc.divider },
             { transform: [{ translateX }] },
           ]}
         >
@@ -833,14 +833,11 @@ function ExpensesWidget() {
     setShow(false);
   };
   return (
-    <Card>
+    <Card title="Expenses" titleStyle={{ color: tc.textTertiary }}>
       <View style={s.expHeaderRow}>
-        <View>
-          <Text style={[s.cardTitle, { color: tc.heading }]}>Expenses</Text>
-          <Text style={[s.expTotal, { color: tc.error }]}>
-            ₹ {total.toFixed(2)} today
-          </Text>
-        </View>
+        <Text style={[s.expTotal, { color: tc.error }]}>
+          ₹ {total.toFixed(2)} today
+        </Text>
         <TouchableOpacity
           style={[s.addExpBtn, { backgroundColor: tc.success }]}
           onPress={() => setShow(true)}
@@ -1279,6 +1276,46 @@ function AiPlanWidget() {
   );
 }
 
+// Not using the below widget because it is mediocre
+// function JournalWidget() {
+//   const { theme } = useTheme();
+//   const tc = theme.colors;
+//   const [notes, setNotes] = useState<any[]>([]);
+//   useEffect(() => {
+//     db.getAllJournalEntries().then((entries) => setNotes(entries.slice(0, 5)));
+//   }, []);
+//   if (notes.length === 0) return null;
+//   return (
+//     <Card title="Recent Notes" titleStyle={{ color: tc.textTertiary }}>
+//       {notes.map((n: any) => (
+//         <TouchableOpacity
+//           key={n.id}
+//           style={[s.noteRow, { borderBottomColor: tc.divider }]}
+//           activeOpacity={0.6}
+//         >
+//           <View style={{ flex: 1 }}>
+//             <Text
+//               style={[s.noteRowTitle, { color: tc.text }]}
+//               numberOfLines={1}
+//             >
+//               {n.title || "Untitled"}
+//             </Text>
+//             <Text
+//               style={[s.noteRowContent, { color: tc.textTertiary }]}
+//               numberOfLines={1}
+//             >
+//               {n.content}
+//             </Text>
+//           </View>
+//           <Text style={[s.noteRowDate, { color: tc.textTertiary }]}>
+//             {n.created_at ? new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
+//           </Text>
+//         </TouchableOpacity>
+//       ))}
+//     </Card>
+//   );
+// }
+
 const WIDGET_MAP: Record<string, React.FC> = {
   "at-a-glance": AtAGlanceWidget,
   "ai-plan": AiPlanWidget,
@@ -1287,6 +1324,7 @@ const WIDGET_MAP: Record<string, React.FC> = {
   mood: MoodWidget,
   expenses: ExpensesWidget,
   "monthly-stats": MonthlyStatsWidget,
+  // "journal-notes": JournalWidget,
 };
 
 // ─── Reorderable List ───
@@ -1959,14 +1997,12 @@ const s = StyleSheet.create({
   },
   moodLabel: { fontSize: 10, fontWeight: "700" },
 
-  cardTitle: { fontSize: 17, fontWeight: "800" },
   expHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: SPACE.sm,
   },
-  expTotal: { fontSize: 13, fontWeight: "700", marginTop: 2 },
+  expTotal: { fontSize: 13, fontWeight: "700" },
   addExpBtn: {
     paddingVertical: 9,
     paddingHorizontal: 16,
@@ -1985,6 +2021,17 @@ const s = StyleSheet.create({
   expDesc: { fontSize: 12, marginTop: 1 },
   expAmt: { fontSize: 13, fontWeight: "700" },
   expEmpty: { textAlign: "center", fontSize: 13, paddingVertical: SPACE.md },
+
+  // ── Journal widget ──
+  noteRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: SPACE.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  noteRowTitle: { fontSize: 13, fontWeight: "600" },
+  noteRowContent: { fontSize: 12, marginTop: 1 },
+  noteRowDate: { fontSize: 11, fontWeight: "500", marginLeft: SPACE.sm },
 
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modal: {
