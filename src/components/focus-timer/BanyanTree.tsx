@@ -447,6 +447,25 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
           ]}
         />
 
+        {/* Soft ground glow halo */}
+        <View
+          style={{
+            position: 'absolute',
+            left: cx - trunkW * 3,
+            bottom: trunkBot - 10,
+            width: trunkW * 6,
+            height: trunkW * 1.4,
+            borderRadius: trunkW * 3,
+            backgroundColor: {
+              spring: '#7ec97e',
+              summer: '#3fae5a',
+              autumn: '#caa15a',
+              winter: '#aebfce',
+            }[curSeason],
+            opacity: 0.12,
+          }}
+        />
+
         {/* Ground mound */}
         <View
           style={{
@@ -462,7 +481,7 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
               autumn: isDark ? '#2a1a0d' : '#5a3a1a',
               winter: isDark ? '#2a3038' : '#4a5560',
             }[curSeason],
-            opacity: 0.4,
+            opacity: 0.55,
           }}
         />
 
@@ -591,11 +610,25 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
               },
             ]}
           />
+          {/* Left-edge shade for cylindrical volume */}
           <View
             style={[
               s.trunkShade,
-              { backgroundColor: isDark ? "#00000035" : "#00000022" },
+              { backgroundColor: isDark ? "#00000045" : "#00000030" },
             ]}
+          />
+          {/* Right-edge rim light */}
+          <View
+            style={{
+              position: "absolute",
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: "22%",
+              borderTopRightRadius: trunkW * 0.3,
+              borderBottomRightRadius: 0,
+              backgroundColor: isDark ? "#ffffff12" : "#ffffff28",
+            }}
           />
         </Animated.View>
 
@@ -687,7 +720,21 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
                   opacity: c.opacity,
                 },
               ]}
-            />
+            >
+              {/* Soft top-left highlight for volume */}
+              <View
+                style={{
+                  position: "absolute",
+                  left: c.r * 0.18,
+                  top: c.r * 0.18,
+                  width: c.r * 1.1,
+                  height: c.r * 1.1,
+                  borderRadius: c.r,
+                  backgroundColor: "#ffffff",
+                  opacity: 0.12 * c.opacity,
+                }}
+              />
+            </View>
           ))}
 
           {/* Figs within canopy */}

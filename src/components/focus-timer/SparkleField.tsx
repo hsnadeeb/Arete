@@ -76,6 +76,7 @@ function Sparkle({
     inputRange: [0, 0.1, 0.6, 1],
     outputRange: [0, 1, 1, 0],
   });
+  const totalOpacity = Animated.multiply(riseOpacity, twinkle);
 
   return (
     <Animated.View
@@ -83,17 +84,38 @@ function Sparkle({
         position: "absolute",
         left: startX,
         bottom: startY,
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-        opacity: Animated.multiply(riseOpacity, twinkle),
+        width: size * 3,
+        height: size * 3,
+        opacity: totalOpacity,
         transform: [{ translateY }],
-        shadowColor: color,
-        shadowOpacity: 0.8,
-        shadowRadius: size * 1.5,
       }}
-    />
+    >
+      {/* Soft halo */}
+      <Animated.View
+        style={{
+          position: "absolute",
+          left: size * 0.5,
+          top: size * 0.5,
+          width: size * 2,
+          height: size * 2,
+          borderRadius: size,
+          backgroundColor: color,
+          opacity: 0.35,
+        }}
+      />
+      {/* Bright core */}
+      <Animated.View
+        style={{
+          position: "absolute",
+          left: size * 1.25,
+          top: size * 1.25,
+          width: size * 0.5,
+          height: size * 0.5,
+          borderRadius: size * 0.25,
+          backgroundColor: "#ffffff",
+        }}
+      />
+    </Animated.View>
   );
 }
 

@@ -10,6 +10,7 @@ import Svg, {
   G,
   Ellipse,
   Polygon,
+  Line,
 } from "react-native-svg";
 import AnimatedSvg from "./AnimatedSvgElements";
 import { hash, getSeason, getSeasonProgress, SEASON_ACCENT, SEASON_GROUND, SEASON_CANOPY_MOD } from "./constants";
@@ -177,6 +178,57 @@ function HorizonHaze({ w, h, colors }: { w: number; h: number; colors: SkyColors
   );
 }
 
+// ─── Horizon bloom (cinematic glowing band, opacity-only) ───
+
+function HorizonBloom({ w, h, color, sunX, active }: { w: number; h: number; color: string; sunX: number; active: boolean }) {
+  const bloom = useRef(new Animated.Value(0.5)).current;
+  useEffect(() => {
+    if (!active) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bloom, { toValue: 1, duration: 5000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bloom, { toValue: 0.5, duration: 5000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [active]);
+
+  const y = h * 0.64;
+  const bw = w * 0.5;
+  return (
+    <G>
+      <Defs>
+        <SvgLinearGradient id="bloomG" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={color} stopOpacity={0.45} />
+          <Stop offset="1" stopColor={color} stopOpacity={0} />
+        </SvgLinearGradient>
+        <SvgLinearGradient id="bloomHg" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor="#ffffff" stopOpacity={0} />
+          <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0.5} />
+          <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
+        </SvgLinearGradient>
+      </Defs>
+      <AnimatedSvg.Rect
+        x={sunX - bw / 2}
+        y={y - h * 0.08}
+        width={bw}
+        height={h * 0.16}
+        fill="url(#bloomG)"
+        opacity={bloom.interpolate({ inputRange: [0.5, 1], outputRange: [0.25, 0.5] })}
+      />
+        <AnimatedSvg.Rect
+        x={sunX - bw / 2}
+        y={y - h * 0.015}
+        width={bw}
+        height={h * 0.03}
+        fill="url(#bloomHg)"
+        opacity={bloom.interpolate({ inputRange: [0.5, 1], outputRange: [0.15, 0.35] })}
+      />
+    </G>
+  );
+}
+
 // ─── Ground ───
 
 function GroundSVG({ w, h, colors }: { w: number; h: number; colors: SkyColors }) {
@@ -251,28 +303,74 @@ function TwinkleStar({ x, y, r, active }: { x: number; y: number; r: number; act
   return <AnimatedSvg.Circle cx={x} cy={y} r={r} fill="#fff" opacity={op} />;
 }
 
-// ─── Sun ───
+// ─── Sun (layered glow + shimmering corona) ───
 
 function SunSVG({ x, y, color, visible }: { x: number; y: number; color: string; visible: boolean }) {
   const [show, setShow] = useState(visible);
   const op = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const breat = useRef(new Animated.Value(0)).current;
+  const rayOps = useRef(Array.from({ length: 12 }, () => new Animated.Value(0.2))).current;
+
   useEffect(() => {
     Animated.timing(op, { toValue: visible ? 1 : 0, duration: 800, useNativeDriver: false }).start(() => {
       if (!visible) setShow(false);
     });
     if (visible) setShow(true);
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const b = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breat, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(breat, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    b.start();
+    const rayAnims = rayOps.map((rv, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 240),
+          Animated.timing(rv, { toValue: 0.55, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          Animated.timing(rv, { toValue: 0.15, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        ]),
+      ),
+    );
+    rayAnims.forEach((a) => a.start());
+    return () => { b.stop(); rayAnims.forEach((a) => a.stop()); };
+  }, [visible]);
+
   if (!show && !visible) return null;
+
+  const rays = Array.from({ length: 12 }, (_, i) => (i * 360) / 12);
+  const pulse = breat.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.08] });
+
   return (
-    <G>
-      <AnimatedSvg.Circle cx={x} cy={y} r={35} fill={color} opacity={op.interpolate({ inputRange: [0, 1], outputRange: [0, 0.3] })} />
-      <AnimatedSvg.Circle cx={x} cy={y} r={20} fill={color} opacity={op.interpolate({ inputRange: [0, 1], outputRange: [0, 0.5] })} />
-      <AnimatedSvg.Circle cx={x} cy={y} r={12} fill={color} opacity={op} />
-    </G>
+    <AnimatedSvg.G opacity={op}>
+      {/* Wide atmospheric halo */}
+      <AnimatedSvg.Circle cx={x} cy={y} r={48} fill={color} opacity={0.12} />
+      <AnimatedSvg.Circle cx={x} cy={y} r={32} fill={color} opacity={0.22} />
+      {/* Shimmering corona of rays */}
+      {rays.map((deg, i) => {
+        const len = 14 + (i % 2 === 0 ? 8 : 0);
+        const rad = (deg * Math.PI) / 180;
+        const x1 = x + Math.cos(rad) * 22;
+        const y1 = y + Math.sin(rad) * 22;
+        const x2 = x + Math.cos(rad) * (22 + len);
+        const y2 = y + Math.sin(rad) * (22 + len);
+        return (
+          <AnimatedSvg.Line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={2} strokeLinecap="round" opacity={rayOps[i]} />
+        );
+      })}
+      {/* Pulsing core */}
+      <AnimatedSvg.Circle cx={x} cy={y} r={18} fill={color} opacity={breat.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.65] })} />
+      <AnimatedSvg.Circle cx={x} cy={y} r={12} fill={color} opacity={pulse.interpolate({ inputRange: [0.9, 1.08], outputRange: [0.8, 0.95] })} />
+      <Circle cx={x} cy={y} r={8} fill="#fff6d8" />
+    </AnimatedSvg.G>
   );
 }
 
-// ─── Moon (Animated glow + float via opacity, static crescent + craters) ───
+// ─── Moon (rich halo, rim light, craters, gentle pulse) ───
 
 function MoonSVG({ x, y, opacity }: { x: number; y: number; opacity: number }) {
   const glow = useRef(new Animated.Value(0.7)).current;
@@ -280,8 +378,8 @@ function MoonSVG({ x, y, opacity }: { x: number; y: number; opacity: number }) {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(glow, { toValue: 0.7, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0.7, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
     );
     loop.start();
@@ -293,24 +391,27 @@ function MoonSVG({ x, y, opacity }: { x: number; y: number; opacity: number }) {
   const fade = opacity;
   const cx = x;
   const cy = y;
-  const moonColor = '#f0ead6';
-  const glowColor = '#f5e6b8';
+  const moonColor = '#f3edd8';
+  const glowColor = '#f7e9bf';
 
   return (
     <G opacity={fade}>
-      {/* Outer glow ring */}
-      <AnimatedSvg.Circle cx={cx} cy={cy} r={22} fill={glowColor} opacity={glow.interpolate({ inputRange: [0.7, 1], outputRange: [0.12, 0.25] })} />
-      {/* Mid glow */}
-      <AnimatedSvg.Circle cx={cx} cy={cy} r={16} fill={glowColor} opacity={glow.interpolate({ inputRange: [0.7, 1], outputRange: [0.2, 0.35] })} />
+      {/* Wide atmospheric halo */}
+      <AnimatedSvg.Circle cx={cx} cy={cy} r={26} fill={glowColor} opacity={glow.interpolate({ inputRange: [0.7, 1], outputRange: [0.1, 0.22] })} />
+      <AnimatedSvg.Circle cx={cx} cy={cy} r={18} fill={glowColor} opacity={glow.interpolate({ inputRange: [0.7, 1], outputRange: [0.18, 0.32] })} />
       {/* Moon body */}
       <Circle cx={cx} cy={cy} r={12} fill={moonColor} />
+      {/* Rim light */}
+      <Circle cx={cx} cy={cy} r={12} fill="none" stroke="#fff8e0" strokeWidth={1} opacity={0.35} />
+      {/* Terminator shading (gives sphere feel) */}
+      <Circle cx={cx + 4} cy={cy - 3} r={11} fill="#000000" opacity={0.06} />
       {/* Crescent shadow (cutout) */}
       <Circle cx={cx + 3.5} cy={cy - 2.5} r={9.5} fill="#02030A" />
-      {/* Subtle craters */}
-      <Circle cx={cx - 3} cy={cy - 1} r={1.8} fill="#d4ceb8" opacity={0.4} />
-      <Circle cx={cx + 1} cy={cy + 3} r={1.2} fill="#d4ceb8" opacity={0.35} />
-      <Circle cx={cx - 5} cy={cy + 2} r={1} fill="#d4ceb8" opacity={0.3} />
-      <Circle cx={cx + 4} cy={cy - 4} r={0.7} fill="#d4ceb8" opacity={0.25} />
+      {/* Craters with soft shading */}
+      <Circle cx={cx - 3} cy={cy - 1} r={1.9} fill="#d9d2bb" opacity={0.45} />
+      <Circle cx={cx + 1.5} cy={cy + 3} r={1.3} fill="#d9d2bb" opacity={0.4} />
+      <Circle cx={cx - 5} cy={cy + 2} r={1} fill="#d9d2bb" opacity={0.35} />
+      <Circle cx={cx + 4} cy={cy - 4} r={0.7} fill="#d9d2bb" opacity={0.3} />
     </G>
   );
 }
@@ -1052,6 +1153,7 @@ export function FocusScene({ t, running, width, height, conditions, particlesAct
         <LightRays w={width} h={height} sunColor={sunColor} sunY={sunYval} visible={showSun} />
         <CloudsSVG w={width} h={height} cloudCover={cc} />
         <HorizonHaze w={width} h={height} colors={seasonColors} />
+        <HorizonBloom w={width} h={height} color={showSun ? "#fff3d6" : "#cdd8ff"} sunX={showSun ? sunX : moonX} active={particlesActive} />
         <MountainRange w={width} h={height} colors={seasonColors} />
         <GroundSVG w={width} h={height} colors={seasonColors} />
       </Svg>
