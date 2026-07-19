@@ -25,7 +25,7 @@ export function FloatingLeaf({
   const spin = useRef(new Animated.Value(0)).current;
 
   const startX = originX + (hash(seed, 0.31) * 2 - 1) * spread * 0.8;
-  const startY = originY + hash(seed, 0.72) * spread * 0.3;
+  const startY = originY - hash(seed, 0.72) * spread * 0.35;
   const size = 5 + hash(seed, 0.18) * 5;
   const color = LEAF_FALL_COLORS[seed % LEAF_FALL_COLORS.length];
   const colorDark = hash(seed, 0.9) > 0.5 ? "#00000022" : "#ffffff18";

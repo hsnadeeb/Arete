@@ -23,6 +23,105 @@ import { Firefly } from "./Firefly";
 import { FloatingLeaf } from "./FloatingLeaf";
 import { SparkleField } from "./SparkleField";
 
+function hash2(a: number, b: number): number {
+  return hash(a * 12.9898 + b * 78.233, 0);
+}
+
+function hash3(a: number, b: number, c: number): number {
+  return hash(a * 12.9898 + b * 78.233 + c * 43.758, 0);
+}
+
+// Generate organic canopy blob data for natural, non-circular shapes
+function generateCanopyShape(c: any, season: Season, t: number, isDark: boolean) {
+  const baseR = c.r;
+  const numVertices = 8;
+  const vertices = [];
+  const seasonColors = SEASON_CANOPY[season];
+  const baseColor = c.color;
+  
+  // Determine color palette for this blob
+  const isOuter = c.layer <= 1;
+  const colorVariation = isOuter ? 0.15 : 0.25;
+  
+  for (let i = 0; i < numVertices; i++) {
+    const angle = (i / numVertices) * Math.PI * 2;
+    // Add organic variation to radius
+    const seed = c.key * 100 + i * 7;
+    const radiusVar = 0.7 + hash2(seed, 0.1) * 0.5; // 0.7-1.2
+    const radius = baseR * radiusVar;
+    
+    // Slight angle jitter for asymmetry
+    const angleJitter = (hash2(seed, 0.2) - 0.5) * 0.3;
+    const finalAngle = angle + angleJitter;
+    
+    vertices.push({
+      x: Math.cos(finalAngle) * radius,
+      y: Math.sin(finalAngle) * radius,
+    });
+  }
+  
+  // Generate color layers for depth
+  const layers = [];
+  const numLayers = isOuter ? 4 : 3;
+  
+  for (let l = 0; l < numLayers; l++) {
+    const layerSeed = c.key * 10 + l;
+    const scale = 1 - l * 0.18; // Each layer slightly smaller
+    const opacity = (isOuter ? 0.35 : 0.25) - l * 0.06;
+    
+    // Color shifts per layer for depth
+    let layerColor = baseColor;
+    if (l === 0) {
+      // Back layer - darker
+      const darken = isDark ? 0.3 : 0.2;
+      const r = parseInt(layerColor.slice(1, 3), 16);
+      const g = parseInt(layerColor.slice(3, 5), 16);
+      const b = parseInt(layerColor.slice(5, 7), 16);
+      layerColor = `rgb(${Math.round(r * (1 - darken))}, ${Math.round(g * (1 - darken))}, ${Math.round(b * (1 - darken))})`;
+    } else if (l === numLayers - 1) {
+      // Front layer - lighter/highlight
+      const lighten = 0.15;
+      const r = parseInt(layerColor.slice(1, 3), 16);
+      const g = parseInt(layerColor.slice(3, 5), 16);
+      const b = parseInt(layerColor.slice(5, 7), 16);
+      layerColor = `rgb(${Math.min(255, Math.round(r + (255 - r) * lighten))}, ${Math.min(255, Math.round(g + (255 - g) * lighten))}, ${Math.min(255, Math.round(b + (255 - b) * lighten))})`;
+    }
+    
+    layers.push({ scale, opacity, color: layerColor, seed: layerSeed });
+  }
+  
+  // Add seasonal accent speckles
+  const speckles = [];
+  if (season === "spring" && t > 0.1) {
+    const numSpeckles = Math.floor(baseR / 3);
+    for (let s = 0; s < numSpeckles; s++) {
+      const ss = c.key * 1000 + s * 13;
+      speckles.push({
+        x: (hash2(ss, 0.1) - 0.5) * baseR * 1.4,
+        y: (hash2(ss, 0.2) - 0.5) * baseR * 1.4,
+        size: 2 + hash2(ss, 0.3) * 3,
+        color: FLW[s % FLW.length],
+        opacity: 0.5 + hash2(ss, 0.4) * 0.3,
+      });
+    }
+  } else if (season === "autumn") {
+    const numSpeckles = Math.floor(baseR / 4);
+    const autumnColors = ["#ff8a65", "#ffcc02", "#ef5350", "#a1887f"];
+    for (let s = 0; s < numSpeckles; s++) {
+      const ss = c.key * 1000 + s * 13;
+      speckles.push({
+        x: (hash2(ss, 0.1) - 0.5) * baseR * 1.3,
+        y: (hash2(ss, 0.2) - 0.5) * baseR * 1.3,
+        size: 2 + hash2(ss, 0.3) * 2.5,
+        color: autumnColors[s % autumnColors.length],
+        opacity: 0.4 + hash2(ss, 0.4) * 0.3,
+      });
+    }
+  }
+  
+  return { vertices, layers, speckles, baseR };
+}
+
 interface BanyanTreeProps {
   pct: number;
   isDark: boolean;
@@ -54,7 +153,7 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
 
   // Canopy
   const canopyR = (40 + t * 70) * treeScale;
-  const canopyCenterY = trunkTop;
+  const canopyCenterY = trunkTop - trunkW * 0.35;
   const maturity = Math.min(4, Math.floor(t * 5));
 
   const seasonMod = SEASON_CANOPY_MOD[curSeason];
@@ -294,18 +393,43 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
 
   // ── Animations ──
 
+  // ── Animations ──
+
+  // Trunk entry - delayed slight bounce
   const trunkEntry = useRef(new Animated.Value(20)).current;
   useEffect(() => {
     Animated.spring(trunkEntry, {
       toValue: 0,
-      friction: 6,
-      tension: 60,
+      friction: 8,
+      tension: 80,
       useNativeDriver: true,
     }).start();
   }, []);
 
-  // ── Continuous sway (0→1→0 oscillation, no instant reset jerk) ──
+  // Tree growth animation - drives overall scale from seedling to mature
+  const treeGrowth = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(treeGrowth, {
+      toValue: 1,
+      duration: 1200,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
+  // Canopy entry - delayed fade + scale for natural emergence
+  const canopyEntry = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(canopyEntry, {
+      toValue: 1,
+      duration: 1000,
+      delay: 300,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  // Continuous sway (0→1→0 oscillation, no instant reset jerk)
   const sway = useRef(new Animated.Value(0)).current;
   const swayDuration = seasonMod.swayDuration;
   const swayAmp = seasonMod.swayAmp;
@@ -387,7 +511,10 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
         style={[
           s.treeScaled,
           {
-            transform: [{ scale: viewScale }],
+            transform: [
+              { scale: viewScale },
+              { scale: treeGrowth.interpolate({ inputRange: [0, 1], outputRange: [0.01, 1] }) },
+            ],
             transformOrigin: "50% 86%",
           },
         ]}
@@ -697,6 +824,7 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
             zIndex: 5,
             transform: [
               { rotate: canopySway },
+              { scale: canopyEntry.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) },
             ],
             opacity: canopyOpacity,
             shadowColor: glowColor,
@@ -705,37 +833,99 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
             shadowOffset: { width: 0, height: 0 },
           }}
         >
-          {canopy.map((c) => (
-            <View
-              key={c.key}
-              style={[
-                s.leaf,
-                {
-                  left: c.lx - c.r,
-                  bottom: c.by - c.r,
-                  width: c.r * 2,
-                  height: c.r * 2,
-                  borderRadius: c.r,
-                  backgroundColor: c.color,
-                  opacity: c.opacity,
-                },
-              ]}
-            >
-              {/* Soft top-left highlight for volume */}
+          {canopy.map((c) => {
+            const shape = generateCanopyShape(c, curSeason, t, isDark);
+            return (
               <View
-                style={{
-                  position: "absolute",
-                  left: c.r * 0.18,
-                  top: c.r * 0.18,
-                  width: c.r * 1.1,
-                  height: c.r * 1.1,
-                  borderRadius: c.r,
-                  backgroundColor: "#ffffff",
-                  opacity: 0.12 * c.opacity,
-                }}
-              />
-            </View>
-          ))}
+                key={c.key}
+                style={[
+                  s.leaf,
+                  {
+                    left: c.lx - c.r * 1.2,
+                    bottom: c.by - c.r * 1.2,
+                    width: c.r * 2.4,
+                    height: c.r * 2.4,
+                  },
+                ]}
+              >
+                {/* Organic shape layers - back to front */}
+                {shape.layers.map((layer, li) => (
+                  <View
+                    key={`layer-${c.key}-${li}`}
+                    style={{
+                      position: "absolute",
+                      left: shape.baseR * (1.2 - layer.scale * 1.2),
+                      bottom: shape.baseR * (1.2 - layer.scale * 1.2),
+                      width: shape.baseR * 2 * layer.scale,
+                      height: shape.baseR * 2 * layer.scale,
+                    }}
+                  >
+                    {/* Draw organic polygon using nested views */}
+                    {shape.vertices.map((v, vi) => (
+                      <View
+                        key={`vert-${c.key}-${li}-${vi}`}
+                        style={{
+                          position: "absolute",
+                          left: shape.baseR * layer.scale + v.x * layer.scale,
+                          bottom: shape.baseR * layer.scale + v.y * layer.scale,
+                          width: shape.baseR * 0.6 * layer.scale,
+                          height: shape.baseR * 0.6 * layer.scale,
+                          borderRadius: shape.baseR * 0.3 * layer.scale,
+                          backgroundColor: layer.color,
+                          opacity: layer.opacity * c.opacity,
+                          transform: [{ rotate: `${(vi / shape.vertices.length) * 360}deg` }],
+                        }}
+                      />
+                    ))}
+                    {/* Center fill to connect vertices */}
+                    <View
+                      style={{
+                        position: "absolute",
+                        left: shape.baseR * layer.scale * 0.2,
+                        bottom: shape.baseR * layer.scale * 0.2,
+                        width: shape.baseR * 1.6 * layer.scale,
+                        height: shape.baseR * 1.6 * layer.scale,
+                        borderRadius: shape.baseR * 0.8 * layer.scale,
+                        backgroundColor: layer.color,
+                        opacity: layer.opacity * c.opacity * 0.8,
+                      }}
+                    />
+                  </View>
+                ))}
+
+                {/* Seasonal accent speckles */}
+                {shape.speckles.map((sp, si) => (
+                  <View
+                    key={`speckle-${c.key}-${si}`}
+                    style={{
+                      position: "absolute",
+                      left: shape.baseR + sp.x - sp.size / 2,
+                      bottom: shape.baseR + sp.y - sp.size / 2,
+                      width: sp.size,
+                      height: sp.size,
+                      borderRadius: sp.size / 2,
+                      backgroundColor: sp.color,
+                      opacity: sp.opacity * c.opacity,
+                    }}
+                  />
+                ))}
+
+                {/* Soft inner glow highlight */}
+                <View
+                  style={{
+                    position: "absolute",
+                    left: shape.baseR * 0.25,
+                    top: shape.baseR * 0.25,
+                    width: shape.baseR * 0.9,
+                    height: shape.baseR * 0.9,
+                    borderRadius: shape.baseR * 0.45,
+                    backgroundColor: "#ffffff",
+                    opacity: 0.06 * c.opacity,
+                  }}
+                />
+              </View>
+            );
+          })}
 
           {/* Figs within canopy */}
           {figs.map((f) => (
