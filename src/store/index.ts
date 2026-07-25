@@ -23,6 +23,7 @@ import { initDatabase, deleteTransactionById, savePrayerTimings, syncPrayersToTi
 import * as todosDb from '../db/service';
 import { runSeed as runSeedData, wipeAllData, type SeedOptions, type SeedResult } from '../data/seedData';
 import { fetchPrayerTimings, extractTimings, getIslamicDateInfo } from '../services/prayerApi';
+import { restoreAuth, signOut as authSignOut, type AuthUser } from '../services/auth';
 
 // ─── App Store Interface ───
 export interface AppStore {
@@ -109,6 +110,13 @@ export interface AppStore {
   seedResult: SeedResult | null;
   seedDatabase: (opts?: SeedOptions) => Promise<SeedResult>;
   wipeDatabase: () => Promise<void>;
+
+  // ── Auth ──
+  authUser: AuthUser | null;
+  authToken: string | null;
+  authLoading: boolean;
+  setAuth: (user: AuthUser) => void;
+  logout: () => Promise<void>;
 }
 
 // ─── Create Store ───
@@ -421,6 +429,16 @@ export const useStore = create<AppStore>()((set, get) => ({
       set({ error: (e as Error).message, deleting: false });
       throw e;
     }
+  },
+
+  // ── Auth ──
+  authUser: null,
+  authToken: null,
+  authLoading: true,
+  setAuth: (user) => set({ authUser: user, authToken: "sso" }),
+  logout: async () => {
+    await authSignOut();
+    set({ authUser: null, authToken: null });
   },
 
   hydrate: async () => {

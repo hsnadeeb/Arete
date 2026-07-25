@@ -21,6 +21,7 @@ import { Avatar } from "../components/Avatar";
 import { LUCIDE_ICONS } from "../constants/typography";
 import type { UserProfileRow } from "../db/db-types";
 import * as db from "../db/service";
+import { signOut as authSignOut } from "../services/auth";
 
 // ─── Profile Groups ───
 
@@ -545,6 +546,20 @@ export default function ProfileScreen() {
     }
   }, [editingField, userProfile, updateProfile]);
 
+  const handleSignOut = useCallback(() => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          await authSignOut();
+          useStore.getState().logout();
+        },
+      },
+    ]);
+  }, []);
+
   // Data browser handlers
   const toggleDataSection = useCallback(async (key: string) => {
     if (expandedData === key) { setExpandedData(null); return; }
@@ -784,6 +799,19 @@ export default function ProfileScreen() {
             );
           })}
         </View>
+
+        {/* Sign Out */}
+        <TouchableOpacity
+          style={[
+            s.signOutBtn,
+            { borderColor: tc.error, backgroundColor: tc.errorBg },
+          ]}
+          onPress={handleSignOut}
+          activeOpacity={0.7}
+        >
+          <Icon name={LUCIDE_ICONS.logOut} size={16} color={tc.error} />
+          <Text style={[s.signOutText, { color: tc.error }]}>Sign Out</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Edit Modal */}
@@ -925,6 +953,19 @@ const s = StyleSheet.create({
   dataItemTitle: { fontSize: 13, fontWeight: "600" },
   dataItemDetail: { fontSize: 11, marginTop: 1 },
   dataDeleteBtn: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  signOutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  signOutText: { fontSize: 15, fontWeight: "600" },
 });
 
 const emodal = StyleSheet.create({

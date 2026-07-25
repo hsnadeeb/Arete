@@ -16,13 +16,17 @@ import { ThemeProvider } from './src/context/ThemeContext';
 import { AppProvider, useAppContext } from './src/context/AppContext';
 import DrawerNavigator from './src/navigation/DrawerNavigator';
 import OnboardingFlow from './src/screens/onboarding/OnboardingFlow';
+import AuthFlow from './src/screens/auth/AuthFlow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useStore } from './src/store';
 
 function AppContent() {
   const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const { forceRehydrate } = useAppContext();
+  const authUser = useStore((s) => s.authUser);
+  const authLoading = useStore((s) => s.authLoading);
 
   const checkOnboardingStatus = useCallback(async () => {
     try {
@@ -42,18 +46,25 @@ function AppContent() {
   const handleOnboardingComplete = useCallback((data: any) => {
     setOnboardingComplete(true);
     setIsOnboarded(true);
-    // Force rehydration after onboarding completes
     setTimeout(() => {
       forceRehydrate();
     }, 100);
   }, [forceRehydrate]);
 
+  const handleAuthenticated = useCallback(() => {
+    // Auth done — the store has the user now
+  }, []);
+
   if (loading || isOnboarded === null) {
-    return null; // Or show a loading spinner
+    return null;
   }
 
   if (!isOnboarded) {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+  }
+
+  if (!authUser) {
+    return <AuthFlow onAuthenticated={handleAuthenticated} />;
   }
 
   return <DrawerNavigator />;

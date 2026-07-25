@@ -2,13 +2,15 @@
   "expo": {
     "name": "arete",
     "slug": "arete",
+    "scheme": "arete",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.arete"
+      "bundleIdentifier": "com.anonymous.arete",
+      "associatedDomains": ["applinks:arete.app"]
     },
     "android": {
       "adaptiveIcon": {
@@ -17,12 +19,38 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.arete"
+      "package": "com.anonymous.arete",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "arete",
+              "host": "*",
+              "pathPrefix": "/auth"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-sqlite", "expo-font", "expo-sharing", "expo-status-bar"],
+    "plugins": [
+      "expo-sqlite",
+      "expo-font",
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID"
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "ea99bc11-6dc9-4f00-92af-cfd4deb714af"
