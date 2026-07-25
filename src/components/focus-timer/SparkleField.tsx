@@ -2,15 +2,6 @@ import React, { useEffect, useRef } from "react";
 import { Animated, Easing } from "react-native";
 import { SPARKLE_COLORS, hash } from "./constants";
 
-interface SparkleProps {
-  seed: number;
-  active: boolean;
-  originX: number;
-  originY: number;
-  spread: number;
-  maturity: number;
-}
-
 function Sparkle({
   seed,
   active,
@@ -18,22 +9,32 @@ function Sparkle({
   originY,
   spread,
   maturity,
-}: SparkleProps) {
+}: {
+  seed: number;
+  active: boolean;
+  originX: number;
+  originY: number;
+  spread: number;
+  maturity: number;
+}) {
   const rise = useRef(new Animated.Value(0)).current;
   const twinkle = useRef(new Animated.Value(0)).current;
+  const driftX = useRef(new Animated.Value(0)).current;
 
-  const startX = originX + (hash(seed, 0.41) * 2 - 1) * spread * 0.65;
+  const startX = originX + (hash(seed, 0.41) * 2 - 1) * spread * 0.7;
   const startY = originY - hash(seed, 0.82) * spread * 0.35;
-  const size = 2 + hash(seed, 0.23) * 2.5;
+  const size = 2 + hash(seed, 0.23) * 3;
   const color = SPARKLE_COLORS[seed % SPARKLE_COLORS.length];
-  const duration = 8000 + hash(seed, 0.55) * 8000;
-  const delay = hash(seed, 0.66) * 6000;
+  const duration = 8000 + hash(seed, 0.55) * 10000;
+  const delay = hash(seed, 0.66) * 5000;
+  const driftMag = (hash(seed, 0.9) - 0.5) * spread * 0.2;
   const visible = maturity > 0.3 && active;
 
   useEffect(() => {
     if (!visible) return;
     rise.setValue(0);
     twinkle.setValue(0);
+    driftX.setValue(0);
 
     const loop = Animated.loop(
       Animated.sequence([
@@ -45,16 +46,24 @@ function Sparkle({
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
+          Animated.timing(driftX, {
+            toValue: driftMag,
+            duration: duration * 0.6,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
           Animated.loop(
             Animated.sequence([
               Animated.timing(twinkle, {
                 toValue: 1,
-                duration: 1000 + hash(seed, 0.34) * 800,
+                duration: 800 + hash(seed, 0.34) * 1000,
+                easing: Easing.out(Easing.sin),
                 useNativeDriver: true,
               }),
               Animated.timing(twinkle, {
-                toValue: 0.1,
-                duration: 1000 + hash(seed, 0.34) * 800,
+                toValue: 0.08,
+                duration: 800 + hash(seed, 0.34) * 1000,
+                easing: Easing.in(Easing.sin),
                 useNativeDriver: true,
               }),
             ]),
@@ -64,16 +73,16 @@ function Sparkle({
     );
     loop.start();
     return () => loop.stop();
-  }, [visible, rise, twinkle, duration, delay]);
+  }, [visible, rise, twinkle, driftX, duration, delay, driftMag]);
 
   if (!visible) return null;
 
   const translateY = rise.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, -(40 + spread * 0.4)],
+    outputRange: [0, -(40 + spread * 0.5)],
   });
   const riseOpacity = rise.interpolate({
-    inputRange: [0, 0.1, 0.6, 1],
+    inputRange: [0, 0.08, 0.6, 1],
     outputRange: [0, 1, 1, 0],
   });
   const totalOpacity = Animated.multiply(riseOpacity, twinkle);
@@ -87,10 +96,9 @@ function Sparkle({
         width: size * 3,
         height: size * 3,
         opacity: totalOpacity,
-        transform: [{ translateY }],
+        transform: [{ translateY }, { translateX: driftX }],
       }}
     >
-      {/* Soft halo */}
       <Animated.View
         style={{
           position: "absolute",
@@ -103,7 +111,6 @@ function Sparkle({
           opacity: 0.35,
         }}
       />
-      {/* Bright core */}
       <Animated.View
         style={{
           position: "absolute",

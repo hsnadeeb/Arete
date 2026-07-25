@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, Animated, StyleSheet } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { View, Text, Animated, Easing, StyleSheet } from "react-native";
 import { TYPOGRAPHY } from "../../constants/typography";
 import { GREEN, MAX_POMODOROS, treeAge } from "./constants";
 
@@ -7,6 +7,7 @@ interface StatsRowProps {
   streak: number;
   totalPomodoros: number;
   streakPulse: Animated.Value;
+  streakGlow?: Animated.Value;
   colors: {
     warning: string;
     textTertiary: string;
@@ -19,17 +20,46 @@ export function StatsRow({
   streak,
   totalPomodoros,
   streakPulse,
+  streakGlow,
   colors,
 }: StatsRowProps) {
   const age = treeAge(totalPomodoros);
+  const mountAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(200),
+      Animated.parallel([
+        Animated.timing(mountAnim, {
+          toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, []);
+
+  const highlightColor = streakGlow?.interpolate
+    ? streakGlow.interpolate({
+        inputRange: [0, 1],
+        outputRange: [colors.warning, "#ff6b6b"],
+      })
+    : colors.warning;
 
   return (
-    <View style={[styles.forestStats, { borderColor: colors.borderLight }]}>
+    <Animated.View
+      style={[
+        styles.forestStats,
+        {
+          borderColor: colors.borderLight,
+          opacity: mountAnim,
+          transform: [{ translateY: mountAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+        },
+      ]}
+    >
       <View style={styles.statItem}>
         <Animated.Text
           style={[
             styles.statVal,
-            { color: colors.warning, transform: [{ scale: streakPulse }] },
+            { color: highlightColor, transform: [{ scale: streakPulse }] },
           ]}
         >
           {streak}
@@ -52,7 +82,7 @@ export function StatsRow({
         </Text>
         <Text style={[styles.statLbl, { color: colors.textTertiary }]}>Years</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

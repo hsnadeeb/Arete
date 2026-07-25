@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { View, Text, Animated, Easing, StyleSheet } from "react-native";
 import { TYPOGRAPHY } from "../../constants/typography";
 import { getTreeStage, TREE_STAGES, treeAge, MAX_POMODOROS } from "./constants";
 
@@ -19,12 +19,35 @@ export function LevelBadge({ totalPomodoros, colors }: LevelBadgeProps) {
   const nextMin = nextStage?.minPomodoros ?? MAX_POMODOROS;
   const pomsToNext = nextMin - totalPomodoros;
   const age = treeAge(totalPomodoros);
+  const mountAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(100),
+      Animated.parallel([
+        Animated.spring(mountAnim, {
+          toValue: 1,
+          friction: 6,
+          tension: 80,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, []);
 
   return (
-    <View
+    <Animated.View
       style={[
         styles.levelBadge,
-        { backgroundColor: colors.bgSecondary, borderColor: colors.borderLight },
+        {
+          backgroundColor: colors.bgSecondary,
+          borderColor: colors.borderLight,
+          opacity: mountAnim,
+          transform: [
+            { scale: mountAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) },
+            { translateY: mountAnim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) },
+          ],
+        },
       ]}
     >
       <Text style={styles.emoji}>{stage.emoji}</Text>
@@ -35,7 +58,7 @@ export function LevelBadge({ totalPomodoros, colors }: LevelBadgeProps) {
         {Math.floor(age)} yrs · {totalPomodoros}/{MAX_POMODOROS} poms
         {pomsToNext > 0 ? ` · ${pomsToNext} to next` : ""}
       </Text>
-    </View>
+    </Animated.View>
   );
 }
 

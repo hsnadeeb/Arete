@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, TouchableWithoutFeedback, StyleSheet, useWindowDimensions } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { View, Text, TouchableWithoutFeedback, Animated, Easing, StyleSheet, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TYPOGRAPHY } from "../../constants/typography";
 import { BanyanTree } from "./BanyanTree";
@@ -37,22 +37,71 @@ export function ScreensaverView({
   particlesActive,
 }: ScreensaverViewProps) {
   const { width, height } = useWindowDimensions();
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const timerPulse = useRef(new Animated.Value(1)).current;
+  const hintOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeIn, {
+        toValue: 1, duration: 800, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.delay(3000),
+        Animated.timing(hintOpacity, {
+          toValue: 1, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, []);
+
+  useEffect(() => {
+    if (!running) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(timerPulse, {
+          toValue: 0.97, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true,
+        }),
+        Animated.timing(timerPulse, {
+          toValue: 1, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [running]);
+
   return (
     <TouchableWithoutFeedback onPress={onDoubleTap}>
       <SafeAreaView
         style={[styles.screenSaver, { backgroundColor: "#000000" }]}
         edges={["top", "bottom"]}
       >
-        <FocusScene t={t} running={running} width={width} height={height} conditions={conditions} particlesActive={particlesActive} season={season} />
+        <Animated.View style={{ flex: 1, opacity: fadeIn }}>
+          <FocusScene t={t} running={running} width={width} height={height} conditions={conditions} particlesActive={particlesActive} season={season} />
+        </Animated.View>
         <View style={styles.saverBody} pointerEvents="box-none">
-          <View style={styles.saverTimerWrap}>
-            <Text
-              style={[styles.saverTimer, { color: done ? "#32D583" : "#ffffff" }]}
+          <Animated.View
+            style={[
+              styles.saverTimerWrap,
+              { opacity: fadeIn, transform: [{ scale: fadeIn.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] },
+            ]}
+          >
+            <Animated.Text
+              style={[
+                styles.saverTimer,
+                { color: done ? "#32D583" : "#ffffff", transform: [{ scale: timerPulse }] },
+              ]}
             >
               {String(min).padStart(2, "0")}:{String(sec).padStart(2, "0")}
-            </Text>
-          </View>
-          <View style={styles.saverTree}>
+            </Animated.Text>
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.saverTree,
+              { opacity: fadeIn, transform: [{ scale: fadeIn.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.1] }) }] },
+            ]}
+          >
             <BanyanTree
               pct={progress}
               isDark={true}
@@ -61,8 +110,10 @@ export function ScreensaverView({
               sessionProgress={sessionProgress}
               season={season}
             />
-          </View>
-          <Text style={styles.saverHint}>Double-tap to exit</Text>
+          </Animated.View>
+          <Animated.Text style={[styles.saverHint, { opacity: hintOpacity }]}>
+            Double-tap to exit
+          </Animated.Text>
         </View>
       </SafeAreaView>
     </TouchableWithoutFeedback>

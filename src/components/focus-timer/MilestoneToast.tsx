@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, Animated, StyleSheet } from "react-native";
+import { Text, Animated, Easing, StyleSheet } from "react-native";
 import { TYPOGRAPHY } from "../../constants/typography";
 import { TREE_STAGES, treeAge, MAX_AGE } from "./constants";
 
@@ -34,13 +34,13 @@ export function MilestoneToast({ milestone, animValue }: MilestoneToastProps) {
             {
               translateY: animValue.interpolate({
                 inputRange: [0, 1],
-                outputRange: [-24, 0],
+                outputRange: [-30, 0],
               }),
             },
             {
               scale: animValue.interpolate({
                 inputRange: [0, 1],
-                outputRange: [0.8, 1],
+                outputRange: [0.7, 1],
               }),
             },
           ],

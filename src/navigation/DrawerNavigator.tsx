@@ -25,6 +25,7 @@ import PlannerScreen from "../screens/PlannerScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import AISettingsScreen from "../screens/AISettingsScreen";
+import BlockDoomscrollingScreen from "../screens/BlockDoomscrollingScreen";
 
 import GreetingScreen from "../screens/GreetingScreen";
 import FocusScreen from "../screens/FocusScreen";
@@ -39,7 +40,8 @@ type RouteName =
   | "Planner"
   | "Settings"
   | "Profile"
-  | "AISettings";
+  | "AISettings"
+  | "BlockDoomscrolling";
 
 const SCREENS: { name: RouteName; component: React.FC }[] = [
   { name: "Greeting", component: GreetingScreen },
@@ -52,6 +54,7 @@ const SCREENS: { name: RouteName; component: React.FC }[] = [
   { name: "Settings", component: SettingsScreen },
   { name: "Profile", component: ProfileScreen },
   { name: "AISettings", component: AISettingsScreen },
+  { name: "BlockDoomscrolling", component: BlockDoomscrollingScreen },
 ];
 
 const NAV_ITEMS: {
@@ -65,6 +68,7 @@ const NAV_ITEMS: {
   { name: "Profile", label: "Profile", icon: "user" },
   { name: "Settings", label: "Settings", icon: "settings" },
   { name: "AISettings", label: "AI Settings", icon: "cpu" },
+  { name: "BlockDoomscrolling", label: "Block Doomscrolling", icon: "ban" },
 ];
 
 export default function DrawerNavigator() {

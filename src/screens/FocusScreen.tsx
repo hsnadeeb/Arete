@@ -90,7 +90,10 @@ export default function FocusScreen() {
   const lastTapRef = useRef(0);
   const prevStageIdxRef = useRef(0);
   const streakPulse = useRef(new Animated.Value(1)).current;
+  const streakGlow = useRef(new Animated.Value(0)).current;
   const doneGlow = useRef(new Animated.Value(0)).current;
+  const doneScale = useRef(new Animated.Value(1)).current;
+  const screenFadeIn = useRef(new Animated.Value(0)).current;
 
   const progress = duration > 0 ? (elapsed / duration) * 100 : 0;
   const remaining = duration - elapsed;
@@ -165,21 +168,44 @@ export default function FocusScreen() {
   }, [stats.totalSessions]);
 
   useEffect(() => {
+    screenFadeIn.setValue(0);
+    Animated.timing(screenFadeIn, {
+      toValue: 1, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+    }).start();
+  }, []);
+
+  useEffect(() => {
     if (stats.streak > 0) {
       const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(streakPulse, {
-            toValue: 1.18,
-            duration: 650,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(streakPulse, {
-            toValue: 1,
-            duration: 650,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: true,
-          }),
+          Animated.parallel([
+            Animated.timing(streakPulse, {
+              toValue: 1.18,
+              duration: 700,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+            Animated.timing(streakGlow, {
+              toValue: 1,
+              duration: 700,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(streakPulse, {
+              toValue: 1,
+              duration: 700,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+            Animated.timing(streakGlow, {
+              toValue: 0,
+              duration: 700,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: true,
+            }),
+          ]),
         ]),
       );
       loop.start();
@@ -213,17 +239,39 @@ export default function FocusScreen() {
               showStageUnlock(nextStage.index);
             }
             setConfettiTrigger((v) => v + 1);
-            Animated.sequence([
-              Animated.timing(doneGlow, {
-                toValue: 1,
-                duration: 500,
-                useNativeDriver: false,
-              }),
-              Animated.timing(doneGlow, {
-                toValue: 0,
-                duration: 1200,
-                useNativeDriver: false,
-              }),
+            Animated.parallel([
+              Animated.sequence([
+                Animated.timing(doneGlow, {
+                  toValue: 1,
+                  duration: 400,
+                  useNativeDriver: false,
+                }),
+                Animated.timing(doneGlow, {
+                  toValue: 0.6,
+                  duration: 300,
+                  useNativeDriver: false,
+                }),
+                Animated.timing(doneGlow, {
+                  toValue: 0,
+                  duration: 1000,
+                  easing: Easing.out(Easing.cubic),
+                  useNativeDriver: false,
+                }),
+              ]),
+              Animated.sequence([
+                Animated.spring(doneScale, {
+                  toValue: 1.12,
+                  friction: 4,
+                  tension: 150,
+                  useNativeDriver: true,
+                }),
+                Animated.spring(doneScale, {
+                  toValue: 1,
+                  friction: 5,
+                  tension: 100,
+                  useNativeDriver: true,
+                }),
+              ]),
             ]).start();
             return duration;
           }
@@ -259,14 +307,15 @@ export default function FocusScreen() {
       Animated.sequence([
         Animated.spring(animMilestone, {
           toValue: 1,
-          friction: 5,
-          tension: 90,
+          friction: 4,
+          tension: 130,
           useNativeDriver: true,
         }),
-        Animated.delay(1200),
+        Animated.delay(2000),
         Animated.timing(animMilestone, {
           toValue: 0,
-          duration: 300,
+          duration: 400,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start(() => setMilestone(null));
@@ -353,6 +402,7 @@ export default function FocusScreen() {
   }
 
   return (
+    <Animated.View style={{ flex: 1, opacity: screenFadeIn }}>
     <SafeAreaView
       style={[s.screen, { backgroundColor: tc.bg }]}
       edges={["top", "bottom"]}
@@ -434,6 +484,7 @@ export default function FocusScreen() {
           streak={stats.streak}
           totalPomodoros={stats.totalSessions}
           streakPulse={streakPulse}
+          streakGlow={streakGlow}
           colors={tc}
         />
 
@@ -446,6 +497,7 @@ export default function FocusScreen() {
           onAddYears={handleAddYears}
           colors={tc}
           doneGlow={doneGlow}
+          doneScale={doneScale}
         />
       </View>
 
@@ -465,6 +517,7 @@ export default function FocusScreen() {
         onSelectSeason={setDebugSeason}
       />
     </SafeAreaView>
+    </Animated.View>
   );
 }
 

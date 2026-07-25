@@ -25,10 +25,11 @@ export function Firefly({
   const startX = originX + (hash(seed, 0.11) * 2 - 1) * spread * 0.9;
   const baseBottom = originY + (hash(seed, 0.6) * 2 - 1) * spread * 0.6;
   const size = 3 + hash(seed, 0.77) * 3.5;
-  const duration = 14000 + hash(seed, 0.33) * 12000;
-  const delay = hash(seed, 0.55) * 6000;
-  const wanderX = (hash(seed, 0.91) * 2 - 1) * spread * 0.5;
-  const wanderY = (hash(seed, 0.13) * 2 - 1) * spread * 0.4;
+  const duration = 16000 + hash(seed, 0.33) * 14000;
+  const delay = hash(seed, 0.55) * 5000;
+  const wanderXMag = (hash(seed, 0.91) * 2 - 1) * spread * 0.6;
+  const wanderYMag = (hash(seed, 0.13) * 2 - 1) * spread * 0.5;
+  const twinkleDur = 800 + hash(seed, 0.21) * 1400;
 
   useEffect(() => {
     if (!active) return;
@@ -50,14 +51,14 @@ export function Firefly({
           Animated.loop(
             Animated.sequence([
               Animated.timing(driftX, {
-                toValue: wanderX,
-                duration: duration * 0.55,
+                toValue: wanderXMag,
+                duration: duration * 0.5,
                 easing: Easing.inOut(Easing.sin),
                 useNativeDriver: true,
               }),
               Animated.timing(driftX, {
-                toValue: -wanderX * 0.6,
-                duration: duration * 0.45,
+                toValue: -wanderXMag * 0.5,
+                duration: duration * 0.5,
                 easing: Easing.inOut(Easing.sin),
                 useNativeDriver: true,
               }),
@@ -66,14 +67,14 @@ export function Firefly({
           Animated.loop(
             Animated.sequence([
               Animated.timing(driftY, {
-                toValue: wanderY,
-                duration: duration * 0.4,
+                toValue: wanderYMag,
+                duration: duration * 0.35,
                 easing: Easing.inOut(Easing.sin),
                 useNativeDriver: true,
               }),
               Animated.timing(driftY, {
-                toValue: -wanderY * 0.7,
-                duration: duration * 0.6,
+                toValue: -wanderYMag * 0.6,
+                duration: duration * 0.65,
                 easing: Easing.inOut(Easing.sin),
                 useNativeDriver: true,
               }),
@@ -81,8 +82,8 @@ export function Firefly({
           ),
           Animated.loop(
             Animated.sequence([
-              Animated.timing(twinkle, { toValue: 1, duration: 900 + hash(seed, 0.21) * 1100, useNativeDriver: true }),
-              Animated.timing(twinkle, { toValue: 0.15, duration: 900 + hash(seed, 0.21) * 1100, useNativeDriver: true }),
+              Animated.timing(twinkle, { toValue: 1, duration: twinkleDur, easing: Easing.out(Easing.sin), useNativeDriver: true }),
+              Animated.timing(twinkle, { toValue: 0.1, duration: twinkleDur, easing: Easing.in(Easing.sin), useNativeDriver: true }),
             ]),
           ),
         ]),
@@ -90,7 +91,7 @@ export function Firefly({
     );
     loop.start();
     return () => loop.stop();
-  }, [active, rise, driftX, driftY, twinkle, duration, delay, wanderX, wanderY]);
+  }, [active, rise, driftX, driftY, twinkle, duration, delay, wanderXMag, wanderYMag, twinkleDur]);
 
   if (!active) return null;
 
@@ -100,12 +101,8 @@ export function Firefly({
     outputRange: [travel, -travel],
   });
   const opacity = rise.interpolate({
-    inputRange: [0, 0.12, 0.85, 1],
+    inputRange: [0, 0.1, 0.85, 1],
     outputRange: [0, 1, 1, 0],
-  });
-  const coreOpacity = twinkle.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.4, 1],
   });
 
   const color = SPARK[seed % SPARK.length];
@@ -126,7 +123,6 @@ export function Firefly({
         ],
       }}
     >
-      {/* Outer halo glow */}
       <Animated.View
         style={{
           position: "absolute",
@@ -136,10 +132,9 @@ export function Firefly({
           height: size * 5.4,
           borderRadius: size * 2.7,
           backgroundColor: color,
-          opacity: Animated.multiply(opacity, twinkle.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.32] })),
+          opacity: Animated.multiply(opacity, twinkle.interpolate({ inputRange: [0, 1], outputRange: [0.1, 0.35] })),
         }}
       />
-      {/* Bright core */}
       <Animated.View
         style={{
           position: "absolute",
@@ -149,7 +144,7 @@ export function Firefly({
           height: size,
           borderRadius: size,
           backgroundColor: "#fff7d6",
-          opacity: coreOpacity,
+          opacity: twinkle.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }),
         }}
       />
     </Animated.View>

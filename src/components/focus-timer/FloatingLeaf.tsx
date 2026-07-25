@@ -26,14 +26,14 @@ export function FloatingLeaf({
 
   const startX = originX + (hash(seed, 0.31) * 2 - 1) * spread * 0.8;
   const startY = originY - hash(seed, 0.72) * spread * 0.35;
-  const size = 5 + hash(seed, 0.18) * 5;
+  const size = 5 + hash(seed, 0.18) * 6;
   const color = LEAF_FALL_COLORS[seed % LEAF_FALL_COLORS.length];
   const colorDark = hash(seed, 0.9) > 0.5 ? "#00000022" : "#ffffff18";
-  const duration = 11000 + hash(seed, 0.44) * 9000;
-  const delay = hash(seed, 0.55) * 7000;
-  const driftAmount = 24 + hash(seed, 0.66) * 30;
+  const duration = 12000 + hash(seed, 0.44) * 10000;
+  const delay = hash(seed, 0.55) * 6000;
+  const driftAmount = 28 + hash(seed, 0.66) * 35;
   const depth = 0.7 + hash(seed, 0.42) * 0.3;
-  const spinTurns = 1 + Math.floor(hash(seed, 0.77) * 2);
+  const spinTurns = 1 + Math.floor(hash(seed, 0.77) * 3);
   const visible = maturity > 0.25 && active;
 
   useEffect(() => {
@@ -55,20 +55,20 @@ export function FloatingLeaf({
           }),
           Animated.loop(
             Animated.sequence([
-              Animated.timing(sway, { toValue: 1, duration: 2600 + hash(seed, 0.5) * 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-              Animated.timing(sway, { toValue: -1, duration: 2600 + hash(seed, 0.5) * 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+              Animated.timing(sway, { toValue: 1, duration: 2800 + hash(seed, 0.5) * 1600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+              Animated.timing(sway, { toValue: -1, duration: 2800 + hash(seed, 0.5) * 1600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
             ]),
           ),
           Animated.loop(
             Animated.sequence([
-              Animated.timing(flutter, { toValue: 1, duration: 700 + hash(seed, 0.61) * 500, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-              Animated.timing(flutter, { toValue: 0, duration: 700 + hash(seed, 0.61) * 500, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+              Animated.timing(flutter, { toValue: 1, duration: 600 + hash(seed, 0.61) * 600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+              Animated.timing(flutter, { toValue: 0, duration: 600 + hash(seed, 0.61) * 600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
             ]),
           ),
           Animated.timing(spin, {
             toValue: spinTurns,
-            duration,
-            easing: Easing.linear,
+            duration: duration * 0.9,
+            easing: Easing.inOut(Easing.quad),
             useNativeDriver: true,
           }),
         ]),
@@ -82,14 +82,14 @@ export function FloatingLeaf({
 
   const translateY = fall.interpolate({
     inputRange: [0, 1],
-    outputRange: [-10, 70 + spread * 0.5],
+    outputRange: [-10, 80 + spread * 0.5],
   });
   const translateX = sway.interpolate({
     inputRange: [-1, 1],
     outputRange: [-driftAmount, driftAmount],
   });
   const opacity = fall.interpolate({
-    inputRange: [0, 0.06, 0.85, 1],
+    inputRange: [0, 0.05, 0.85, 1],
     outputRange: [0, 0.9 * depth, 0.9 * depth, 0],
   });
   const rotate = spin.interpolate({
@@ -98,7 +98,7 @@ export function FloatingLeaf({
   });
   const scaleX = flutter.interpolate({
     inputRange: [0, 1],
-    outputRange: [1, 0.35],
+    outputRange: [1, 0.3],
   });
 
   return (
@@ -122,7 +122,6 @@ export function FloatingLeaf({
         shadowOffset: { width: 0, height: 0 },
       }}
     >
-      {/* Leaf body */}
       <Animated.View
         style={{
           position: "absolute",
@@ -135,7 +134,6 @@ export function FloatingLeaf({
           opacity: 0.92,
         }}
       />
-      {/* Central vein for detail */}
       <Animated.View
         style={{
           position: "absolute",

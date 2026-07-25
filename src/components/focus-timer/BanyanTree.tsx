@@ -391,115 +391,237 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
     }[];
   }, [t, trunkW, trunkH, trunkBot, cx, isDark, treeScale]);
 
-  // ── Animations ──
+  // ── Choreographed Entry Sequence ──
+  // All entry animations fire on mount in a staggered parallel timeline.
+  // This reveals the tree at its current growth stage (t) with a cinematic build-up.
 
-  // ── Animations ──
-
-  // Trunk entry - delayed slight bounce
-  const trunkEntry = useRef(new Animated.Value(20)).current;
-  useEffect(() => {
-    Animated.spring(trunkEntry, {
-      toValue: 0,
-      friction: 8,
-      tension: 80,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  // Tree growth animation - drives overall scale from seedling to mature
-  const treeGrowth = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(treeGrowth, {
-      toValue: 1,
-      duration: 1200,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  // Canopy entry - delayed fade + scale for natural emergence
+  // Ground shadow fade
+  const shadowEntry = useRef(new Animated.Value(0)).current;
+  // Trunk rises from ground (no overshoot to keep tree planted)
+  const trunkEntry = useRef(new Animated.Value(1)).current;
+  // Whole-tree reveal scale (pop-in from small)
+  const treeReveal = useRef(new Animated.Value(0)).current;
+  // Canopy fade + scale
   const canopyEntry = useRef(new Animated.Value(0)).current;
+  // Branches growth (combined signal)
+  const branchEntry = useRef(new Animated.Value(0)).current;
+  // Aerial roots growth
+  const rootEntry = useRef(new Animated.Value(0)).current;
+  // Figs bounce
+  const figEntry = useRef(new Animated.Value(0)).current;
+  // Anticipation overshoot for trunk rise
+  const trunkAnticipation = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    Animated.timing(canopyEntry, {
-      toValue: 1,
-      duration: 1000,
-      delay: 300,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
+    shadowEntry.setValue(0);
+    trunkEntry.setValue(1);
+    treeReveal.setValue(0);
+    canopyEntry.setValue(0);
+    branchEntry.setValue(0);
+    rootEntry.setValue(0);
+    figEntry.setValue(0);
+    trunkAnticipation.setValue(0);
+
+    Animated.parallel([
+      // 1. Ground shadow fades in with anticipation stretch
+      Animated.sequence([
+        Animated.timing(shadowEntry, {
+          toValue: 0, duration: 100, useNativeDriver: true,
+        }),
+        Animated.timing(shadowEntry, {
+          toValue: 1, duration: 500, easing: Easing.out(Easing.quad), useNativeDriver: true,
+        }),
+      ]),
+      // 2. Trunk rises with anticipation dip (tiny pull-down before rising)
+      Animated.sequence([
+        Animated.delay(120),
+        Animated.timing(trunkAnticipation, {
+          toValue: 1, duration: 80, easing: Easing.in(Easing.quad), useNativeDriver: true,
+        }),
+        Animated.parallel([
+          Animated.timing(trunkAnticipation, {
+            toValue: 0, duration: 120, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+          }),
+          Animated.timing(trunkEntry, {
+            toValue: 0, duration: 800, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+          }),
+        ]),
+      ]),
+      // 3. Whole tree reveals with spring bounce
+      Animated.sequence([
+        Animated.delay(60),
+        Animated.spring(treeReveal, {
+          toValue: 1, friction: 4, tension: 120, useNativeDriver: true,
+        }),
+      ]),
+      // 4. Canopy emerges with gentle float
+      Animated.timing(canopyEntry, {
+        toValue: 1, duration: 1400, delay: 400,
+        easing: Easing.out(Easing.cubic), useNativeDriver: true,
+      }),
+      // 5. Branches grow out from trunk
+      Animated.timing(branchEntry, {
+        toValue: 1, duration: 900, delay: 500,
+        easing: Easing.out(Easing.cubic), useNativeDriver: true,
+      }),
+      // 6. Aerial roots descend with slight overshoot
+      Animated.timing(rootEntry, {
+        toValue: 1, duration: 1100, delay: 650,
+        easing: Easing.out(Easing.quad), useNativeDriver: true,
+      }),
+      // 7. Figs pop in with staggered spring
+      Animated.stagger(80, [
+        Animated.spring(figEntry, {
+          toValue: 1, friction: 3, tension: 160, delay: 800, useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
   }, []);
 
-  // Continuous sway (0→1→0 oscillation, no instant reset jerk)
-  const sway = useRef(new Animated.Value(0)).current;
+  // ── Wind Sway (composite waveform for natural motion) ──
+  // Combines a slow main swell + faster gust overlay
+  const windPhase = useRef(new Animated.Value(0)).current;
+  const windGust = useRef(new Animated.Value(0)).current;
   const swayDuration = seasonMod.swayDuration;
-  const swayAmp = seasonMod.swayAmp;
 
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(sway, {
-          toValue: 1,
-          duration: swayDuration / 2,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+        Animated.timing(windPhase, {
+          toValue: 1, duration: swayDuration / 2,
+          easing: Easing.inOut(Easing.sin), useNativeDriver: true,
         }),
-        Animated.timing(sway, {
-          toValue: 0,
-          duration: swayDuration / 2,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+        Animated.timing(windPhase, {
+          toValue: -1, duration: swayDuration,
+          easing: Easing.inOut(Easing.sin), useNativeDriver: true,
+        }),
+        Animated.timing(windPhase, {
+          toValue: 0, duration: swayDuration / 2,
+          easing: Easing.inOut(Easing.sin), useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+
+    const gustLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(windGust, {
+          toValue: 1, duration: 3000,
+          easing: Easing.inOut(Easing.sin), useNativeDriver: true,
+        }),
+        Animated.timing(windGust, {
+          toValue: -0.6, duration: 5000,
+          easing: Easing.inOut(Easing.sin), useNativeDriver: true,
+        }),
+        Animated.timing(windGust, {
+          toValue: 0, duration: 2000,
+          easing: Easing.inOut(Easing.sin), useNativeDriver: true,
+        }),
+      ]),
+    );
+    gustLoop.start();
+
+    return () => { loop.stop(); gustLoop.stop(); };
+  }, [swayDuration]);
+
+  const windAmp = 3 * seasonMod.swayAmp;
+  const gustAmp = windAmp * 0.4;
+
+  // Combine main wind + gust for natural variation
+  const combinedWind = Animated.add(windPhase, Animated.multiply(windGust, 0.4));
+
+  // Wind amplitude gradient: canopy > branches > trunk
+  const canopyWind = combinedWind.interpolate({
+    inputRange: [-1.4, 0, 1.4],
+    outputRange: [`${-windAmp * 0.55}deg`, `0deg`, `${windAmp * 0.55}deg`],
+  });
+  const branchWind = combinedWind.interpolate({
+    inputRange: [-1.4, 0, 1.4],
+    outputRange: [`${-windAmp * 0.38}deg`, `0deg`, `${windAmp * 0.38}deg`],
+  });
+  const trunkWind = combinedWind.interpolate({
+    inputRange: [-1.4, 0, 1.4],
+    outputRange: [`${-windAmp * 0.14}deg`, `0deg`, `${windAmp * 0.14}deg`],
+  });
+
+  // ── Idle Tree Breath ──
+  // Subtle whole-tree scale pulse on a slow inhale/exhale rhythm
+  const breath = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breath, {
+          toValue: 1, duration: 5000,
+          easing: Easing.out(Easing.cubic), useNativeDriver: true,
+        }),
+        Animated.timing(breath, {
+          toValue: 0, duration: 6000,
+          easing: Easing.in(Easing.cubic), useNativeDriver: true,
         }),
       ]),
     );
     loop.start();
     return () => loop.stop();
-  }, [swayDuration]);
+  }, []);
 
-  const baseAmp = 2.5 * swayAmp;
-
-  const canopySway = sway.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [`${-baseAmp}deg`, `${baseAmp}deg`, `${-baseAmp}deg`],
+  const breathScale = breath.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.01],
+  });
+  const breathTranslate = breath.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -1.5],
   });
 
-  const trunkSway = sway.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [`${-baseAmp * 0.2}deg`, `${baseAmp * 0.2}deg`, `${-baseAmp * 0.2}deg`],
-  });
-
+  // ── Session Glow ──
   const glow = useRef(new Animated.Value(0.35)).current;
+  const glowPulseAccel = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (running) {
       const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(glow, {
-            toValue: 1,
-            duration: 2200,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(glow, {
-            toValue: 0.35,
-            duration: 2200,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
+          Animated.parallel([
+            Animated.timing(glow, {
+              toValue: 1, duration: 2200,
+              easing: Easing.out(Easing.cubic), useNativeDriver: true,
+            }),
+            Animated.timing(glowPulseAccel, {
+              toValue: 1, duration: 2200,
+              easing: Easing.inOut(Easing.sin), useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(glow, {
+              toValue: 0.3, duration: 2200,
+              easing: Easing.in(Easing.cubic), useNativeDriver: true,
+            }),
+            Animated.timing(glowPulseAccel, {
+              toValue: 0, duration: 2200,
+              easing: Easing.inOut(Easing.sin), useNativeDriver: true,
+            }),
+          ]),
         ]),
       );
       loop.start();
       return () => loop.stop();
     }
-    Animated.timing(glow, {
-      toValue: 0.35,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.timing(glow, {
+        toValue: 0.35, duration: 600,
+        easing: Easing.out(Easing.quad), useNativeDriver: true,
+      }),
+      Animated.timing(glowPulseAccel, {
+        toValue: 0, duration: 400,
+        easing: Easing.out(Easing.quad), useNativeDriver: true,
+      }),
+    ]).start();
   }, [running]);
 
+  // Derived values
   const glowColor = skyColorAt(pct, "glow");
-  const canopyOpacity = glow.interpolate({
+  const canopyGlow = glow.interpolate({
     inputRange: [0.35, 1],
-    outputRange: [0.88, 1],
+    outputRange: [0.85, 1],
   });
   const ffCount = curSeason === "winter" ? 0 : Math.max(2, Math.min(12, Math.floor({
     spring: 2, summer: 4, autumn: 1,
@@ -513,7 +635,9 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
           {
             transform: [
               { scale: viewScale },
-              { scale: treeGrowth.interpolate({ inputRange: [0, 1], outputRange: [0.01, 1] }) },
+              { scale: treeReveal.interpolate({ inputRange: [0, 1], outputRange: [0.01, 1] }) },
+              { scale: breathScale },
+              { translateY: breathTranslate },
             ],
             transformOrigin: "50% 86%",
           },
@@ -562,14 +686,17 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
         style={[s.treeWrap, { top: -15 }]}
       >
         {/* Ground shadow */}
-        <View
+        <Animated.View
           style={[
             s.groundShadow,
             {
               left: cx - Math.max(35, 18 + trunkW * 1.5),
               bottom: trunkBot - 4,
               width: Math.max(70, (18 + trunkW * 1.5) * 2),
-              opacity: isDark ? 0.35 : 0.2,
+              opacity: Animated.multiply(
+                shadowEntry.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+                isDark ? 0.35 : 0.2,
+              ),
             },
           ]}
         />
@@ -656,7 +783,11 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
               left: cx - trunkW / 2,
               borderTopLeftRadius: trunkW * 0.3,
               borderTopRightRadius: trunkW * 0.3,
-              transform: [{ translateY: trunkEntry }, { rotate: trunkSway }],
+              transform: [
+                { translateY: trunkEntry.interpolate({ inputRange: [0, 1], outputRange: [0, 28], extrapolate: "clamp" }) },
+                { translateY: trunkAnticipation.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) },
+                { rotate: trunkWind },
+              ],
             },
           ]}
         >
@@ -761,7 +892,7 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
 
         {/* Branches */}
         {branches.map((b) => (
-          <View
+          <Animated.View
             key={`branch-${b.key}`}
             style={[
               s.branch,
@@ -770,32 +901,52 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
                 bottom: b.bottom,
                 width: b.width,
                 height: b.height,
-                opacity: b.opacity,
+                opacity: Animated.multiply(
+                  branchEntry.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+                  b.opacity,
+                ),
                 backgroundColor: b.color,
-                transform: [{ rotate: `${b.angle}deg` }],
+                transform: [
+                  { rotate: `${b.angle}deg` },
+                  { rotate: branchWind },
+                ],
               },
             ]}
           />
         ))}
 
         {/* Aerial roots (in front of trunk and canopy) */}
-        {aerialRoots.map((ar) => (
+        {aerialRoots.map((ar) => {
+          const rh = ar.height;
+          return (
           <React.Fragment key={`aerial-${ar.key}`}>
-            <View
+            <Animated.View
               style={[
                 s.aerialRoot,
                 {
                   left: ar.left,
                   bottom: ar.bottom,
                   width: ar.width,
-                  height: ar.height,
-                  opacity: ar.opacity,
+                  height: rh,
                   backgroundColor: ar.color,
+                  opacity: Animated.multiply(
+                    rootEntry.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+                    ar.opacity,
+                  ),
+                  transform: [
+                    { scaleY: rootEntry },
+                    {
+                      translateY: rootEntry.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [rh / 2, 0],
+                      }),
+                    },
+                  ],
                 },
               ]}
             />
             {ar.tipSize > 1.5 && (
-              <View
+              <Animated.View
                 style={[
                   s.aerialRootTip,
                   {
@@ -804,14 +955,27 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
                     width: ar.tipSize,
                     height: ar.tipSize,
                     borderRadius: ar.tipSize / 2,
-                    opacity: ar.opacity * 0.8,
                     backgroundColor: ar.color,
+                    opacity: Animated.multiply(
+                      rootEntry.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+                      ar.opacity * 0.8,
+                    ),
+                    transform: [
+                      { scale: rootEntry },
+                      {
+                        translateY: rootEntry.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [ar.height / 2, 0],
+                        }),
+                      },
+                    ],
                   },
                 ]}
               />
             )}
           </React.Fragment>
-        ))}
+          );
+        })}
 
         {/* Canopy layer */}
         <Animated.View
@@ -823,10 +987,10 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
             bottom: 0,
             zIndex: 5,
             transform: [
-              { rotate: canopySway },
+              { rotate: canopyWind },
               { scale: canopyEntry.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) },
             ],
-            opacity: canopyOpacity,
+            opacity: canopyGlow,
             shadowColor: glowColor,
             shadowOpacity: running ? 0.55 : 0.2,
             shadowRadius: running ? 16 : 8,
@@ -929,7 +1093,7 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
 
           {/* Figs within canopy */}
           {figs.map((f) => (
-            <View
+            <Animated.View
               key={`fig-${f.key}`}
               style={[
                 s.fig,
@@ -940,7 +1104,13 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
                   height: f.size,
                   borderRadius: f.size / 2,
                   backgroundColor: f.color,
-                  opacity: f.opacity,
+                  opacity: Animated.multiply(
+                    figEntry.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+                    f.opacity,
+                  ),
+                  transform: [{
+                    scale: figEntry.interpolate({ inputRange: [0, 1], outputRange: [0.01, 1] }),
+                  }],
                 },
               ]}
             />
@@ -948,7 +1118,7 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
           {figs
             .filter((f) => f.highlight)
             .map((f) => (
-              <View
+              <Animated.View
                 key={`fig-hl-${f.key}`}
                 style={[
                   s.figHighlight,
@@ -958,7 +1128,10 @@ export function BanyanTree({ pct, isDark, running, completedPomodoros = 0, sessi
                     width: f.size * 0.3,
                     height: f.size * 0.3,
                     borderRadius: f.size * 0.15,
-                    opacity: f.opacity * 0.6,
+                    opacity: Animated.multiply(
+                      figEntry.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+                      f.opacity * 0.6,
+                    ),
                   },
                 ]}
               />
