@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "STOP: buildAppClean.sh is locked to prevent accidental execution."
+exit 1  # Remove or comment out this line when you are ready to run it
+
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
