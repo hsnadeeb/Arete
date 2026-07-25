@@ -1,0 +1,5 @@
+<resources>
+  <string name="app_name">arete</string>
+  <string name="expo_system_ui_user_interface_style" translatable="false">light</string>
+  <string name="doomscrolling_service_description">Arete uses this service to detect when you open apps with short-form video feeds (Reels, Shorts, TikToks) and helps you block them. No personal data is read or transmitted.</string>
+</resources>
