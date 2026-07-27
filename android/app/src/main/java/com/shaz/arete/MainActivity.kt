@@ -1,4 +1,4 @@
-package com.anonymous.arete
+package com.shaz.arete
 
 import android.os.Build
 import android.os.Bundle

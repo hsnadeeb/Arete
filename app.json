@@ -9,8 +9,8 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.arete",
-      "associatedDomains": ["applinks:arete.app"]
+      "bundleIdentifier": "com.shaz.arete",
+      "associatedDomains": ["applinks:shaz.app"]
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +19,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.arete",
+      "package": "com.shaz.arete",
       "intentFilters": [
         {
           "action": "VIEW",
@@ -39,6 +39,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/withDoomscrolling",
       "expo-sqlite",
       "expo-font",
       "expo-sharing",

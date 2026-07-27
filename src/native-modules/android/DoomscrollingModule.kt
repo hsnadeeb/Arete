@@ -1,4 +1,4 @@
-package com.anonymous.arete
+package com.shaz.arete
 
 import android.content.ComponentName
 import android.content.Context
@@ -16,7 +16,7 @@ class DoomscrollingModule(reactContext: ReactApplicationContext) :
 
     companion object {
         private const val NAME = "DoomscrollingModule"
-        private const val PREFS_NAME = "com.anonymous.arete.doomscrolling"
+        private const val PREFS_NAME = "com.shaz.arete.doomscrolling"
         private const val KEY_ENABLED = "enabled"
         private const val KEY_BLOCKED_APPS = "blocked_apps"
     }

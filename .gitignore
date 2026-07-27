@@ -39,6 +39,17 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# IDE
+.idea/
+
+# Agent & Tools
+.kimchi/
+.artifacts/
+*.bak
+
+# Security
+*.keystore
+
 # generated native folders
 # /ios
 # /android

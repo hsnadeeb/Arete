@@ -1,4 +1,4 @@
-package com.anonymous.arete
+package com.shaz.arete
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
@@ -13,7 +13,7 @@ class DoomscrollingAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "DoomscrollingService"
-        private const val PREFS_NAME = "com.anonymous.arete.doomscrolling"
+        private const val PREFS_NAME = "com.shaz.arete.doomscrolling"
         private const val KEY_ENABLED = "enabled"
         private const val KEY_BLOCKED_APPS = "blocked_apps"
 
