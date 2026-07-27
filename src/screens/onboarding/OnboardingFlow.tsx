@@ -94,9 +94,10 @@ export default function OnboardingFlow({ onComplete }: { onComplete: (data: Onbo
     setStep(0);
   };
 
-  const handleKeepData = () => {
+  const handleKeepData = async () => {
     setShowRestorePopup(false);
-    setStep(0);
+    await AsyncStorage.setItem('onboarding_completed', 'true');
+    onComplete({} as OnboardingData);
   };
 
   const handleNameNext = (name: string) => {

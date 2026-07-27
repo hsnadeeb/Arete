@@ -33,6 +33,9 @@ export interface AppStore {
   error: string | null;
   currentRoute: string;
   setCurrentRoute: (route: string) => void;
+  navigationHistory: string[];
+  pushRoute: (route: string) => void;
+  goBack: () => void;
 
   // ── Daily Life ──
   dailyLog: DailyLogRow | null;
@@ -334,6 +337,13 @@ export const useStore = create<AppStore>()((set, get) => ({
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   currentRoute: "Greeting",
   setCurrentRoute: (route) => set({ currentRoute: route }),
+  navigationHistory: [] as string[],
+  pushRoute: (route: string) => set((s) => ({ navigationHistory: [...s.navigationHistory, route] })),
+  goBack: () => set((s) => {
+    if (s.navigationHistory.length === 0) return { currentRoute: "Dashboard" };
+    const prev = s.navigationHistory[s.navigationHistory.length - 1];
+    return { currentRoute: prev, navigationHistory: s.navigationHistory.slice(0, -1) };
+  }),
 
   // ── User Profile ──
   userProfile: null,

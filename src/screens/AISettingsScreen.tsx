@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useStore } from "../store";
 import { useTheme } from "../context/ThemeContext";
 import { Card } from "../components/Card";
+import BackButton from "../components/BackButton";
 import { Icon } from "../components/Icons";
 import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import * as db from "../db/service";
@@ -154,6 +155,7 @@ export default function AISettingsScreen() {
           { backgroundColor: colors.surface, borderBottomColor: colors.border },
         ]}
       >
+        <BackButton />
         <TouchableOpacity
           onPress={() => setSidebarOpen(true)}
           style={styles.menuBtn}

@@ -89,9 +89,10 @@ export default function PostAuthOnboardingFlow({ onComplete }: { onComplete: () 
     setStep(0);
   };
 
-  const handleKeepData = () => {
+  const handleKeepData = async () => {
     setShowRestorePopup(false);
-    setStep(0);
+    await AsyncStorage.setItem('onboarding_completed', 'true');
+    onComplete();
   };
 
   const handleNameNext = (name: string) => {

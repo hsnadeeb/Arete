@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../components/Card";
+import BackButton from "../components/BackButton";
 import { Icon, getIconName } from "../components/Icons";
 import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import { useStore } from "../store";
@@ -288,6 +289,7 @@ export default function SettingsScreen() {
           { backgroundColor: colors.card, borderBottomColor: colors.border },
         ]}
       >
+        <BackButton />
         <TouchableOpacity
           onPress={() => setSidebarOpen(true)}
           style={{ padding: 8 }}

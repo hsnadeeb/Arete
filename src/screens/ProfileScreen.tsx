@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useStore } from "../store";
 import { useTheme } from "../context/ThemeContext";
+import BackButton from "../components/BackButton";
 import { Icon } from "../components/Icons";
 import { Avatar } from "../components/Avatar";
 import { LUCIDE_ICONS } from "../constants/typography";
@@ -622,6 +623,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: tc.bg }} edges={["top"]}>
       {/* Header */}
       <View style={[s.header, { backgroundColor: tc.surface, borderBottomColor: tc.divider }]}>
+        <BackButton />
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={s.headerBtn}>
           <Icon name={LUCIDE_ICONS.menu} size={20} color={tc.heading} label="menu" />
         </TouchableOpacity>

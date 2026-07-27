@@ -3,11 +3,9 @@ package com.shaz.arete
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
-import android.view.accessibility.AccessibilityNodeInfo
 
 class DoomscrollingAccessibilityService : AccessibilityService() {
 
@@ -58,12 +56,9 @@ class DoomscrollingAccessibilityService : AccessibilityService() {
         Log.d(TAG, "Accessibility service connected")
 
         val info = AccessibilityServiceInfo()
-        info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
-                AccessibilityEvent.TYPE_VIEW_SCROLLED
+        info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
         info.notificationTimeout = 100
-        info.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
-        info.flags = info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
         serviceInfo = info
     }
 
@@ -71,18 +66,8 @@ class DoomscrollingAccessibilityService : AccessibilityService() {
         val enabled = prefs?.getBoolean(KEY_ENABLED, false) ?: false
         if (!enabled) return
 
-        when (event.eventType) {
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                handleWindowStateChanged(event)
-            }
-            AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
-                handleScrollEvent(event)
-            }
-            else -> {}
-        }
-    }
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
 
-    private fun handleWindowStateChanged(event: AccessibilityEvent) {
         val packageName = event.packageName?.toString() ?: return
         val blockedApps = prefs?.getStringSet(KEY_BLOCKED_APPS, emptySet()) ?: emptySet()
 
@@ -90,52 +75,6 @@ class DoomscrollingAccessibilityService : AccessibilityService() {
             Log.d(TAG, "Blocked app detected: $packageName")
             performGlobalAction(GLOBAL_ACTION_HOME)
         }
-    }
-
-    private fun handleScrollEvent(event: AccessibilityEvent) {
-        val packageName = event.packageName?.toString() ?: return
-        val blockedApps = prefs?.getStringSet(KEY_BLOCKED_APPS, emptySet()) ?: emptySet()
-
-        if (!blockedApps.contains(packageName)) return
-
-        val source = event.source ?: return
-        if (isLikelyShortFormFeed(source)) {
-            Log.d(TAG, "Short-form feed detected in $packageName, performing home")
-            performGlobalAction(GLOBAL_ACTION_HOME)
-        }
-        source.recycle()
-    }
-
-    private fun isLikelyShortFormFeed(node: AccessibilityNodeInfo): Boolean {
-        val className = node.className?.toString() ?: ""
-        val isVerticalScrollContainer = className.contains("RecyclerView") ||
-                className.contains("ViewPager") ||
-                className.contains("ScrollView")
-
-        if (!isVerticalScrollContainer) return false
-
-        return hasVideoContent(node)
-    }
-
-    private fun hasVideoContent(node: AccessibilityNodeInfo): Boolean {
-        val className = node.className?.toString()?.lowercase() ?: ""
-        if (className.contains("video") || className.contains("player")) return true
-
-        val text = node.text?.toString()?.lowercase() ?: ""
-        if (text.contains("reel") || text.contains("short") || text.contains("tiktok")) return true
-
-        if (node.childCount in 1..10) {
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i) ?: continue
-                if (hasVideoContent(child)) {
-                    child.recycle()
-                    return true
-                }
-                child.recycle()
-            }
-        }
-
-        return false
     }
 
     override fun onInterrupt() {
@@ -146,9 +85,5 @@ class DoomscrollingAccessibilityService : AccessibilityService() {
         super.onDestroy()
         isRunning = false
         Log.d(TAG, "Accessibility service destroyed")
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return START_STICKY
     }
 }

@@ -76,6 +76,7 @@ export default function DrawerNavigator() {
   const setCurrentRoute = useStore((s) => s.setCurrentRoute) as (
     route: RouteName,
   ) => void;
+  const pushRoute = useStore((s) => s.pushRoute);
   const sidebarOpen = useStore((s) => s.sidebarOpen);
   const setSidebarOpen = useStore((s) => s.setSidebarOpen);
   const slideAnim = useRef(new Animated.Value(-260)).current;
@@ -211,7 +212,7 @@ export default function DrawerNavigator() {
           {userProfile?.name ? (
             <TouchableOpacity
               style={styles.brandRow}
-              onPress={() => { setCurrentRoute("Profile"); setSidebarOpen(false); }}
+              onPress={() => { pushRoute(currentRoute); setCurrentRoute("Profile"); setSidebarOpen(false); }}
               activeOpacity={0.7}
             >
               <Avatar
@@ -272,6 +273,7 @@ export default function DrawerNavigator() {
                   focused && { backgroundColor: theme.colors.accentBg },
                 ]}
                 onPress={() => {
+                  pushRoute(currentRoute);
                   setCurrentRoute(item.name);
                   setSidebarOpen(false);
                 }}

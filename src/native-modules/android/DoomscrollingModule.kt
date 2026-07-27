@@ -1,10 +1,11 @@
 package com.shaz.arete
 
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
@@ -41,16 +42,8 @@ class DoomscrollingModule(reactContext: ReactApplicationContext) :
         prefs.edit().putBoolean(KEY_ENABLED, enabled).apply()
 
         if (enabled) {
-            val accessibilityIntent = Intent(reactApplicationContext, DoomscrollingAccessibilityService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                reactApplicationContext.startForegroundService(accessibilityIntent)
-            } else {
-                reactApplicationContext.startService(accessibilityIntent)
-            }
             startMonitor()
         } else {
-            val accessibilityIntent = Intent(reactApplicationContext, DoomscrollingAccessibilityService::class.java)
-            reactApplicationContext.stopService(accessibilityIntent)
             stopMonitor()
         }
     }
@@ -80,10 +73,10 @@ class DoomscrollingModule(reactContext: ReactApplicationContext) :
             return
         }
         try {
-            val usm = reactApplicationContext.getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+            val usm = reactApplicationContext.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
             val now = System.currentTimeMillis()
-            val stats = usm.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, now - 10000, now)
-            promise.resolve(stats != null && stats.isNotEmpty())
+            val events = usm.queryEvents(now - 60000, now)
+            promise.resolve(events != null)
         } catch (e: Exception) {
             promise.resolve(false)
         }

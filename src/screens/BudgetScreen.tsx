@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
+import BackButton from "../components/BackButton";
 import { Icon } from "../components/Icons";
 import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 import { Card, Row } from "../components/Card";
@@ -220,6 +221,7 @@ export default function BudgetScreen() {
           { backgroundColor: T.surface, borderBottomColor: T.border },
         ]}
       >
+        <BackButton />
         <TouchableOpacity
           onPress={() => setSidebarOpen(true)}
           style={styles.menuBtn}

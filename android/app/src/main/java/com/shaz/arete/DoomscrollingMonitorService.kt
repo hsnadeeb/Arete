@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
@@ -143,16 +144,30 @@ class DoomscrollingMonitorService : Service() {
 
         val usm = getSystemService(USAGE_STATS_SERVICE) as UsageStatsManager
         val now = System.currentTimeMillis()
-        val stats = usm.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY,
-            now - 10000,
-            now
-        ) ?: return null
+        val events = usm.queryEvents(now - 5000, now) ?: return null
 
-        if (stats.isEmpty()) return null
+        var foreground: String? = null
+        var lastTime = 0L
 
-        stats.sortByDescending { it.lastTimeUsed }
-        return stats.firstOrNull()?.packageName
+        val event = UsageEvents.Event()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            when (event.eventType) {
+                UsageEvents.Event.MOVE_TO_FOREGROUND,
+                UsageEvents.Event.ACTIVITY_RESUMED -> {
+                    if (event.timeStamp > lastTime) {
+                        foreground = event.packageName?.toString()
+                        lastTime = event.timeStamp
+                    }
+                }
+                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    if (event.packageName?.toString() == foreground) {
+                        foreground = null
+                    }
+                }
+            }
+        }
+        return foreground
     }
 
     private fun showOverlay() {

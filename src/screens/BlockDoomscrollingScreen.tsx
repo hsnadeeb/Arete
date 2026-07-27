@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../context/ThemeContext";
+import BackButton from "../components/BackButton";
 import { Icon } from "../components/Icons";
 import { LUCIDE_ICONS, TYPOGRAPHY } from "../constants/typography";
 
@@ -265,9 +266,12 @@ export default function BlockDoomscrollingScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={[styles.header, { borderBottomColor: colors.divider }]}>
-        <Text style={[styles.headerTitle, { color: colors.heading }]}>
-          Block Doomscrolling
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <BackButton />
+          <Text style={[styles.headerTitle, { color: colors.heading }]}>
+            Block Doomscrolling
+          </Text>
+        </View>
         <Text style={[styles.headerSub, { color: colors.textTertiary }]}>
           Take control of your attention
         </Text>
@@ -555,9 +559,9 @@ export default function BlockDoomscrollingScreen() {
           <Text
             style={[styles.disclaimerText, { color: colors.textSecondary }]}
           >
-            This feature uses Android's Accessibility API to detect short-form
-            video feeds. It does NOT read, store, or transmit any personal
-            data, keystrokes, or screen content.
+            This feature uses Android's Usage Stats API to detect when a blocked
+            app is opened and immediately navigates home. No personal data,
+            keystrokes, or screen content is read, stored, or transmitted.
           </Text>
         </View>
 
@@ -578,9 +582,9 @@ export default function BlockDoomscrollingScreen() {
           <Text
             style={[styles.disclaimerText, { color: colors.textSecondary }]}
           >
-            Blocking is achieved by detecting the app window and performing a
-            system back-navigation when a short-form video feed is detected.
-            Some apps may attempt to override this behavior.
+            When a blocked app is detected, a full-screen overlay is displayed
+            to prevent usage. Enable the accessibility service for instant
+            detection via the system's window change events.
           </Text>
         </View>
 
