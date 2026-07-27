@@ -30,10 +30,21 @@ fi
 
 # Verify signing
 echo "🛡️ Verifying APK signature..."
-if command -v apksigner >/dev/null 2>&1; then
-  apksigner verify --verbose "$APK_PATH" || { echo "⚠️ APK might not be signed correctly."; }
+APKSIGNER="apksigner"
+
+if ! command -v apksigner >/dev/null 2>&1; then
+  # Try to find it in Android SDK
+  SDK_PATH="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+  LATEST_BUILD_TOOLS=$(ls -d "$SDK_PATH/build-tools/"* 2>/dev/null | sort -V | tail -1)
+  if [ -n "$LATEST_BUILD_TOOLS" ] && [ -f "$LATEST_BUILD_TOOLS/apksigner" ]; then
+    APKSIGNER="$LATEST_BUILD_TOOLS/apksigner"
+  fi
+fi
+
+if command -v "$APKSIGNER" >/dev/null 2>&1 || [ -f "$APKSIGNER" ]; then
+  "$APKSIGNER" verify --verbose "$APK_PATH" || { echo "⚠️ APK might not be signed correctly."; }
 else
-  echo "ℹ️ apksigner not found, skipping verification. (Ensure you have a release.keystore)"
+  echo "ℹ️ apksigner not found in PATH or SDK, skipping verification. (Ensure you have a release.keystore)"
 fi
 
 cp "$APK_PATH" "$OUTPUT_APK"
