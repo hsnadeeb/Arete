@@ -51,7 +51,16 @@ export async function signInWithGoogle(): Promise<{
     if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
       return { user: null, error: "Google Play Services not available" };
     }
-    return { user: null, error: error.message || "Google sign-in failed" };
+    console.error("[GoogleSignIn] Error:", JSON.stringify({ message: error.message, code: error.code, statusCode: error.statusCode }, null, 2));
+    const msg = error.message || "Google sign-in failed";
+    if (msg.toLowerCase().includes("developer error")) {
+      return {
+        user: null,
+        error:
+          "Developer error: Google Sign-In is not configured correctly. Ensure the correct OAuth client IDs and SHA-1 fingerprints are set up in the Google Cloud Console.",
+      };
+    }
+    return { user: null, error: msg };
   }
 }
 
@@ -89,18 +98,34 @@ export async function signInWithApple(): Promise<{
 }
 
 export async function signInWithEmail(
-  _email: string,
+  email: string,
   _password: string,
 ): Promise<AuthUser | null> {
-  return null;
+  // Mock implementation for testing
+  const user: AuthUser = {
+    id: `email_${Date.now()}`,
+    name: email.split("@")[0] || "User",
+    email: email,
+    provider: "email",
+  };
+  await persistAuth(user);
+  return user;
 }
 
 export async function signUpWithEmail(
-  _name: string,
-  _email: string,
+  name: string,
+  email: string,
   _password: string,
 ): Promise<AuthUser | null> {
-  return null;
+  // Mock implementation for testing
+  const user: AuthUser = {
+    id: `email_${Date.now()}`,
+    name: name,
+    email: email,
+    provider: "email",
+  };
+  await persistAuth(user);
+  return user;
 }
 
 async function persistAuth(user: AuthUser) {

@@ -88,7 +88,7 @@ class DoomscrollingAccessibilityService : AccessibilityService() {
 
         if (blockedApps.contains(packageName)) {
             Log.d(TAG, "Blocked app detected: $packageName")
-            performGlobalAction(GLOBAL_ACTION_BACK)
+            performGlobalAction(GLOBAL_ACTION_HOME)
         }
     }
 
@@ -100,8 +100,8 @@ class DoomscrollingAccessibilityService : AccessibilityService() {
 
         val source = event.source ?: return
         if (isLikelyShortFormFeed(source)) {
-            Log.d(TAG, "Short-form feed detected in $packageName, performing back")
-            performGlobalAction(GLOBAL_ACTION_BACK)
+            Log.d(TAG, "Short-form feed detected in $packageName, performing home")
+            performGlobalAction(GLOBAL_ACTION_HOME)
         }
         source.recycle()
     }

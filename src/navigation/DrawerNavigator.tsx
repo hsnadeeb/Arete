@@ -198,7 +198,7 @@ export default function DrawerNavigator() {
         ]}
         pointerEvents={sidebarOpen ? "auto" : "none"}
       >
-        {/* App header */}
+        {/* Combined header: profile + brand */}
         <View
           style={[
             styles.sidebarHeader,
@@ -208,39 +208,9 @@ export default function DrawerNavigator() {
             },
           ]}
         >
-          <View style={styles.brandRow}>
-            <View
-              style={[
-                styles.iconWrap,
-                { backgroundColor: theme.colors.accentBg },
-              ]}
-            >
-              <Image
-                source={require("../../assets/icon.png")}
-                style={styles.appIcon}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.brand, { color: theme.colors.heading }]}>
-                arete
-              </Text>
-              <Text
-                style={[
-                  styles.brandSub,
-                  { color: theme.colors.textTertiary },
-                ]}
-              >
-                Live with intention
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {userProfile?.name ? (
-          <View style={[styles.userSection, { borderBottomColor: theme.colors.divider }]}>
+          {userProfile?.name ? (
             <TouchableOpacity
-              style={styles.userRow}
+              style={styles.brandRow}
               onPress={() => { setCurrentRoute("Profile"); setSidebarOpen(false); }}
               activeOpacity={0.7}
             >
@@ -248,22 +218,35 @@ export default function DrawerNavigator() {
                 uri={userProfile?.avatar_uri}
                 name={userProfile?.name}
                 gender={userProfile?.gender}
-                size={36}
-                iconSize={16}
-                textSize={12}
+                size={40}
+                iconSize={18}
+                textSize={14}
               />
-              <View style={{ flex: 1, marginLeft: 10 }}>
+              <View style={{ flex: 1 }}>
                 <Text style={[styles.userName, { color: theme.colors.heading }]} numberOfLines={1}>
                   {userProfile.name}
                 </Text>
-                <Text style={[styles.userMeta, { color: theme.colors.textTertiary }]} numberOfLines={1}>
-                  View profile
+                <Text style={[styles.brandSub, { color: theme.colors.textTertiary }]} numberOfLines={1}>
+                  arete · Live with intention
                 </Text>
               </View>
-              <Icon name={LUCIDE_ICONS.chevronRight} size={14} color={theme.colors.border} />
             </TouchableOpacity>
-          </View>
-        ) : null}
+          ) : (
+            <View style={styles.brandRow}>
+              <View style={[styles.iconWrap, { backgroundColor: theme.colors.accentBg }]}>
+                <Image
+                  source={require("../../assets/icon.png")}
+                  style={styles.appIcon}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.brand, { color: theme.colors.heading }]}>arete</Text>
+                <Text style={[styles.brandSub, { color: theme.colors.textTertiary }]}>Live with intention</Text>
+              </View>
+            </View>
+          )}
+        </View>
 
         {/* Section label */}
         <Text
@@ -393,23 +376,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginTop: 1,
   },
-  userSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  userRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
   userName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
-  },
-  userMeta: {
-    fontSize: 11,
-    fontWeight: "500",
-    marginTop: 1,
   },
   sectionLabel: {
     fontSize: 10,
@@ -419,16 +388,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 6,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    ...TYPOGRAPHY.h4,
   },
   navItem: {
     flexDirection: "row",
@@ -442,10 +401,6 @@ const styles = StyleSheet.create({
   navItemLabel: {
     ...TYPOGRAPHY.body,
     fontWeight: "500",
-  },
-  navItemLabelActive: {
-    color: "#6366f1",
-    fontWeight: "600",
   },
   themeToggle: {
     flexDirection: "row",

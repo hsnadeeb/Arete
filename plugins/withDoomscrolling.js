@@ -44,6 +44,7 @@ const withDoomscrolling = (config) => {
     const permissions = [
       'android.permission.FOREGROUND_SERVICE',
       'android.permission.FOREGROUND_SERVICE_SPECIAL_USE',
+      'android.permission.PACKAGE_USAGE_STATS',
     ];
 
     permissions.forEach(perm => {

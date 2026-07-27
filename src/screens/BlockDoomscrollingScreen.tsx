@@ -8,7 +8,9 @@ import {
   Switch,
   Alert,
   NativeModules,
+  NativeEventEmitter,
   AppState,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -42,20 +44,46 @@ const APP_NAMES: Record<string, string> = {
 export default function BlockDoomscrollingScreen() {
   const { theme } = useTheme();
   const colors = theme.colors;
+  const doomModule = NativeModules.DoomscrollingModule;
 
   const [enabled, setEnabled] = useState(false);
   const [serviceRegistered, setServiceRegistered] = useState(false);
+  const [overlayEnabled, setOverlayEnabled] = useState(false);
   const [blockedApps, setBlockedApps] = useState<string[]>(DEFAULT_BLOCKED_APPS);
   const [checking, setChecking] = useState(false);
+  const [monitorRunning, setMonitorRunning] = useState(false);
   const appStateRef = useRef(AppState.currentState);
+
+  useEffect(() => {
+    (async () => {
+      if (doomModule?.isMonitorRunning) {
+        try {
+          const running = await doomModule.isMonitorRunning();
+          setMonitorRunning(running);
+        } catch {}
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    const emitter = new NativeEventEmitter(doomModule);
+    const sub = emitter.addListener("DoomscrollingBlocked", (event: { packageName: string }) => {
+      console.log("[Doomscrolling] Blocked app:", event.packageName);
+    });
+    return () => sub.remove();
+  }, [doomModule]);
 
   const checkServiceStatus = useCallback(async () => {
     setChecking(true);
     try {
       const module = NativeModules.DoomscrollingModule;
       if (module) {
-        const registered = await module.isAccessibilityServiceEnabled();
+        const [registered, overlay] = await Promise.all([
+          module.isAccessibilityServiceEnabled(),
+          module.isOverlayPermissionEnabled ? module.isOverlayPermissionEnabled() : Promise.resolve(true)
+        ]);
         setServiceRegistered(registered);
+        setOverlayEnabled(overlay);
       }
     } catch {
       setServiceRegistered(false);
@@ -132,8 +160,7 @@ export default function BlockDoomscrollingScreen() {
         if (!registered) {
           Alert.alert(
             "Enable Accessibility Service",
-            "To block short videos across apps, enable 'Arete' in your device's Accessibility settings.\n\n" +
-              "Settings → Accessibility → Installed Apps → Arete",
+            "To block short videos across apps, toggle 'Arete' on in the Accessibility service settings.",
             [
               { text: "Later", style: "cancel" },
               {
@@ -182,6 +209,27 @@ export default function BlockDoomscrollingScreen() {
       const module = NativeModules.DoomscrollingModule;
       if (module) {
         module.openAccessibilitySettings();
+
+        // Android 13+ Guidance
+        if (Platform.OS === 'android' && Platform.Version >= 33) {
+          Alert.alert(
+            "Android 13+ Note",
+            "If 'Arete' is grayed out or shows 'Restricted Setting':\n\n" +
+            "1. Go to Settings → Apps → Arete\n" +
+            "2. Tap the three dots (⋮) in top right\n" +
+            "3. Tap 'Allow restricted settings'\n" +
+            "4. Return here and try again."
+          );
+        }
+      }
+    } catch {}
+  };
+
+  const openOverlaySettings = () => {
+    try {
+      const module = NativeModules.DoomscrollingModule;
+      if (module) {
+        module.openOverlaySettings();
       }
     } catch {}
   };
@@ -385,7 +433,7 @@ export default function BlockDoomscrollingScreen() {
               style={[styles.permissionDesc, { color: colors.textTertiary }]}
             >
               Used to track time spent in blocked apps and show you insights.
-              Optional — blocking works without it.
+              Required for the app to appear in the usage list.
             </Text>
           </View>
           <Icon
@@ -393,6 +441,61 @@ export default function BlockDoomscrollingScreen() {
             size={16}
             color={colors.border}
           />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.permissionRow,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+          onPress={openOverlaySettings}
+          activeOpacity={0.7}
+        >
+          <View
+            style={[
+              styles.permissionIcon,
+              {
+                backgroundColor: overlayEnabled
+                  ? colors.successBg
+                  : colors.warningBg,
+              },
+            ]}
+          >
+            <Icon
+              name={overlayEnabled ? LUCIDE_ICONS.checkCircle : LUCIDE_ICONS.layers}
+              size={18}
+              color={overlayEnabled ? colors.success : colors.warning}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.permissionTitle, { color: colors.heading }]}>
+              Display Over Other Apps
+            </Text>
+            <Text style={[styles.permissionDesc, { color: colors.textTertiary }]}>
+              Required to show blocking overlays and prevent you from bypassing the limits.
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.badge,
+              {
+                backgroundColor: overlayEnabled
+                  ? colors.successBg
+                  : colors.warningBg,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.badgeText,
+                {
+                  color: overlayEnabled ? colors.success : colors.warning,
+                },
+              ]}
+            >
+              {overlayEnabled ? "Enabled" : "Disabled"}
+            </Text>
+          </View>
         </TouchableOpacity>
 
         {/* ── Blocked Apps ── */}

@@ -41,12 +41,17 @@ export default function AuthFlow({ onAuthenticated }: AuthFlowProps) {
     })();
   }, []);
 
+  useEffect(() => {
+    if (!checking) {
+      authOpacity.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) });
+    }
+  }, [mode]);
+
   const switchMode = useCallback(
     (next: "login" | "signup") => {
       if (next === mode) return;
       authOpacity.value = withTiming(0, { duration: 150, easing: Easing.out(Easing.ease) }, () => {
         runOnJS(setMode)(next);
-        authOpacity.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) });
       });
     },
     [mode],

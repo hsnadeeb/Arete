@@ -12,10 +12,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { useTheme } from '../../context/ThemeContext';
 
-export default function NameScreen({ onNext, onBack }: { onNext: (name: string) => void; onBack: () => void }) {
+export default function NameScreen({ onNext, onBack, initialName }: { onNext: (name: string) => void; onBack: () => void; initialName?: string }) {
   const { theme } = useTheme();
   const tc = theme.colors;
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName ?? '');
 
   const handleNext = () => {
     if (name.trim()) {

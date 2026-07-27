@@ -1,7 +1,6 @@
 import 'react-native-gesture-handler';
 import React, { useState, useEffect, useCallback } from 'react';
 
-// Strip console logs in release builds to reduce JS thread noise
 if (!__DEV__) {
   console.log = () => {};
   console.info = () => {};
@@ -15,24 +14,24 @@ import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { AppProvider, useAppContext } from './src/context/AppContext';
 import DrawerNavigator from './src/navigation/DrawerNavigator';
-import OnboardingFlow from './src/screens/onboarding/OnboardingFlow';
+import WelcomeScreen from './src/screens/onboarding/WelcomeScreen';
 import AuthFlow from './src/screens/auth/AuthFlow';
+import PostAuthOnboardingFlow from './src/screens/onboarding/PostAuthOnboardingFlow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useStore } from './src/store';
 
 function AppContent() {
   const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [phase, setPhase] = useState<"welcome" | "auth" | "onboarding" | "app">("welcome");
   const { forceRehydrate } = useAppContext();
   const authUser = useStore((s) => s.authUser);
-  const authLoading = useStore((s) => s.authLoading);
 
   const checkOnboardingStatus = useCallback(async () => {
     try {
       const completed = await AsyncStorage.getItem('onboarding_completed');
       setIsOnboarded(completed === 'true');
-    } catch (e) {
+    } catch {
       setIsOnboarded(false);
     } finally {
       setLoading(false);
@@ -43,31 +42,50 @@ function AppContent() {
     checkOnboardingStatus();
   }, [checkOnboardingStatus]);
 
-  const handleOnboardingComplete = useCallback((data: any) => {
-    setOnboardingComplete(true);
+  useEffect(() => {
+    if (isOnboarded === null || loading) return;
+    if (isOnboarded && authUser) {
+      setPhase("app");
+    } else if (isOnboarded && !authUser) {
+      setPhase("auth");
+    } else if (!isOnboarded && authUser) {
+      setPhase("onboarding");
+    } else {
+      setPhase("welcome");
+    }
+  }, [isOnboarded, loading, authUser]);
+
+  const handleWelcomeNext = useCallback(() => {
+    setPhase("auth");
+  }, []);
+
+  const handleAuthenticated = useCallback(() => {
+    setPhase("onboarding");
+  }, []);
+
+  const handleOnboardingComplete = useCallback(async () => {
+    await AsyncStorage.setItem('onboarding_completed', 'true');
     setIsOnboarded(true);
+    setPhase("app");
     setTimeout(() => {
       forceRehydrate();
     }, 100);
   }, [forceRehydrate]);
 
-  const handleAuthenticated = useCallback(() => {
-    // Auth done — the store has the user now
-  }, []);
-
   if (loading || isOnboarded === null) {
     return null;
   }
 
-  if (!isOnboarded) {
-    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+  switch (phase) {
+    case "welcome":
+      return <WelcomeScreen onNext={handleWelcomeNext} />;
+    case "auth":
+      return <AuthFlow onAuthenticated={handleAuthenticated} />;
+    case "onboarding":
+      return <PostAuthOnboardingFlow onComplete={handleOnboardingComplete} />;
+    case "app":
+      return <DrawerNavigator />;
   }
-
-  if (!authUser) {
-    return <AuthFlow onAuthenticated={handleAuthenticated} />;
-  }
-
-  return <DrawerNavigator />;
 }
 
 export default function App() {
